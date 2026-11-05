@@ -13,7 +13,7 @@ why the scores arrive progressively rather than all at once.
 |---|---|---|---|
 | 1 | Voice event log | ✅ done | low |
 | 2 | Real SPCs and corpus plumbing | ✅ done — 232 tracks, 5 drivers, splits clean | medium |
-| 3 | Absolute pitch | note numbers, with per-sample confidence | medium |
+| 3 | Absolute pitch | ⚠️ partial — 83% pitched, ~9% octave-suspect | medium |
 | 4 | Grid inference | tracker rows; *separated* and *blended* scores | low |
 | 5 | Timbre vocabulary | a closed codebook; *expressive* score | **high — the research problem** |
 | 6 | Publish | MIDI, all three scores, intake JSON, splits | low |
@@ -151,8 +151,51 @@ fundamental directly.
   rather than given a confident wrong number
 - emit a per-sample confidence, so downstream work can filter
 
-**Exit:** note numbers for pitched voices, with confidence, validated against
-samples whose pitch is independently known.
+**Exit: partially met.** 315,349 of 379,821 notes (83%) carry a note number;
+373 of 500 distinct samples (75%) yield a usable fundamental, the rest being
+percussion and noise as expected. But **8.7% of pitched notes land outside
+MIDI 12-108**, which is the signature of a residual octave error: two
+estimators can agree and both still be an octave out. Treat `midi_note` as
+usable in bulk and unreliable per note; `pitch_confidence` is on every note.
+
+### What this milestone actually established
+
+**Autocorrelation on a BRR loop is weak, and my first implementation was
+broken.** It read a pure 440 Hz sine as 477.6 Hz -- 142 cents sharp -- because
+it took the first lag crossing a threshold, which lands on the rising flank of
+the first peak rather than its apex. Picking the first local maximum with
+parabolic interpolation brought synthetic tones to within 2.4 cents across
+110-1760 Hz, and real samples from one usable estimate in five to 75%.
+
+**A semitone-grid fit looked like the answer and was deleted.** Since a voice
+plays equal-tempered notes, the f0 that puts `f0 * PITCH / 4096` on semitones
+for every note using that sample should be the right one -- a one-parameter fit
+over real data rather than a guess from a short loop. It improved apparent
+accuracy from 5-40 cents to 0.1-0.4 cents.
+
+A control with a RANDOM coarse f0 fit equally well: 0.13 to 0.29 cents. The
+reason is structural -- a driver computes PITCH as `base * 2**(n/12)`, so one
+sample's PITCH values are ALREADY a semitone ladder among themselves. Any f0
+maps that ladder onto a grid; only the offset moves. The fit measured the
+driver's internal consistency, which is always there, and said nothing about
+the fundamental. `pitch.py` carries the full note so it is not reinvented.
+
+**Relative pitch is exact for some drivers and not others.** Median deviation
+from an exact semitone ladder, per sample: Rare 0.30 cents (96% of samples
+under 5 cents), Square 0.48 (91%), Nintendo N-SPC 2.87 (65%), Konami 3.39
+(69%), **Capcom 10.67 (19%)**. So the design doc's fallback -- "PITCH ratios
+are already exact, so dropping absolute pitch loses absolute key and nothing
+else" -- holds for Rare and Square and does NOT hold for Capcom. That was
+worth learning before relying on it.
+
+Pitch write rate does not explain it: Zelda rewrites PITCH 48.8 times per note
+and has a cleaner ladder than Mega Man X at 6.5. Heavy pitch modulation is
+universal; whether the key-on value sits on the grid is not.
+
+**Also found:** a 512-block decode cap silently truncated real samples. Final
+Fantasy VI has one of 1,046 blocks, and the truncated decode produced a
+fundamental that landed exactly on the estimator's 4 kHz clamp while being
+reported as high confidence.
 
 **The shortcut, if this stalls:** skip it. PITCH *ratios* are already exact, so
 interval-level and transposition-invariant work needs nothing from this

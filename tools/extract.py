@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from snesmdb import splits as splits_mod  # noqa: E402
 from snesmdb.spcfile import SpcError, load  # noqa: E402
+from snesmdb import brr, pitch  # noqa: E402
 from snesmdb.checks import audio_peak, run as run_checks  # noqa: E402
 from snesmdb.voices import extract, read_log  # noqa: E402
 
@@ -102,7 +103,71 @@ def process(args: tuple[str, float, bool, str]) -> dict[str, Any]:
 
         result_extract = extract(read_log(log))
         row["summary"] = result_extract.summary()
-        row["notes"] = [note.to_dict() for note in result_extract.notes]
+
+        # Milestone 3: absolute pitch, where it can be had. The PITCH register
+        # is a resample ratio, so each sample's own fundamental is recovered
+        # from the BRR data in ARAM and the note number follows. Samples whose
+        # two estimators disagree are left without one -- a plausible wrong
+        # pitch in a corpus is worse than a missing one.
+        srcns = {n.srcn for n in result_extract.notes}
+        entries = brr.read_directory(spc.aram, spc.dsp[0x5D], srcns)
+        fundamentals: dict[int, Any] = {}
+        for srcn, entry in entries.items():
+            if not entry.plausible:
+                continue
+            decoded = brr.decode(spc.aram, entry.start, entry.loop)
+            fundamentals[srcn] = pitch.estimate_f0(
+                srcn, decoded.data, decoded.loop_offset
+            )
+        row["samples"] = {
+            str(srcn): {**entry.__dict__, **fundamentals[srcn].to_dict()}
+            for srcn, entry in entries.items()
+            if srcn in fundamentals
+        }
+
+        notes_out = []
+        for note in result_extract.notes:
+            item = note.to_dict()
+            estimate = fundamentals.get(note.srcn)
+            usable = (
+                estimate is not None
+                and estimate.f0_hz
+                and estimate.confidence in ("high", "medium")
+                and note.pitch > 0
+                and not note.noise
+                and not note.pitch_modulated
+            )
+            if usable:
+                hz, midi = pitch.note_for(note.pitch, estimate.f0_hz)
+                item["hz"] = hz
+                item["midi_note"] = midi
+                item["pitch_confidence"] = estimate.confidence
+            else:
+                item["hz"] = None
+                item["midi_note"] = None
+                item["pitch_confidence"] = (
+                    estimate.confidence if estimate else "none"
+                )
+            notes_out.append(item)
+        row["notes"] = notes_out
+
+        pitched = [n for n in notes_out if n["midi_note"] is not None]
+        implausible = [
+            n for n in pitched if not (12.0 <= n["midi_note"] <= 108.0)
+        ]
+        row["pitch"] = {
+            "n_pitched": len(pitched),
+            "n_unpitched": len(notes_out) - len(pitched),
+            # Notes outside a musical register signal a residual OCTAVE error
+            # in the fundamental: two estimators can agree and still both be
+            # an octave out. Measured at 5.6% over the first 60 tracks.
+            "n_implausible_register": len(implausible),
+            "n_samples": len(entries),
+            "n_samples_with_f0": sum(
+                1 for f in fundamentals.values()
+                if f.confidence in ("high", "medium")
+            ),
+        }
 
         peak: int | None = None
         try:
@@ -268,6 +333,10 @@ def main() -> None:
             {r.get("error", "?") .split(":")[0] for r in manifest if not r.get("ok")}
         ),
         "n_notes": sum(r["summary"]["n_notes"] for r in good),
+        "n_notes_pitched": sum(r.get("pitch", {}).get("n_pitched", 0) for r in good),
+        "n_notes_implausible_register": sum(
+            r.get("pitch", {}).get("n_implausible_register", 0) for r in good
+        ),
         "rendered_seconds_total": round(
             sum(r.get("render_seconds", 0.0) for r in good), 1
         ),
