@@ -4,6 +4,7 @@ build/
 # use only". They never enter this repository. Keep them here locally.
 data/spc/*
 !data/spc/.gitkeep
+!data/spc/README.md
 
 # Extraction output: derived from research-only data, and regenerable.
 data/out/*
