@@ -11,7 +11,7 @@ That shielding is harder here than on the NES, and the reasons are worth
 understanding before choosing a format — see the
 [SNES Synthesizer Primer](#snes-synthesizer-primer).
 
-**Status: milestone 1 of 6.** The SPC700 runs, every DSP register write is
+**Status: [milestone 1 of 6](docs/milestones.md).** The SPC700 runs, every DSP register write is
 logged with absolute timestamps, and notes are recovered from that log. No real
 SPC has been processed yet, pitch is still a raw register value, and there is
 no timbre vocabulary. Formats below are marked accordingly. Nothing here is a
@@ -30,6 +30,8 @@ published dataset yet.
 - [Licensing and the source data](#licensing-and-the-source-data)
 - [Relationship to the renderer](#relationship-to-the-renderer)
 - [Attribution](#attribution)
+
+Planning docs: [milestones](docs/milestones.md), [design](docs/design.md).
 
 ## Dataset information
 
