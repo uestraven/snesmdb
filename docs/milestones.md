@@ -56,6 +56,60 @@ extraction code against it.
 **Why this is medium risk:** every driver is different. Expect this milestone
 to find that some assumption in milestone 1 only held for my own fixture.
 
+### What first contact actually found
+
+Two games, two driver families, 111 tracks, 229,879 notes, 108 of 111 passing
+every check and **zero unhandled registers in either**.
+
+| | Donkey Kong Country (Rare) | Final Fantasy VI (AKAO) |
+|---|---|---|
+| notes/sec | 21.0 | 13.4 |
+| KON *writes*/sec | 21.0 | 204.5 |
+| effective / all KON | **100.0%** | **2.7%** |
+| mean voices used | 7.4 | 7.3 |
+
+**The two drivers could not be more different in idiom, and it does not
+matter.** Rare writes KON only when it means it. AKAO re-uploads the whole DSP
+register block about 205 times a second, so 97.3% of its KON writes carry a
+zero mask. Anything that measured register *activity* would have called FF6
+ten times denser than DKC when it is actually sparser. Counting set bits
+rather than writes was the decision that made both work.
+
+Three failures, all in FF6, all the same thing: an SPC is a **snapshot of a
+running system**, so a sustained track can have all eight voices already
+sounding and never be re-keyed. Grand Finale (part 1), Strong Wind and
+Rumbling are drones of 9-23 seconds with KON written 12,307 times and a zero
+mask every time. The notes model cannot represent them; `n_kon_effective`
+makes the record say which case it is.
+
+Short tracks are NOT a problem -- DKC's 1-second "Extra Life Balloon"
+extracted 23 notes cleanly. Length was never the issue; being a drone was.
+
+**Render length must come from the track.** A flat 60-second window truncated
+68 of FF6's 82 tracks and captured 8.8% of the 683-second "Dancing Mad
+(Full)". Reading ID666's "seconds to play" took the corpus from 60,242 notes
+to 149,512 for the same 82 files, and nothing in the output had flagged the
+shortfall.
+
+**Still blocking the exit criterion:** splits. Two games with disjoint
+composers give two components, so `test` is empty. This is a corpus-size
+problem, not an algorithm problem, and the fix is more games rather than a
+weaker split rule -- see the note below.
+
+### Why a game is the unit of assignment, not a composer
+
+Composer-disjointness alone would permit splitting one game across splits:
+DKC's Dave Wise (21 tracks), Eveline Fischer (7) and Robin Beanland (1) could
+go to three different splits without any composer spanning two. That would
+make the ratios much easier to hit.
+
+It is not done, because a game's tracks share an instrument bank, a driver and
+an idiom, so splitting a game across splits leaks far more than a composer
+does. Whole game components are the stricter choice and the ratios pay for it.
+The consequence to accept: you need at least as many composer-disjoint game
+components as you want splits, so three splits need three such groups. Adding
+a game is cheap; weakening the guarantee is not.
+
 ## 3. Absolute pitch
 
 The PITCH register is a resample ratio, not a frequency, and the base
