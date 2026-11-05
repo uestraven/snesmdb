@@ -607,6 +607,38 @@ limitations written down.
 
 ---
 
+## Performance conventions — not a milestone, and the point of the corpus
+
+`docs/design.md` §7 argues that if this is built for analysis, the thing to
+extract is **performance** conventions rather than progressions and form, on
+the record that composition-rule changes are 0 for 4 with this listener while
+per-song duty and position-shaped velocity landed immediately. That analysis
+sits outside the six milestones and is now done:
+**[performance-conventions.md](performance-conventions.md)**, over all 1,316
+tracks.
+
+The result that matters most is a negative. **Position-shaped velocity does not
+exist in real SNES music** — correlation of note volume with position through
+the track is 0.006, and the range across 22 games is −0.047 to 0.066. One of
+the only two changes a listener has ever accepted from this project is
+therefore an invention that improves on the idiom, not a convention waiting to
+be recovered. Measurement found it absent and would never have proposed it.
+
+Four things are genuine conventions, tight across every game: **instant ADSR
+attack** (median 15 of 15, range 14-15), **full sustain** (median 7 of 7),
+**echo on** (every track of the median game, six of eight voices), and **about
+five of eight voices sounding** with silence almost absent. Those are the
+platform's defaults.
+
+Volume-vs-register and volume-vs-voice are **house styles, not conventions** —
+Breath of Fire II is +0.71 on voice index where DKC2 is −0.55, so they are
+strong inside a game and cancel across the corpus. Same for staccato, which
+runs from 0% to 73.5% of notes under 100 ms.
+
+And two of the S-DSP's distinctive features are dead hardware here: **106 noise
+notes and 727 pitch-modulated notes out of 1,863,499**. Drivers write NON and
+PMON 1.48 million times in a 40-track sample, always zero.
+
 ## What this does not promise
 
 The published artifact is a **dataset and the tools to rebuild it**, not a
