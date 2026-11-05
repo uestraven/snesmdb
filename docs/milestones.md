@@ -12,7 +12,7 @@ why the scores arrive progressively rather than all at once.
 | # | milestone | exit criterion | risk |
 |---|---|---|---|
 | 1 | Voice event log | ✅ done | low |
-| 2 | Real SPCs and corpus plumbing | a curated set extracted, each track audio-validated | **medium — first contact with reality** |
+| 2 | Real SPCs and corpus plumbing | ✅ done — 232 tracks, 5 drivers, splits clean | medium |
 | 3 | Absolute pitch | note numbers, with per-sample confidence | medium |
 | 4 | Grid inference | tracker rows; *separated* and *blended* scores | low |
 | 5 | Timbre vocabulary | a closed codebook; *expressive* score | **high — the research problem** |
@@ -45,35 +45,62 @@ survives it.
 - **composer-disjoint splits**, which NES-MDB has and a corpus without is not
   comparable to it
 
-**Exit:** a curated set extracted end to end, every track carrying an audio
-validation score, splits built and verified disjoint.
+**Exit (met):** a curated set extracted end to end, every track carrying
+structural checks and a replayable reference log, splits built and
+independently verified disjoint.
 
-**Open dependency:** whether per-track composer metadata is obtainable at
-scale. snesmusic.org lists 3,255 composers, but that it is parseable per track
-is unverified, and it gates the split property. Check this before writing
-extraction code against it.
+The "audio validation score" originally written here was removed rather than
+achieved; see the gate note below and `src/snesmdb/checks.py`.
+
+**Open dependency, resolved:** per-track composer metadata comes from the
+ID666 tag inside each SPC, not from scraping -- the archive gives composer per
+SET, the tag gives it per TRACK, and it needs no network. All 232 files carry
+one.
+
+Two data-quality problems it brought with it. One field often credits several
+people ("Masanori Adachi, Taro Kudou"), so the graph links games through
+individual PEOPLE rather than the raw label, or two games crediting an
+overlapping pair would never link and disjointness would pass on a
+technicality. And the field is 32 bytes, so it truncates: `mmx-b01.spc` reads
+"Setsuo, Tomozou, Sato, Yuko, Kir" with no terminator and the last credit is
+unrecoverable. Such tracks are flagged (`composer_truncated`) and listed in
+the summary, because a link made through a cut-off name is a guess.
 
 **Why this is medium risk:** every driver is different. Expect this milestone
 to find that some assumption in milestone 1 only held for my own fixture.
 
-### What first contact actually found
+### What first contact actually found ✅
 
-Two games, two driver families, 111 tracks, 229,879 notes, 108 of 111 passing
-every check and **zero unhandled registers in either**.
+**232 tracks, 5 games, all 5 major driver families, 379,821 notes, 227 of 232
+passing every check, and zero unhandled registers in any game.** All three
+splits non-empty with no composer leaks, so the exit criterion is met.
 
-| | Donkey Kong Country (Rare) | Final Fantasy VI (AKAO) |
-|---|---|---|
-| notes/sec | 21.0 | 13.4 |
-| KON *writes*/sec | 21.0 | 204.5 |
-| effective / all KON | **100.0%** | **2.7%** |
-| mean voices used | 7.4 | 7.3 |
+| game | driver | trk | notes | notes/s | KON *writes*/s | effective | voices |
+|---|---|---|---|---|---|---|---|
+| Final Fantasy VI | AKAO (Square) | 82 | 149,512 | 13.4 | 204.5 | 2.7% | 7.3 |
+| Zelda: A Link to the Past | N-SPC (Nintendo) | 50 | 36,507 | 13.2 | **364.9** | **1.6%** | 5.4 |
+| Super Castlevania IV | Konami | 36 | 55,823 | 14.1 | 249.6 | 2.9% | 6.1 |
+| Mega Man X | Capcom | 35 | 57,612 | 26.3 | 62.5 | 16.7% | 7.9 |
+| Donkey Kong Country | Rare | 29 | 80,367 | 21.0 | 21.0 | **100.0%** | 7.4 |
 
-**The two drivers could not be more different in idiom, and it does not
-matter.** Rare writes KON only when it means it. AKAO re-uploads the whole DSP
-register block about 205 times a second, so 97.3% of its KON writes carry a
-zero mask. Anything that measured register *activity* would have called FF6
-ten times denser than DKC when it is actually sparser. Counting set bits
-rather than writes was the decision that made both work.
+**A 17× spread in write rate and a 62× spread in how many of those writes mean
+anything.** Rare writes KON only when it intends a note. Nintendo's N-SPC
+writes it 365 times a second and means it 1.6% of the time. Any measure of
+register *activity* would have ranked these five almost exactly backwards:
+Zelda looks seventeen times busier than DKC and is in fact slightly sparser.
+Counting set bits rather than writes is the single decision that made all five
+work unchanged.
+
+**Note density is the thing that does NOT vary.** Despite the driver chatter
+spanning 17×, actual notes/sec sits between 13.2 and 26.3 across every family.
+Driver verbosity is an implementation habit; note density is music.
+
+Five failures, all the same cause, now spanning two games: an SPC is a
+**snapshot of a running system**, so a sustained track can have all eight
+voices already sounding and never be re-keyed. FF6's Grand Finale (part 1),
+Strong Wind and Rumbling, plus Zelda's Unused Sound and Teleport — all 2-15
+second drones or effects with `n_kon_effective` of exactly 0. The notes model
+cannot represent them, and that is a property of the track.
 
 Three failures, all in FF6, all the same thing: an SPC is a **snapshot of a
 running system**, so a sustained track can have all eight voices already
@@ -91,10 +118,11 @@ extracted 23 notes cleanly. Length was never the issue; being a drone was.
 to 149,512 for the same 82 files, and nothing in the output had flagged the
 shortfall.
 
-**Still blocking the exit criterion:** splits. Two games with disjoint
-composers give two components, so `test` is empty. This is a corpus-size
-problem, not an algorithm problem, and the fix is more games rather than a
-weaker split rule -- see the note below.
+**Splits, resolved by corpus size rather than by weakening the rule.** With
+two games there were two components and `test` was empty. Five games give five
+components and train/valid/test of 168/35/29 (72.4% / 15.1% / 12.5%) against a
+requested 80/10/10 -- coarse, because whole games are indivisible, and
+honestly reported as `fraction_error`. No composer spans a split.
 
 ### Why a game is the unit of assignment, not a composer
 

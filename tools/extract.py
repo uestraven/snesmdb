@@ -225,8 +225,10 @@ def main() -> None:
     for row in good:
         tag = row["tag"]
         game = tag["game"] or f"unknown:{row['track_id']}"
-        composer = tag["composer"]
-        composers = [composer] if composer else []
+        # Individual people, not the raw label: a field crediting
+        # "Masanori Adachi, Taro Kudou" must link to a game crediting either
+        # of them, or the disjointness check passes on a technicality.
+        composers = tag.get("composers") or []
         tracks_by_game.setdefault(game, []).append(row["track_id"])
         game_composers.setdefault(game, [])
         for name in composers:
@@ -279,6 +281,11 @@ def main() -> None:
         "check_failures": dict(sorted(failures_by_check.items())),
         "splits": assigned.report(),
         "composer_leaks": leaks,
+        # Names cut off at ID666's 32-byte limit: the last credit in such a
+        # field is unrecoverable, so any link made through it is a guess.
+        "tracks_with_truncated_composer": sorted(
+            r["track_id"] for r in good if r["tag"].get("composer_truncated")
+        ),
         # A corpus with an empty requested split is unusable for the purpose
         # the split exists for. Expected on a tiny corpus, where there are
         # fewer composer components than splits; a real finding on a large one.

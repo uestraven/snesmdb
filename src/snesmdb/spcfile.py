@@ -20,6 +20,7 @@ low-confidence tag as unknown.
 from __future__ import annotations
 
 import hashlib
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -41,6 +42,13 @@ _DATE = (0x9E, 11)
 _SECONDS = (0xA9, 3)
 _FADE = (0xAC, 5)
 _ARTIST = (0xB1, 32)
+
+#: Separators used inside a single ID666 artist field. Real tags credit
+#: several people in one 32-byte field ("Masanori Adachi, Taro Kudou"), and
+#: treating that as ONE composer label means two games crediting an
+#: overlapping pair of people never link, so composer-disjointness is weaker
+#: than it reports.
+_COMPOSER_SPLIT = re.compile(r"\s*(?:,|&|/|\band\b)\s*")
 
 
 class SpcError(ValueError):
@@ -65,6 +73,11 @@ class Id666:
     date: str = ""
     seconds: int | None = None
     fade_ms: int | None = None
+    #: True when the artist field fills all 32 bytes with no terminator, so
+    #: the last name in it is cut off. `mmx-b01.spc` reads
+    #: "Setsuo, Tomozou, Sato, Yuko, Kir" -- the final credit is unrecoverable,
+    #: and a name matched against it may be wrong.
+    composer_truncated: bool = False
     #: "text", "binary", or "unknown".
     layout: str = "unknown"
     #: Why the layout was chosen, so a surprising corpus row can be explained.
@@ -72,14 +85,34 @@ class Id666:
 
     @property
     def composer(self) -> str:
-        """ID666 calls it the artist; everywhere else calls it the composer."""
+        """The artist field verbatim. ID666's name for the composer."""
         return self.artist
+
+    @property
+    def composers(self) -> list[str]:
+        """The individual people credited in the artist field.
+
+        Split because one field often credits several -- and because the
+        composer graph links games through shared PEOPLE. With the raw label
+        as the unit, "Masanori Adachi, Taro Kudou" would never link to another
+        game crediting "Taro Kudou", and the corpus would claim a
+        composer-disjointness it had not checked.
+
+        A truncated field still yields its last fragment; `composer_truncated`
+        says not to trust that one.
+        """
+        if not self.artist:
+            return []
+        parts = [p.strip() for p in _COMPOSER_SPLIT.split(self.artist)]
+        return [p for p in parts if p]
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "title": self.title,
             "game": self.game,
             "composer": self.composer,
+            "composers": self.composers,
+            "composer_truncated": self.composer_truncated,
             "dumper": self.dumper,
             "comments": self.comments,
             "date": self.date,
@@ -136,6 +169,9 @@ def parse_id666(data: bytes) -> Id666:
         tag.seconds = int(seconds) if seconds.isdigit() else None
         tag.fade_ms = int(fade) if fade.isdigit() else None
         tag.artist = _text(data, _ARTIST)
+        tag.composer_truncated = (
+            b"\x00" not in data[_ARTIST[0] : _ARTIST[0] + _ARTIST[1]]
+        )
     else:
         # Binary layout: date is 4 bytes at 0x9E, length 3 at 0xA9, fade 4 at
         # 0xAC, artist 32 at 0xB0 -- note the artist shifts by one byte.
@@ -148,6 +184,7 @@ def parse_id666(data: bytes) -> Id666:
         tag.seconds = int.from_bytes(data[0xA9:0xAC], "little") or None
         tag.fade_ms = int.from_bytes(data[0xAC:0xB0], "little") or None
         tag.artist = _text(data, (0xB0, 32))
+        tag.composer_truncated = b"\x00" not in data[0xB0:0xB0 + 32]
     return tag
 
 
