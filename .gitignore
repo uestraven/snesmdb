@@ -10,6 +10,10 @@ data/spc/*
 data/out/*
 !data/out/.gitkeep
 
+# Proof-of-concept scratch corpora (regenerable; derived data).
+data/poc_spc/
+data/poc_out/
+
 __pycache__/
 *.pyc
 .pytest_cache/

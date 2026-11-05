@@ -127,7 +127,39 @@ def brr_sample() -> bytes:
     return bytes([header]) + payload
 
 
-def build(notes: int) -> bytes:
+def _id666(out: bytearray, title: str, game: str, composer: str) -> None:
+    """Write a text-layout ID666 tag.
+
+    The fixture carries a tag so the metadata path -- and the
+    composer-disjoint split built on it -- is testable without real SPCs,
+    whose tags are the only place per-track composer data exists.
+    """
+    def put(offset: int, width: int, text: str) -> None:
+        # The full width is usable. Reserving a byte for a NUL terminator
+        # truncated the fixed-width numeric fields -- "030" seconds became
+        # "03" and "05000" ms fade became "0500" -- because ID666 pads those
+        # with digits, not with a terminator.
+        raw = text.encode("latin-1", "replace")[:width]
+        out[offset : offset + width] = raw + b"\x00" * (width - len(raw))
+
+    out[0x23] = 0x1A if not title else 0x1B  # 0x1B: tag present
+    put(0x2E, 32, title)        # song title
+    put(0x4E, 32, game)         # game title
+    put(0x6E, 16, "snesmdb")    # dumper
+    put(0x7E, 32, "synthetic fixture")
+    put(0x9E, 11, "2026-11-05")  # date, ASCII -> text layout
+    put(0xA9, 3, "030")         # seconds
+    put(0xAC, 5, "05000")       # fade ms
+    put(0xB1, 32, composer)     # artist / composer
+
+
+def build(
+    notes: int,
+    *,
+    title: str = "Synthetic Test Track",
+    game: str = "Synthetic Test Game",
+    composer: str = "snesmdb fixture",
+) -> bytes:
     aram = bytearray(0x10000)
     dsp_regs = bytearray(0x80)
 
@@ -194,6 +226,7 @@ def build(notes: int) -> bytes:
     out[0x29] = 0x00  # Y
     out[0x2A] = 0x00  # PSW
     out[0x2B] = 0xEF  # SP
+    _id666(out, title, game, composer)
     out[ARAM_OFFSET : ARAM_OFFSET + 0x10000] = aram
     out[DSP_OFFSET : DSP_OFFSET + 0x80] = dsp_regs
     return bytes(out)
@@ -203,8 +236,13 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("out", type=Path)
     parser.add_argument("--notes", type=int, default=4)
+    parser.add_argument("--title", default="Synthetic Test Track")
+    parser.add_argument("--game", default="Synthetic Test Game")
+    parser.add_argument("--composer", default="snesmdb fixture")
     args = parser.parse_args()
-    data = build(args.notes)
+    data = build(
+        args.notes, title=args.title, game=args.game, composer=args.composer
+    )
     assert len(data) == SPC_SIZE, len(data)
     args.out.write_bytes(data)
     print(f"wrote {args.out} ({len(data)} bytes, {args.notes} notes)")
