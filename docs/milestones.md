@@ -12,8 +12,8 @@ why the scores arrive progressively rather than all at once.
 | # | milestone | exit criterion | risk |
 |---|---|---|---|
 | 1 | Voice event log | ✅ done | low |
-| 2 | Real SPCs and corpus plumbing | ✅ done — 232 tracks, 5 drivers, splits clean | medium |
-| 3 | Absolute pitch | ⚠️ partial — 83% pitched, ~9% octave-suspect | medium |
+| 2 | Real SPCs and corpus plumbing | ✅ done — **634 tracks, 9 games, splits clean** | medium |
+| 3 | Absolute pitch | ⚠️ partial — **81.8% pitched, 10.4% octave-suspect** | medium |
 | 4 | Grid inference | tracker rows; *separated* and *blended* scores | low |
 | 5 | Timbre vocabulary | a closed codebook; *expressive* score | **high — the research problem** |
 | 6 | Publish | MIDI, all three scores, intake JSON, splits | low |
@@ -54,8 +54,8 @@ achieved; see the gate note below and `src/snesmdb/checks.py`.
 
 **Open dependency, resolved:** per-track composer metadata comes from the
 ID666 tag inside each SPC, not from scraping -- the archive gives composer per
-SET, the tag gives it per TRACK, and it needs no network. All 232 files carry
-one.
+SET, the tag gives it per TRACK, and it needs no network. All 634 files carry
+one, though 207 of them are truncated -- see the expansion note below.
 
 Two data-quality problems it brought with it. One field often credits several
 people ("Masanori Adachi, Taro Kudou"), so the graph links games through
@@ -124,6 +124,102 @@ components and train/valid/test of 168/35/29 (72.4% / 15.1% / 12.5%) against a
 requested 80/10/10 -- coarse, because whole games are indivisible, and
 honestly reported as `fraction_error`. No composer spans a split.
 
+### Corpus expansion before milestone 4
+
+Four games added: **Chrono Trigger, Earthbound, Super Mario World, Super
+Metroid.** 232 tracks → **634**, 23,895 rendered seconds → 51,209.
+
+**Every one extracted, and still zero unhandled registers in any game.** That
+is the milestone 2 claim surviving a 2.7× corpus and four more drivers, which
+is the thing this expansion was for.
+
+| game | driver | trk | pass | notes | notes/s | KON *writes*/s | effective | voices | pitched | octave-suspect |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Final Fantasy VI | AKAO (Square) | 82 | 79 | 149,512 | 13.4 | 204.5 | 2.7% | 7.3 | 80.4% | 5.8% |
+| Zelda: A Link to the Past | N-SPC (Nintendo) | 50 | 48 | 36,507 | 13.2 | 364.9 | 1.6% | 5.4 | 87.8% | 14.5% |
+| Super Castlevania IV | Konami | 36 | 36 | 55,823 | 14.1 | 249.6 | 2.9% | 6.1 | 94.6% | 15.3% |
+| Mega Man X | Capcom | 35 | 35 | 57,612 | 26.3 | 62.5 | 16.7% | 7.9 | 71.1% | 9.8% |
+| Donkey Kong Country | Rare | 29 | 29 | 80,367 | 21.0 | 21.0 | **100.0%** | 7.4 | 86.2% | 5.3% |
+| **Chrono Trigger** | AKAO (Square) | 92 | 86 | 117,153 | 13.5 | 190.0 | 2.9% | 6.4 | 72.0% | 12.2% |
+| **Earthbound** | N-SPC derivative (Ape/HAL) | 206 | 204 | 155,212 | 13.8 | 307.3 | 2.1% | 6.7 | 85.4% | 13.5% |
+| **Super Mario World** | N-SPC (Nintendo) | 66 | 62 | 70,142 | 21.7 | 90.7 | 10.5% | 5.6 | 80.4% | 14.5% |
+| **Super Metroid** | Nintendo R&D1 | 38 | 36 | 28,439 | **7.0** | **471.1** | **0.8%** | 5.3 | 90.6% | **0.7%** |
+| | | **634** | **615** | **750,767** | 14.7 | 231.2 | 3.2% | 6.5 | 81.8% | 10.4% |
+
+Driver attribution is by published knowledge of each game, not detected by the
+extractor; the numbers either side of it are measured.
+
+**The note-density claim is now wrong and worth correcting rather than
+quietly dropping.** Milestone 2 concluded that "note density is the thing that
+does NOT vary... between 13.2 and 26.3 across every family", on five games.
+Super Metroid comes in at **7.0 notes/s — half the old floor** — so the range
+is 7.0 to 26.3 and the generalisation does not hold. The music is the
+explanation: Super Metroid is sparse and atmospheric by design. Which is the
+point. Note density tracks *idiom*, not driver verbosity, and five games were
+not enough to see an idiom that far from the others.
+
+**Super Metroid is also the new chatter record, and the cleanest pitch.** 471.1
+KON writes/s at 0.8% effective beats Zelda's 364.9 at 1.6%, so the spread in
+how much register activity means anything is now 125× rather than 62×. And its
+octave-suspect rate is **0.7%**, against 15.3% for Castlevania — twenty times
+better than the worst, on the chattiest driver in the corpus. Write rate
+predicts neither note density nor pitch quality.
+
+**Splits got better, which is the one thing corpus size reliably buys.** 7
+components, train/valid/test 496/67/71 = **78.2 / 10.6 / 11.2%** against a
+requested 80/10/10. Fraction error fell from −7.6/+5.1/+2.5 points to
+**−1.8/+0.6/+1.2**. Still composer-disjoint with no leaks.
+
+**Two composers merged four games into two components**, exactly as the warning
+below predicts: Nobuo Uematsu links Final Fantasy VI and Chrono Trigger (174
+tracks), Koji Kondo links Zelda and Super Mario World (116). So nine games give
+seven components, not nine, and the two largest are 206 (Earthbound alone) and
+174. Adding another Square or Nintendo title buys corpus but not split
+granularity.
+
+**What the splits do NOT guarantee, and a reader would assume they do.** They
+are composer-disjoint; they are not driver-balanced. The assignment put every
+AKAO and every N-SPC-family track in **train**, leaving valid = {DKC, Super
+Metroid} and test = {Mega Man X, Castlevania IV}. So two of the five driver
+families appear in training only. Nothing is wrong with the splitter — a
+property it never promised — but any milestone 4+ result measured on valid or
+test is measured on Rare, Nintendo R&D1, Capcom and Konami, and never on the
+two families that supply 70% of the notes. Worth knowing before grid inference
+is tuned.
+
+**Earthbound makes the composer tag a real problem rather than a noted one.**
+All **206** of its tracks carry a truncated credit — `Akio Ohmori, Ritsuo
+Kamimura, Ke` fills the 32-byte field with no terminator — so a third
+contributor is unrecoverable on 32.5% of the corpus. Truncated tracks went from
+1 to 207. Disjointness still passes, but for Earthbound it passes on the names
+that happened to fit, which is precisely the technicality the milestone 2 note
+warns about. If the hidden credit is shared with another game in the corpus,
+nothing here would detect it.
+
+**Failures: 19 of 634 (3.0%), up from 5 of 232 (2.2%), and 17 are the same
+known cause** — an SPC is a snapshot, so a track already sounding and never
+re-keyed has `n_kon_effective` of 0 and the notes model cannot represent it.
+Chrono Trigger contributes 6 (Time Vortex, Strong Wind, Blackbird (Outside),
+Ozzie Scream, plus Rain and Flowing Water and Fall of Zeal with 1-2 notes),
+Earthbound 2 (Ambush!, Giygas' Static), Super Mario World 3, Super Metroid 2.
+Every one is a drone, a jingle or an effect.
+
+**One genuinely new failure mode.** `writes_span_render` fired for the first
+time, on Super Mario World's *Nintendo Logo* and *Peach's Item*: writes span
+0.402 s of a 1 s render and 0.968 s of a 2 s render. Both are sub-second
+jingles whose ID666 length rounds up to a whole second, so the check's
+expectation that register writes cover the window is simply wrong for them. The
+extraction is correct and the check is mis-scoped for tracks shorter than its
+resolution — a threshold question, not a bug, and the first time the corpus has
+contained anything short enough to ask it.
+
+**Pitch got slightly worse, as an unresolved octave problem should.** 81.8%
+pitched (was 83%) and 10.4% of pitched notes outside MIDI 12-108 (was 8.7%),
+over 2,466 of 3,105 per-track sample slots yielding a fundamental (79.4%).
+Chrono Trigger at 72.0% pitched now ties Mega Man X for the worst coverage.
+Milestone 3 stays partial, and the extra data moved it the wrong way rather
+than averaging the problem out.
+
 ### Why a game is the unit of assignment, not a composer
 
 Composer-disjointness alone would permit splitting one game across splits:
@@ -151,12 +247,19 @@ fundamental directly.
   rather than given a confident wrong number
 - emit a per-sample confidence, so downstream work can filter
 
-**Exit: partially met.** 315,349 of 379,821 notes (83%) carry a note number;
-373 of 500 distinct samples (75%) yield a usable fundamental, the rest being
-percussion and noise as expected. But **8.7% of pitched notes land outside
-MIDI 12-108**, which is the signature of a residual octave error: two
-estimators can agree and both still be an octave out. Treat `midi_note` as
-usable in bulk and unreliable per note; `pitch_confidence` is on every note.
+**Exit: partially met.** On the nine-game corpus, 614,474 of 750,767 notes
+(81.8%) carry a note number, and 2,466 of 3,105 per-track sample slots (79.4%)
+yield a usable fundamental, the rest being percussion and noise as expected.
+But **10.4% of pitched notes land outside MIDI 12-108**, which is the signature
+of a residual octave error: two estimators can agree and both still be an
+octave out. Treat `midi_note` as usable in bulk and unreliable per note;
+`pitch_confidence` is on every note.
+
+Per game the octave-suspect rate runs from **0.7% (Super Metroid) to 15.3%
+(Super Castlevania IV)** — a 22× spread that the five-game corpus understated
+as 5.3-15.3%. On the five original games it was 83% pitched and 8.7% suspect;
+adding four games moved both the wrong way, so the problem is not averaging
+out with scale.
 
 ### What this milestone actually established
 
