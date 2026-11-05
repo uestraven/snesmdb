@@ -181,7 +181,9 @@ register is exactly what fails to transfer.
 
 ## MIDI drops things, and names them
 
-Only notes with a recovered pitch appear — 81.8% of the corpus. No General MIDI
+Only notes with a recovered pitch appear — 1,465,863 of 1,863,499 notes are
+written and 382,544 dropped, across 1,252 of the 1,316 tracks (a track with no
+pitched note at all gets no file). No General MIDI
 program is set, because sample identity does not transfer and a program number
 would be fabricated. Channel 9 is never used, so nothing is implicitly a drum.
 **Phase inversion is lost**: a negative side volume inverts that side's phase

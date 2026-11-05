@@ -599,6 +599,33 @@ the open instrument vocabulary the milestone set out to build.
 timbre axis, validated on held-out games against a null. **What is not**: a
 5-class instrument codebook presented as cross-game meaningful.
 
+### Refitting on corrected pitch made the register axis worse, not better
+
+Milestone 3's octave fix changed `median_midi` for a large share of samples,
+which is one of the three usage axes this validation turns on, so the codebook
+was refitted and the tests re-run. A reader would reasonably expect cleaner
+pitch to help. It did the opposite on the axis that matters:
+
+| test 2, cross-game agreement *(lower is better)* | before the pitch fix | after |
+|---|---|---|
+| median register, real | 0.526 | **0.546** |
+| median register, shuffled null | 0.554 | **0.505** |
+| verdict | marginally better than null | **worse than null** |
+
+Duration and pitchedness are unchanged (0.255 against 0.328, and 0.509 against
+0.552), and held-out transfer is unchanged too: register 0.444 SD, duration
+0.202 SD, pitchedness 0.0 SD.
+
+So the earlier marginal "slightly better than chance" on register was partly an
+artifact of the octave errors themselves. Samples sharing an octave error
+clustered together and their registers agreed for that reason. With the pitch
+corrected the register signal is gone outright, and the codebook now agrees
+across games *less* well than random labels do.
+
+This strengthens the negative rather than changing it, and it belongs on
+record: fixing an upstream milestone made a downstream result worse, because
+the downstream result had been partly measuring the upstream error.
+
 ### A circular result, caught by its own null
 
 The first run reported separation of **426 against a null of 0.18** and a
