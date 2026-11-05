@@ -32,9 +32,20 @@ from snesmdb import splits as splits_mod  # noqa: E402
 from snesmdb.spcfile import SpcError, load  # noqa: E402
 from snesmdb import brr, pitch  # noqa: E402
 from snesmdb.checks import audio_peak, run as run_checks  # noqa: E402
+from snesmdb import grid as grid_mod, scores as scores_mod, tick as tick_mod  # noqa: E402
 from snesmdb.voices import extract, read_log  # noqa: E402
 
 BINARY = Path(__file__).resolve().parent.parent / "build" / "spc_dump"
+
+
+def _median(values: list[float]) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    mid = len(ordered) // 2
+    if len(ordered) % 2:
+        return float(ordered[mid])
+    return (ordered[mid - 1] + ordered[mid]) / 2.0
 
 
 def _track_id(path: Path, sha: str) -> str:
@@ -168,6 +179,70 @@ def process(args: tuple[str, float, bool, str]) -> dict[str, Any]:
                 if f.confidence in ("high", "medium")
             ),
         }
+
+        # Milestone 4: the row grid, then the two timbre-free scores.
+        #
+        # The driver's tick period is nowhere in the SPC, so it is recovered
+        # from the spacing of the key-ons themselves. A track whose onsets do
+        # not lie on one period gets `found: false` and a reason rather than a
+        # fabricated tempo -- a wrong grid would silently quantise the whole
+        # score onto the wrong lattice.
+        render_ticks = int(seconds * grid_mod.TICKS_PER_SECOND)
+        onsets = grid_mod.onsets_from_notes(notes_out)
+
+        # The driver's timer, from the write cadence rather than from key-ons.
+        # This is the correction the first attempt needed: onsets are sparse
+        # and gave 5.4 rows/s for Zelda against a real 62.5 Hz tick, wrong by
+        # 11.6x. All DSP writes are one to two orders of magnitude denser and
+        # carry the timer directly.
+        driver_tick = tick_mod.infer(w["t"] for w in read_log(log))
+        row["tick"] = driver_tick.to_dict()
+
+        track_grid = grid_mod.infer(onsets, render_ticks=render_ticks)
+        if track_grid.found and driver_tick.found:
+            # Where the tick is trustworthy it is the better measurement, so
+            # the row becomes a whole number of ticks -- then re-fitted, and
+            # the snap is kept only if the grid still describes the music at
+            # least as well.
+            before_fit = track_grid.fit
+            before_period = track_grid.period_ticks
+            snapped = grid_mod.refit(
+                grid_mod.snap_to_tick(track_grid, driver_tick.period_ticks),
+                onsets, render_ticks,
+            )
+            if snapped.fit + 1e-9 < before_fit:
+                snapped.period_ticks = before_period
+                snapped.snapped_to_tick = False
+                track_grid = grid_mod.refit(snapped, onsets, render_ticks)
+            else:
+                track_grid = snapped
+        row["grid"] = track_grid.to_dict()
+        # Was the onset grid consistent with the tick before snapping? The
+        # ratio is the diagnostic that exposed the original error.
+        row["grid"]["onset_grid_over_tick"] = (
+            round(row["grid"]["period_ticks"] / driver_tick.period_ticks, 3)
+            if driver_tick.found and driver_tick.period_ticks else None
+        )
+
+        track_scores = scores_mod.build(notes_out, track_grid, render_ticks)
+        row["scores"] = track_scores.stats()
+        if track_grid.found and track_scores.n_rows:
+            scores_dir = out_dir / "scores"
+            scores_dir.mkdir(parents=True, exist_ok=True)
+            stem_scores = row["track_id"].replace(":", "_")
+            score_path = scores_dir / f"{stem_scores}.json.gz"
+            with gzip.open(score_path, "wt", encoding="utf-8") as handle:
+                json.dump(
+                    {
+                        "track_id": row["track_id"],
+                        "grid": row["grid"],
+                        **track_scores.to_dict(),
+                    },
+                    handle,
+                    separators=(",", ":"),
+                )
+            row["scores_path"] = f"scores/{score_path.name}"
+            row["scores_bytes"] = score_path.stat().st_size
 
         peak: int | None = None
         try:
@@ -325,6 +400,17 @@ def main() -> None:
     for row in good:
         for name in row.get("checks", {}).get("failed", []):
             failures_by_check[name] = failures_by_check.get(name, 0) + 1
+
+    # Why a grid was refused, counted. The reason strings carry the offending
+    # numbers after a semicolon, so they are grouped on the part before it.
+    grid_reasons: dict[str, int] = {}
+    for row in good:
+        info = row.get("grid", {})
+        if info.get("found"):
+            continue
+        reason = info.get("reason", "?").split(";")[0]
+        grid_reasons[reason] = grid_reasons.get(reason, 0) + 1
+    grid_reasons = dict(sorted(grid_reasons.items(), key=lambda kv: -kv[1]))
     summary = {
         "n_sources": len(sources),
         "n_extracted": len(good),
@@ -348,6 +434,65 @@ def main() -> None:
             1 for r in good if r.get("checks", {}).get("ok")
         ),
         "check_failures": dict(sorted(failures_by_check.items())),
+        # Milestone 4. A grid is reported per track with its fit, so the
+        # corpus says how much of itself it has a tempo for rather than
+        # claiming one everywhere.
+        "grid": {
+            "n_found": sum(1 for r in good if r.get("grid", {}).get("found")),
+            "n_not_found": sum(
+                1 for r in good if not r.get("grid", {}).get("found")
+            ),
+            "reasons": grid_reasons,
+            "median_fit": round(_median([
+                r["grid"]["fit"] for r in good if r.get("grid", {}).get("found")
+            ]), 4),
+            "median_rows_per_second": round(_median([
+                r["grid"]["rows_per_second"]
+                for r in good if r.get("grid", {}).get("found")
+            ]), 3),
+            "median_residual_fraction": round(_median([
+                r["grid"]["median_abs_residual_fraction"]
+                for r in good if r.get("grid", {}).get("found")
+            ]), 4),
+        },
+        "tick": {
+            "n_found": sum(1 for r in good if r.get("tick", {}).get("found")),
+            "median_hz": round(_median([
+                r["tick"]["hz"] for r in good if r.get("tick", {}).get("found")
+            ]), 2),
+            "median_sharpness": round(_median([
+                r["tick"]["sharpness"] for r in good if r.get("tick", {}).get("found")
+            ]), 3),
+            # A tick is a property of the DRIVER, so every track in a game
+            # should report the same one. The count of distinct values per game
+            # is the real check on whether this is measuring the driver or
+            # fitting noise, and it goes in the summary rather than being
+            # left for a reader to work out.
+            "distinct_hz_per_game": {},
+        },
+        "scores": {
+            "n_tracks": sum(1 for r in good if r.get("scores_path")),
+            "n_rows_total": sum(r.get("scores", {}).get("n_rows", 0) for r in good),
+            "n_notes_represented": sum(
+                r.get("scores", {}).get("n_notes_represented", 0) for r in good
+            ),
+            "n_notes_unpitched": sum(
+                r.get("scores", {}).get("n_notes_unpitched", 0) for r in good
+            ),
+            "n_notes_out_of_range": sum(
+                r.get("scores", {}).get("n_notes_out_of_range", 0) for r in good
+            ),
+            "n_notes_snapped": sum(
+                r.get("scores", {}).get("n_notes_snapped", 0) for r in good
+            ),
+            "n_notes_unplaced": sum(
+                r.get("scores", {}).get("n_notes_unplaced", 0) for r in good
+            ),
+            "max_polyphony": max(
+                (r.get("scores", {}).get("max_polyphony", 0) for r in good),
+                default=0,
+            ),
+        },
         "splits": assigned.report(),
         "composer_leaks": leaks,
         # Names cut off at ID666's 32-byte limit: the last credit in such a
@@ -360,6 +505,18 @@ def main() -> None:
         # fewer composer components than splits; a real finding on a large one.
         "empty_splits": empty,
     }
+    per_game: dict[str, set[float]] = {}
+    for row in good:
+        info = row.get("tick", {})
+        if not info.get("found"):
+            continue
+        name = row["tag"]["game"] or "?"
+        per_game.setdefault(name, set()).add(round(info["hz"], 1))
+    summary["tick"]["distinct_hz_per_game"] = {
+        name: {"n_distinct": len(values), "hz": sorted(values)[:6]}
+        for name, values in sorted(per_game.items())
+    }
+
     (args.out_dir / "splits.json").write_text(
         json.dumps({"assignment": assigned.assignment, **assigned.report()}, indent=1)
     )

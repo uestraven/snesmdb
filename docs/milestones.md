@@ -12,9 +12,9 @@ why the scores arrive progressively rather than all at once.
 | # | milestone | exit criterion | risk |
 |---|---|---|---|
 | 1 | Voice event log | ✅ done | low |
-| 2 | Real SPCs and corpus plumbing | ✅ done — **634 tracks, 9 games, splits clean** | medium |
+| 2 | Real SPCs and corpus plumbing | ✅ done — **1,316 tracks, 22 games, splits within 0.3 points** | medium |
 | 3 | Absolute pitch | ⚠️ partial — **81.8% pitched, 10.4% octave-suspect** | medium |
-| 4 | Grid inference | tracker rows; *separated* and *blended* scores | low |
+| 4 | Grid inference | ⚠️ partial — rows + both scores on 866 tracks; the driver tick is **not** in the key-ons | low → medium |
 | 5 | Timbre vocabulary | a closed codebook; *expressive* score | **high — the research problem** |
 | 6 | Publish | MIDI, all three scores, intake JSON, splits | low |
 
@@ -315,6 +315,167 @@ are expressible — they need no timbre.
 
 **Exit:** a tempo and row grid per track with a goodness-of-fit measure, and
 the two timbre-free score formats emitted.
+
+### Exit: met for the scores, and the premise above is wrong
+
+**866 of 1,316 tracks (65.8%) carry a row grid** with a fit measure, median fit
+0.96 and a median timing residual of 2.5% of a row, and **both score formats
+are emitted** for every one of them. That is the exit criterion.
+
+**But the sentence this milestone was planned around does not hold on this
+hardware.** "The driver's tick period falls out as the dominant spacing of
+key-ons" is true on the NES because music there advances on a universal
+60.0988 Hz frame, so onsets and frames coincide. Measured here:
+
+| | onset grid | real tick | out by |
+|---|---|---|---|
+| Zelda: A Link to the Past | 5.4 rows/s | 62.5 Hz | **11.6×** |
+| Final Fantasy VI | 11.0 rows/s | 205.4 Hz | **18.7×** |
+| Donkey Kong Country | 80.0 rows/s | 80.1 Hz | 1.00× |
+
+Only DKC agrees, and for a reason the corpus already recorded: Rare's driver
+writes KON only when it means a note, at 100% effective, so its music
+exercises every tick. Every other driver keys on far more sparsely than it
+ticks, and what the onset histogram then recovers is the music's own
+phrasing — a perfectly real grid, but not the hardware's.
+
+So two quantities are now reported, separately, each with its own confidence,
+because conflating them is what produced the error above.
+
+### The tick is in the write cadence, not the key-ons
+
+A driver runs its music engine on a timer and writes a **burst of registers**
+every time that timer fires, whether or not a note starts. That cadence is one
+to two orders of magnitude denser than the key-ons, and it carries the timer
+directly. The clean modes over 1,316 tracks:
+
+| ticks | tracks | Hz | driver |
+|---|---|---|---|
+| 4,992 | 58 | 205.1 | AKAO — Final Fantasy VI |
+| 5,376 | 48 | 190.5 | AKAO — Chrono Trigger |
+| **16,384 = 2¹⁴** | 60 | **62.5** | Capcom — Mega Man X, Breath of Fire II |
+| 12,800 | 38 | 80.0 | Rare — DKC, DKC2, Plok! |
+| 4,609 | 15 | 222.2 | AKAO — Secret of Mana |
+
+2¹⁴ ticks for 62.5 Hz is the kind of number a driver author actually writes.
+
+**The honest validator is not the confidence score, it is whether every track
+in a game reports the same tick** — a timer is a property of the driver, not
+of the song. By that test:
+
+| trustworthy | tracks | Hz | distinct values |
+|---|---|---|---|
+| Final Fantasy VI | 59/82 | 205.1 | **1** |
+| Mega Man X | 34/35 | 62.5 | **1** |
+| Breath of Fire II | 44/56 | 62.5 | 2 |
+| Chrono Trigger | 58/92 | 190.5 | 3 |
+| Donkey Kong Country | 10/29 | 80.0 | 4 |
+
+| not trustworthy | tracks | Hz | distinct values |
+|---|---|---|---|
+| Tales of Phantasia | 52/77 | 39.6 | **36 — every track differs** |
+| Star Ocean | 54/66 | 46.5 | **32** |
+| Lufia II | 38/63 | 88.9 | 15 |
+| DKC2 | 64/109 | 80.0 | 15 (while DKC itself gives 4) |
+
+**519 of 1,316 tracks (39.4%) report a tick, and it is believable for four or
+five of twenty-two drivers.** That is the state, and it is why this milestone
+is partial rather than done.
+
+**One artifact, named so it can be fixed.** Twenty tracks across six unrelated
+games report exactly 2,048 ticks (500 Hz) — and 19 of those 20 came from the
+narrowest burst window, 64 ticks. 2,048 is not a timer; it is the spacing of
+writes *within* one burst, picked up as if it were the cadence. Six different
+drivers do not share a 500 Hz rate. That is the first thing to look at.
+
+### Three bugs, two of which only real data could show
+
+**A chord is not simultaneous in the write log.** Drivers key-on a chord's
+voices one after another — DKC staggers them 471 to 1,200 ticks apart — so an
+eight-voice chord contributes seven tiny intervals and one musical one and the
+histogram is swamped 7:1 by the driver's write order. DKC's *Theme* gave 3,201
+notes, 3,201 distinct onset times and a commonest interval of 631 ticks: 1,600
+rows a second, which is not a tempo. Clustering onsets first took DKC from
+16/29 grids to 28/29. The clustering window is chosen per track from an
+ascending ladder so no track is collapsed more than its data requires.
+
+**Maximum polyphony of nine, on eight-voice hardware.** Two causes. A note
+still sounding when the render window closes has `end: null`, and reading that
+as "sounds to the end of the track" made it overlap every later note on its own
+voice. And the blended score was accumulated alongside the separated grid
+rather than derived from it, so one voice could contribute two numbers to one
+row. Blended is now derived from separated, which makes more than eight
+arithmetically impossible, and collisions are counted rather than hidden.
+
+**A split burst passes as the tick, perfectly.** A burst window narrower than
+the spacing *within* a burst makes every write its own burst, so the only
+surviving gap is from the last write of one burst to the first of the next —
+the period minus the burst span. It is exactly regular, so the burst-gap
+statistic scored it 1.0 and read a 4,993-tick timer as 4,393. Replaced with the
+circular concentration of write phases over all write times, which no choice of
+window can flatter: a period wrong by one per cent makes the phase precess and
+the statistic collapse.
+
+### Two limits that are properties of the problem, not of the code
+
+**A sub-multiple can be indistinguishable from the tick.** When a driver
+spreads its writes evenly across its tick — three writes 1,500 ticks apart
+inside a 6,000-tick timer — both periods put every write at the same phase, and
+no statistic over write times alone separates them. The module reports the
+sub-multiple, and a consumer reading four times the true rate for such a driver
+is reading the data correctly.
+
+**The confidence threshold is bounded by the driver's write style.** Writes
+spread uniformly across a fraction *f* of the period give a concentration of
+sinc(π*f*), so a driver whose burst occupies 60% of its tick cannot exceed 0.50
+however real its timer is. The threshold is 0.25 for that reason rather than by
+preference, which admits bursts up to about 75% of a tick. Confidence here
+measures *regularity*, not correctness: DKC's 80.0 Hz is right and scores 0.88,
+while Mega Man X's equally right 62.5 Hz scores 0.36.
+
+### The two scores
+
+**separated** — one row-indexed track per DSP voice, cells holding a MIDI note
+or 0. The analogue of NES-MDB's `sepsco`, with the honest caveat that on the
+NES track 0 is always pulse 1, whereas here voice 0 is whatever the driver
+assigned it to. Voice *role* is milestone 5.
+
+**blended** — one row-indexed list of the distinct notes sounding, voice
+identity discarded. NES-MDB's `blndsco`, and immune to the voice-assignment
+problem above, which makes it the more comparable of the two today.
+
+Over 866 tracks: **1,926,961 rows, 849,956 notes placed**, maximum polyphony 8.
+What the formats cannot say is counted rather than dropped: **211,375 unpitched
+notes** (percussion, noise, or no recoverable fundamental), **1,589 pitches
+outside MIDI 1–127** (octave errors showing through), **32 unplaceable**, and
+**109,055 snapped** — notes shorter than one row, whose onset the grid moved.
+
+**That last number is the score-quality figure and it is driver-dependent**:
+2.2% for Plok!, 3.9% for DKC, against **32.4% for Kirby Super Star**, 21.8% for
+Final Fantasy VI and 21.6% for Secret of Mana. A grid that moves one onset in
+three is describing the music coarsely, and the games where it happens are
+exactly the ones whose onset grid is far from their tick. Snapping and the
+onset/tick gap are the same problem seen twice.
+
+Where both were found and snapping did not worsen the fit, **114 row grids were
+rounded to a whole number of driver ticks**; 50 of those came out at exactly
+one tick per row.
+
+### What the corpus looks like now
+
+**1,316 tracks, 22 games, 1,863,499 notes, 109,263 rendered seconds, and still
+zero unhandled DSP registers in any game** — the driver-agnostic claim holding
+across twelve more families than it was first tested on, including Chunsoft,
+HAL, tri-Ace, Namco and Factor 5. 1,292 of 1,316 pass every structural check.
+
+**The splits are now effectively exact.** 16 components, train/valid/test
+1,049/135/132 = **79.71 / 10.26 / 10.03%** against a requested 80/10/10 —
+fraction error **−0.29 / +0.26 / +0.03 points**, from −7.6/+5.1/+2.5 at five
+games. Composer-disjoint, no leaks. This is what corpus size buys, and it is
+the one thing it reliably buys.
+
+Truncated composer credits are at **242 of 1,316 (18.4%)**, down as a share
+from 28.5% at twelve games but still concentrated in Earthbound's 206.
 
 ## 5. Timbre vocabulary — the research problem
 
