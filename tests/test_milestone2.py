@@ -55,14 +55,31 @@ def test_fixed_width_numeric_fields_are_not_truncated(tmp_path) -> None:
     assert tag.fade_ms == 5000, tag.to_dict()
 
 
-def test_a_missing_tag_is_reported_as_absent_not_as_empty_strings() -> None:
-    """Header byte 0x23 == 0x1A means no tag. That is different from a tag
-    that was present and unreadable, and the corpus should not conflate them."""
-    data = bytearray(b"SNES-SPC700 Sound File Data v0.30".ljust(0x100, b"\x00"))
-    data[0x23] = 0x1A
-    tag = parse_id666(bytes(data))
+def test_the_tag_presence_flag_follows_the_spc_spec_not_our_guess() -> None:
+    """0x23 == 26 (0x1A) means the header CONTAINS ID666 info; 27 (0x1B)
+    means it does not.
+
+    This was implemented inverted, with the fixture generator inverted to
+    match, so the suite was green while all 82 real Final Fantasy VI tracks
+    reported no tag at all -- despite carrying "Nobuo Uematsu" at 0xB1. The
+    assertions here are on raw bytes so the fixture cannot agree with the bug
+    again.
+    """
+    base = bytearray(b"SNES-SPC700 Sound File Data v0.30".ljust(0x100, b"\x00"))
+    base[0x2E : 0x2E + 5] = b"Title"
+    base[0xB1 : 0xB1 + 8] = b"Composer"
+
+    present = bytearray(base)
+    present[0x23] = 0x1A
+    tag = parse_id666(bytes(present))
+    assert tag.layout == "text", tag.layout_reason
+    assert tag.title == "Title" and tag.composer == "Composer"
+
+    absent = bytearray(base)
+    absent[0x23] = 0x1B
+    tag = parse_id666(bytes(absent))
     assert tag.layout == "unknown"
-    assert "no ID666" in tag.layout_reason
+    assert tag.title == "" and tag.composer == ""
 
 
 def test_a_non_spc_file_is_rejected(tmp_path) -> None:

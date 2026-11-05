@@ -108,8 +108,16 @@ def parse_id666(data: bytes) -> Id666:
         tag.layout_reason = "file too short to contain a tag"
         return tag
 
-    if data[0x23] == 0x1A:
-        tag.layout_reason = "header says no ID666 tag present"
+    # Header byte 0x23: 26 (0x1A) means the header CONTAINS ID666 information,
+    # 27 (0x1B) means it does not. This was implemented inverted, and the
+    # synthetic fixture was written with the same inverted convention, so the
+    # whole suite passed while every real SPC reported "no tag" -- all 82
+    # Final Fantasy VI tracks came back with empty game and composer despite
+    # carrying "Nobuo Uematsu" at 0xB1. A test fixture that agrees with the
+    # bug proves nothing; see tests/test_milestone2.py for the byte-level
+    # assertions that now pin the real convention.
+    if data[0x23] != 0x1A:
+        tag.layout_reason = f"header byte 0x23 is {data[0x23]:#04x}, not 0x1a"
         return tag
 
     tag.title = _text(data, _TITLE)

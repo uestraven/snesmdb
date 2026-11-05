@@ -142,7 +142,10 @@ def _id666(out: bytearray, title: str, game: str, composer: str) -> None:
         raw = text.encode("latin-1", "replace")[:width]
         out[offset : offset + width] = raw + b"\x00" * (width - len(raw))
 
-    out[0x23] = 0x1A if not title else 0x1B  # 0x1B: tag present
+    # 0x1A means the header CONTAINS ID666 info; 0x1B means it does not.
+    # This generator had it inverted, matching an inverted parser, so the
+    # fixture and the bug agreed and the suite stayed green.
+    out[0x23] = 0x1A if title else 0x1B
     put(0x2E, 32, title)        # song title
     put(0x4E, 32, game)         # game title
     put(0x6E, 16, "snesmdb")    # dumper
