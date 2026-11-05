@@ -4,6 +4,15 @@ Milestone 4. With pitch (3) and the grid (4) in hand, two of NES-MDB's score
 formats are expressible without touching timbre -- which matters, because
 timbre is milestone 5 and the research risk. These two do not wait on it.
 
+**expressive** -- one row-indexed track per DSP voice, each cell a triple of
+(note, velocity, timbre class). NES-MDB's `exprsco`. The timbre axis is the
+codebook class from milestone 5, and it carries that milestone's limitation
+with it: only the binary tonal/percussive split was shown to transfer across
+games, so `timbre_validated` on the score says which claim the consumer may
+rely on. Emitting the finer class anyway is the honest choice -- it is real
+information about this corpus even where it is not cross-game meaning -- but it
+must not be presented as an alphabet.
+
 **separated** -- one row-indexed track per DSP voice, each cell a MIDI note
 number or 0 for silence. Voice identity is kept. The SNES analogue of
 NES-MDB's `sepsco`, with 8 generic voices in place of 4 fixed channels, and
@@ -15,8 +24,8 @@ milestone 5.
 identity discarded. NES-MDB's `blndsco`. Immune to the voice-assignment
 problem above, which makes it the more comparable of the two today.
 
-Neither carries velocity, timbre or envelope: that is what "timbre-free" means
-here, and it is a deliberate reduction, not an omission to fix later. The full
+`separated` and `blended` carry no velocity, timbre or envelope: that is what
+"timbre-free" means here, and it is a deliberate reduction, not an omission to fix later. The full
 note list stays in the record for anything that needs more.
 
 What cannot be represented is COUNTED rather than dropped quietly:
@@ -144,6 +153,76 @@ def _clamped_ends(notes: Sequence[dict[str, Any]], last_tick: int) -> dict[int, 
             resolved = int(end) if end is not None else next_start
             ends[index] = max(int(note["start"]), min(resolved, next_start))
     return ends
+
+
+def _velocity(note: dict[str, Any]) -> int:
+    """Per-note loudness, 0..127, from the two signed side volumes.
+
+    Magnitude only: a negative side volume inverts that side's phase, which a
+    scalar velocity cannot express. The loss is recorded in the corpus
+    limitations, and it is not small -- two games invert on over half their
+    notes.
+    """
+    left = abs(int(note.get("volume_left") or 0))
+    right = abs(int(note.get("volume_right") or 0))
+    return max(0, min(127, int(round((left + right) / 2.0))))
+
+
+def expressive(
+    notes: Sequence[dict[str, Any]],
+    grid: Grid,
+    timbre_of: dict[int, int] | None = None,
+    render_ticks: int = 0,
+) -> dict[str, Any]:
+    """The third score format: note, velocity and timbre class per voice-row.
+
+    `timbre_of` maps a sample index (SRCN) to its codebook class. Absent, the
+    timbre axis is written as -1 throughout rather than as a plausible zero,
+    so a missing codebook can never be mistaken for class 0.
+    """
+    base = build(notes, grid, render_ticks)
+    if not base.n_rows:
+        return {
+            "n_rows": 0, "voices": [], "timbre_classes_present": [],
+            "timbre_validated": "tonal_vs_percussive_only",
+        }
+
+    n_rows = base.n_rows
+    voices: list[list[list[int]]] = [
+        [[0, 0, -1] for _ in range(n_rows)] for _ in range(N_VOICES)
+    ]
+    ends = _clamped_ends(notes, render_ticks or max(
+        (int(n["end"]) for n in notes if n.get("end") is not None), default=0
+    ))
+    present: set[int] = set()
+    for index, note in enumerate(notes):
+        number = _note_number(note)
+        if not number:
+            continue
+        voice = int(note["voice"])
+        if not 0 <= voice < N_VOICES:
+            continue
+        velocity = _velocity(note)
+        klass = (timbre_of or {}).get(int(note["srcn"]), -1)
+        present.add(klass)
+        start = int(note["start"])
+        first = max(0, -(-(start - grid.phase_ticks) // grid.period_ticks))
+        last = -(-(ends[index] - grid.phase_ticks) // grid.period_ticks) - 1
+        rows = range(int(first), min(int(last), n_rows - 1) + 1)
+        if not rows:
+            snapped = grid.row_of(start)
+            if not 0 <= snapped < n_rows:
+                continue
+            rows = range(snapped, snapped + 1)
+        for row in rows:
+            voices[voice][row] = [number, velocity, klass]
+    return {
+        "n_rows": n_rows,
+        "voices": voices,
+        "timbre_classes_present": sorted(present),
+        # The claim a consumer may rely on, carried with the data.
+        "timbre_validated": "tonal_vs_percussive_only",
+    }
 
 
 def build(

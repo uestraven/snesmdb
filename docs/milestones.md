@@ -16,7 +16,7 @@ why the scores arrive progressively rather than all at once.
 | 3 | Absolute pitch | ⚠️ partial — **81.8% pitched, 10.4% octave-suspect** | medium |
 | 4 | Grid inference | ⚠️ partial — rows + both scores on 866 tracks; the driver tick is **not** in the key-ons | low → medium |
 | 5 | Timbre vocabulary | ❌ **exit criterion not met** — a transferable 2-class split, not an instrument vocabulary | **high — and it was the risk named** |
-| 6 | Publish | MIDI, all three scores, intake JSON, splits | low |
+| 6 | Publish | ✅ done — **[DATASET.md](DATASET.md)**, three scores, MIDI, intake, splits | low |
 
 ---
 
@@ -606,6 +606,45 @@ to transfer.
 limitations written down.
 
 ---
+
+### Exit: met
+
+**[DATASET.md](DATASET.md)** is the deliverable the exit criterion actually
+names — "a corpus another person could use, with its provenance and its
+limitations written down". Half of it is limitations, because that is the half
+that makes a corpus usable rather than merely available.
+
+`tools/publish.py` assembles the tree: per track the three score formats, an
+8-track MIDI and an intake JSON; once, the splits, the manifest, the codebook
+and the performance figures.
+
+**All three score formats now exist.** `expressive` was blocked on milestone 5
+and ships using the one timbre claim that survived validation — a binary
+tonal/percussive flag — with `timbre_validated:
+"tonal_vs_percussive_only"` carried on every score so a consumer cannot mistake
+class 3 for an instrument. Writing the finer class anyway is deliberate: it is
+real information about this corpus, and the field next to it says how far to
+trust it.
+
+**MIDI claims as little as possible.** No General MIDI program is set, because
+milestone 5 showed sample identity does not transfer and a program number would
+be fabricated. Channel 9 is never used, so nothing is implicitly a drum. The
+one real loss is phase inversion — a negative side volume inverts that side's
+phase and MIDI has no way to say so — and it is not a corner case, since Tales
+of Phantasia inverts on 55.8% of its notes. Every drop is counted per track
+rather than silently absorbed.
+
+**The licensing rule is enforced, not just documented.** `publish.py` refuses
+to write into a git work tree, because the output is derived from SPCs that are
+"educational and personal non-profit use only" and must never be committed. The
+published artifact is derived data plus the tools to rebuild it from files the
+user supplies.
+
+**One thing is explicitly unverified.** The intake tree is `snesmdb.intake.v1`,
+intended for the sibling renderer's `acquire(from_extracted=True)` — which is
+not in this repository and against which it has never been tested. It is
+labelled proposed rather than assumed compatible, in DATASET.md and in the
+schema field itself.
 
 ## Performance conventions — not a milestone, and the point of the corpus
 
