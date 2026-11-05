@@ -15,7 +15,7 @@ why the scores arrive progressively rather than all at once.
 | 2 | Real SPCs and corpus plumbing | ✅ done — **1,316 tracks, 22 games, splits within 0.3 points** | medium |
 | 3 | Absolute pitch | ⚠️ partial — **81.8% pitched, 10.4% octave-suspect** | medium |
 | 4 | Grid inference | ⚠️ partial — rows + both scores on 866 tracks; the driver tick is **not** in the key-ons | low → medium |
-| 5 | Timbre vocabulary | a closed codebook; *expressive* score | **high — the research problem** |
+| 5 | Timbre vocabulary | ❌ **exit criterion not met** — a transferable 2-class split, not an instrument vocabulary | **high — and it was the risk named** |
 | 6 | Publish | MIDI, all three scores, intake JSON, splits | low |
 
 ---
@@ -503,6 +503,95 @@ likely to fail.
 **Why this is high risk:** it is a clustering problem with no ground truth, and
 "strings in Final Fantasy VI and strings in Chrono Trigger are the same class"
 is a claim that has to be demonstrated, not assumed.
+
+### Exit: not met, and the check is why
+
+The deliverables exist. A codebook of **k=5** over **1,162 distinct samples
+from 22 games**, chosen by sweep with its reasoning recorded, per-sample
+assignments emitted, silhouette 0.24. What does not hold is the sanity check,
+and that check was always the milestone.
+
+**How it was tested without labels.** Nobody has labelled these samples, so the
+evidence comes from independence instead. The codebook is fitted only on
+features intrinsic to the decoded waveform — length, loop structure, attack,
+spectral centroid, spread, rolloff, flatness. The check uses only how the
+corpus *plays* each sample — the register, the note length, whether it is ever
+pitched at all. The fit never sees the second set. Each test is run again
+against shuffled labels, because a partition of a correlated feature space will
+always separate *something*.
+
+| test | axis | real | shuffled null | verdict |
+|---|---|---|---|---|
+| 1. separates usage? | unpitched fraction | **63.3** | 0.06 | strong |
+| | median register | **10.7** | 0.90 | modest |
+| | note duration | 0.75 | 0.85 | **no signal** |
+| 2. same meaning across games? *(lower better)* | median register | 0.526 | 0.554 | **at the null** |
+| | note duration | 0.255 | 0.328 | marginal |
+| | unpitched fraction | 0.509 | 0.552 | **at the null** |
+| 3. held-out games | unpitched fraction | **0.0 SD** | — | transfers |
+| | note duration | 0.202 SD | — | transfers |
+| | median register | **0.437 SD** | — | does not |
+
+**Test 2 is the exit criterion and it comes out at the shuffled null.** A class
+does not mean the same thing from game to game by more than a few per cent over
+chance on any axis. The finer structure of the codebook describes each game's
+own sample bank, which is what the design doc feared in as many words.
+
+**Test 3 shows precisely what does and does not carry.** Fitted on the 16
+composer-disjoint train games and applied to 6 unseen ones:
+
+| class | train (16 games) | held out (6 games) |
+|---|---|---|
+| 0 | MIDI 91.1, unpitched 0.0 | MIDI 85.1, unpitched 0.0 |
+| 1 | — , unpitched **1.0** | — , unpitched **1.0** |
+| 2 | MIDI 77.5, unpitched 0.0 | MIDI **61.2**, unpitched 0.0 |
+| 4 | MIDI 72.9, unpitched 0.0 | MIDI 67.5, unpitched 0.0 |
+
+The pitched/unpitched division transfers exactly. Register does not: class 2
+moves **sixteen semitones** between the games the codebook was built from and
+games it had never seen. So spectral features recover *tonal versus
+percussive*, across games, reliably — and that is a **two-value alphabet**, not
+the open instrument vocabulary the milestone set out to build.
+
+**What is defensible to publish**, therefore: a binary `tonal | percussive`
+timbre axis, validated on held-out games against a null. **What is not**: a
+5-class instrument codebook presented as cross-game meaningful.
+
+### A circular result, caught by its own null
+
+The first run reported separation of **426 against a null of 0.18** and a
+perfect 0.0 SD transfer, which looked like a decisive pass. It was leakage:
+`pitched` and `harmonicity` were in the clustering vector, and both depend on
+whether an f0 was recoverable — the same quantity the usage half measures as
+`unpitched_fraction`, since a note receives a MIDI number only when its
+sample's f0 estimate was usable. The answer was on both sides of the
+validation. Removing those two axes took separation from 426 to 63 and the
+cross-game agreement from "clearly better than null" to "at the null".
+
+This is the second time on this project that a result survived three rounds of
+looking right and was killed by a control — the first was milestone 3's
+semitone-grid fit, which a random coarse f0 fitted equally well. The pattern is
+the same both times: a quantity derived from the data appearing on both sides
+of its own test.
+
+### Note duration has no signal at all, and that is a real finding
+
+0.75 against a null of 0.85: the waveform does not predict how long notes made
+with it last, in the corpus or out of it. Note length is a composition choice,
+not a property of the sample — which is worth knowing before any further work
+tries to derive phrasing from instrument identity.
+
+### What this costs the roadmap
+
+`exprsco`, the third score format, needs a timbre axis. A binary one is
+available and honest; a 5-class one is not supported by the evidence. So
+milestone 6 can ship **three** score formats if `expressive` uses the validated
+binary axis, with the limitation stated — or two, if an open vocabulary is held
+to be the requirement.
+
+Voice-role assignment, which this milestone was supposed to subsume, does not
+follow: a role needs register and function, and register is exactly what fails
+to transfer.
 
 ## 6. Publish
 
