@@ -122,8 +122,28 @@ def main() -> None:
         p for p in args.spc_dir.rglob("*")
         if p.suffix.lower() in {".spc"} and p.is_file()
     )
+
+    # Archives are NOT unpacked here, and silently ignoring them is how a
+    # corpus ends up quietly missing most of its input: snesmusic.org ships
+    # sets as .rsn (a renamed RAR), so a directory of downloads can look full
+    # and contain zero usable files. Say so loudly instead.
+    archives = sorted(
+        p for p in args.spc_dir.rglob("*")
+        if p.suffix.lower() in {".rsn", ".rar", ".zip", ".7z"} and p.is_file()
+    )
+    if archives:
+        print(
+            f"warning: {len(archives)} archive(s) found and SKIPPED "
+            f"(e.g. {archives[0].name}). Unpack them to .spc first; see "
+            f"data/spc/README.md.",
+            file=sys.stderr,
+        )
     if not sources:
-        raise SystemExit(f"no .spc files under {args.spc_dir}")
+        raise SystemExit(
+            f"no .spc files under {args.spc_dir}"
+            + (f" (but {len(archives)} archive(s) are present -- unpack them)"
+               if archives else "")
+        )
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     records_dir = args.out_dir / "records"
