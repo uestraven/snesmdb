@@ -20,3 +20,8 @@ __pycache__/
 *.wav
 *.jsonl
 *.aram
+
+# Extraction output and logs (derived, regenerable).
+data/out/
+data/extract.log
+data/fixture/

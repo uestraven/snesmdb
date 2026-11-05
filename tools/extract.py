@@ -19,6 +19,8 @@ import argparse
 import json
 import subprocess
 import sys
+import gzip
+import shutil
 import tempfile
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -28,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from snesmdb import splits as splits_mod  # noqa: E402
 from snesmdb.spcfile import SpcError, load  # noqa: E402
-from snesmdb.validate import validate_wav  # noqa: E402
+from snesmdb.checks import audio_peak, run as run_checks  # noqa: E402
 from snesmdb.voices import extract, read_log  # noqa: E402
 
 BINARY = Path(__file__).resolve().parent.parent / "build" / "spc_dump"
@@ -38,9 +40,10 @@ def _track_id(path: Path, sha: str) -> str:
     return f"{path.stem}:{sha[:12]}"
 
 
-def process(args: tuple[str, float, bool]) -> dict[str, Any]:
+def process(args: tuple[str, float, bool, str]) -> dict[str, Any]:
     """Extract one SPC. Returns a manifest row, successful or not."""
-    path_str, seconds, keep_wav = args
+    path_str, seconds, want_audio, out_dir_str, max_seconds = args
+    out_dir = Path(out_dir_str)
     path = Path(path_str)
     row: dict[str, Any] = {"source": path.name, "ok": False}
 
@@ -49,6 +52,19 @@ def process(args: tuple[str, float, bool]) -> dict[str, Any]:
     except (SpcError, OSError) as error:
         row["error"] = f"load: {error}"
         return row
+
+    # Render for the track's OWN length, from the ID666 "seconds to play"
+    # field, rather than a flat window. A fixed 60 s both over-rendered a
+    # 9-second fragment and captured 8.8% of the 683-second "Dancing Mad
+    # (Full)" -- 68 of Final Fantasy VI's 82 tracks are longer than 60 s, so a
+    # flat window silently truncated most of the corpus.
+    if seconds <= 0:
+        tagged = spc.tag.seconds or 0
+        seconds = float(min(tagged, max_seconds)) if tagged else 180.0
+        row["render_source"] = "id666" if tagged else "default"
+    else:
+        row["render_source"] = "requested"
+    row["render_seconds"] = seconds
 
     row.update(
         {
@@ -88,16 +104,35 @@ def process(args: tuple[str, float, bool]) -> dict[str, Any]:
         row["summary"] = result_extract.summary()
         row["notes"] = [note.to_dict() for note in result_extract.notes]
 
+        peak: int | None = None
         try:
-            validation = validate_wav(
-                [n.start for n in result_extract.notes], wav
-            )
-            row["validation"] = validation.to_dict()
+            peak = audio_peak(wav)
         except (ValueError, OSError) as error:
-            row["validation"] = {"error": str(error)}
+            row["audio_error"] = str(error)
+        row["checks"] = run_checks(
+            result_extract, render_seconds=seconds, peak=peak
+        ).to_dict()
 
-        if keep_wav:
-            row["wav_bytes"] = wav.stat().st_size
+        # The reference artifact, and the analogue of NES-MDB's raw VGM: the
+        # DSP write log, which is a register log rather than audio. Gzipped it
+        # is ~1.1 MB a track against 7.7 MB for the WAV, and anyone can replay
+        # it. Audio is regenerable from the SPC, so it stays opt-in.
+        raw_dir = out_dir / "raw"
+        raw_dir.mkdir(parents=True, exist_ok=True)
+        stem = row["track_id"].replace(":", "_")
+        raw_path = raw_dir / f"{stem}.jsonl.gz"
+        with log.open("rb") as src, gzip.open(raw_path, "wb") as dst:
+            shutil.copyfileobj(src, dst)
+        row["raw_path"] = f"raw/{raw_path.name}"
+        row["raw_bytes"] = raw_path.stat().st_size
+
+        if want_audio:
+            audio_dir = out_dir / "audio"
+            audio_dir.mkdir(parents=True, exist_ok=True)
+            kept = audio_dir / f"{stem}.wav"
+            shutil.copyfile(wav, kept)
+            row["audio_path"] = f"audio/{kept.name}"
+            row["audio_bytes"] = kept.stat().st_size
 
     row["ok"] = True
     return row
@@ -107,8 +142,19 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("spc_dir", type=Path)
     parser.add_argument("out_dir", type=Path)
-    parser.add_argument("--seconds", type=float, default=180.0)
-    parser.add_argument("--keep-wav", action="store_true")
+    parser.add_argument(
+        "--seconds", type=float, default=0.0,
+        help="render length per track; 0 (default) uses each track's ID666 "
+             "length, capped by --max-seconds",
+    )
+    parser.add_argument(
+        "--max-seconds", type=float, default=720.0,
+        help="cap when taking the length from ID666",
+    )
+    parser.add_argument(
+        "--reference-audio", action="store_true",
+        help="also keep the rendered WAV per track (~7.7 MB per 60 s)",
+    )
     parser.add_argument("--jobs", type=int, default=1)
     parser.add_argument("--valid-fraction", type=float, default=0.1)
     parser.add_argument("--test-fraction", type=float, default=0.1)
@@ -149,7 +195,11 @@ def main() -> None:
     records_dir = args.out_dir / "records"
     records_dir.mkdir(exist_ok=True)
 
-    work = [(str(p), args.seconds, args.keep_wav) for p in sources]
+    work = [
+        (str(p), args.seconds, args.reference_audio,
+         str(args.out_dir), args.max_seconds)
+        for p in sources
+    ]
     if args.jobs > 1:
         with ProcessPoolExecutor(max_workers=args.jobs) as pool:
             rows = list(pool.map(process, work))
@@ -204,10 +254,10 @@ def main() -> None:
         if want > 0 and not assigned.counts.get(name)
     ]
 
-    scores = [
-        r["validation"]["score"] for r in good
-        if isinstance(r.get("validation"), dict) and "score" in r["validation"]
-    ]
+    failures_by_check: dict[str, int] = {}
+    for row in good:
+        for name in row.get("checks", {}).get("failed", []):
+            failures_by_check[name] = failures_by_check.get(name, 0) + 1
     summary = {
         "n_sources": len(sources),
         "n_extracted": len(good),
@@ -216,8 +266,17 @@ def main() -> None:
             {r.get("error", "?") .split(":")[0] for r in manifest if not r.get("ok")}
         ),
         "n_notes": sum(r["summary"]["n_notes"] for r in good),
-        "validation_score_mean": (sum(scores) / len(scores)) if scores else None,
-        "validation_score_min": min(scores) if scores else None,
+        "rendered_seconds_total": round(
+            sum(r.get("render_seconds", 0.0) for r in good), 1
+        ),
+        "render_sources": {
+            k: sum(1 for r in good if r.get("render_source") == k)
+            for k in ("id666", "default", "requested")
+        },
+        "n_tracks_all_checks_passed": sum(
+            1 for r in good if r.get("checks", {}).get("ok")
+        ),
+        "check_failures": dict(sorted(failures_by_check.items())),
         "splits": assigned.report(),
         "composer_leaks": leaks,
         # A corpus with an empty requested split is unusable for the purpose

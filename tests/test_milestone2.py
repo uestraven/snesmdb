@@ -9,7 +9,7 @@ import pytest
 
 from snesmdb import splits as sp
 from snesmdb.spcfile import SpcError, load, parse_id666
-from snesmdb.validate import compare, detect_onsets
+from snesmdb.checks import run as run_checks
 from snesmdb.voices import CLOCK_RATE
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -96,53 +96,93 @@ def test_a_truncated_spc_is_rejected_rather_than_read_past_the_end(tmp_path) -> 
         load(path)
 
 
-# --- validation gate ------------------------------------------------------
+# --- structural checks ---------------------------------------------------
+#
+# These replaced an audio-onset gate that scored 1.0000 on the synthetic
+# fixture and 0.151 on real Final Fantasy VI. The real number was the honest
+# one: in sustained polyphonic audio the detector fired on envelope ripple
+# rather than note attacks, finding 80 onsets where the track had 19 note-ons.
+# Nothing here produces a score, because a score invites tuning it until it
+# looks acceptable.
 
 
-def test_the_signal_start_counts_as_an_onset() -> None:
-    """Audio beginning at t=0 has no quiet frame before it to rise from, so a
-    rise-only detector misses it -- and nearly every track starts at t=0, so
-    every score came out exactly one onset short. A gate with a systematic
-    bias is the thing you end up tuning thresholds against."""
-    rate = 32000
-    samples = [0.5 if i < rate // 10 else 0.0 for i in range(rate)]
-    onsets = detect_onsets(samples, rate)
-    assert onsets, "a signal starting at t=0 must register an onset"
-    assert onsets[0] == pytest.approx(0.0, abs=0.005)
+R_KON, R_KOFF = 0x4C, 0x5C
 
 
-def test_perfect_agreement_scores_one() -> None:
-    starts = [int(t * CLOCK_RATE) for t in (0.0, 0.3, 0.6)]
-    result = compare(starts, [0.0, 0.3, 0.6])
-    assert result.precision == 1.0 and result.recall == 1.0
-    assert result.score == 1.0
+def w(t: int, addr: int, data: int) -> dict:
+    return {"t": t, "addr": addr, "data": data, "reg": hex(addr), "voice": -1}
 
 
-def test_an_invented_note_costs_precision_and_a_missed_one_costs_recall() -> None:
-    starts = [int(t * CLOCK_RATE) for t in (0.0, 0.3, 0.9)]
-    result = compare(starts, [0.0, 0.3, 0.6])
-    assert result.unsupported_notes == 1  # 0.9 has no audio behind it
-    assert result.unexplained_audio == 1  # 0.6 was not extracted
-    assert result.precision < 1.0 and result.recall < 1.0
-
-
-def test_two_notes_cannot_claim_the_same_audio_onset() -> None:
-    """Without one-to-one matching, a burst of spurious notes near one real
-    onset would score as perfect precision."""
-    starts = [int(t * CLOCK_RATE) for t in (0.300, 0.302, 0.304)]
-    result = compare(starts, [0.300])
-    assert result.n_matched == 1
-    assert result.unsupported_notes == 2
-
-
-def test_the_score_cannot_be_rescued_by_one_good_direction() -> None:
-    """Harmonic mean: 100% recall with 10% precision is not a pass."""
-    starts = [int(t * CLOCK_RATE) for t in (0.0,)] + [
-        int((5.0 + i * 0.5) * CLOCK_RATE) for i in range(9)
+def setup_voice(t: int, voice: int, pitch: int) -> list[dict]:
+    base = voice * 0x10
+    return [
+        w(t + 0, base + 0x00, 0x60),
+        w(t + 1, base + 0x01, 0x60),
+        w(t + 2, base + 0x02, pitch & 0xFF),
+        w(t + 3, base + 0x03, (pitch >> 8) & 0x3F),
     ]
-    result = compare(starts, [0.0])
-    assert result.recall == 1.0
-    assert result.score < 0.25
+
+
+def _extraction(log: list[dict]):
+    from snesmdb.voices import extract
+    return extract(iter(log))
+
+
+def test_a_track_with_no_notes_fails() -> None:
+    report = run_checks(_extraction([]), render_seconds=10.0)
+    assert "notes_present" in report.failed
+    assert not report.ok
+
+
+def test_an_unmodelled_register_fails_rather_than_passing_quietly() -> None:
+    log = [w(0, 0x1D, 0xFF), *setup_voice(1, 0, 0x0800),
+           w(10, R_KON, 0x01), w(CLOCK_RATE * 9, R_KOFF, 0x01)]
+    report = run_checks(_extraction(log), render_seconds=10.0)
+    assert "no_unhandled_registers" in report.failed
+
+
+def test_a_note_starting_after_the_render_ended_fails() -> None:
+    """The symptom the chunk-relative clock produced: timestamps that do not
+    belong to the window they were logged in."""
+    log = [*setup_voice(0, 0, 0x0800), w(int(CLOCK_RATE * 99), R_KON, 0x01)]
+    report = run_checks(_extraction(log), render_seconds=10.0)
+    assert "notes_within_render" in report.failed
+
+
+def test_every_note_unfinished_fails() -> None:
+    """Some notes legitimately ring past a fixed-length render. All of them
+    means no key-off was ever seen, so no duration in the track is real."""
+    log = [*setup_voice(0, 0, 0x0800), w(10, R_KON, 0x01),
+           w(int(CLOCK_RATE * 5), 0x1C, 0x7F)]
+    report = run_checks(_extraction(log), render_seconds=10.0)
+    assert "some_notes_completed" in report.failed
+
+
+def test_writes_stopping_early_fails() -> None:
+    """A driver that halts leaves the rest of the window silent, and the
+    extraction looks fine while covering a fraction of the track."""
+    log = [*setup_voice(0, 0, 0x0800), w(10, R_KON, 0x01),
+           w(int(CLOCK_RATE * 1), R_KOFF, 0x01)]
+    report = run_checks(_extraction(log), render_seconds=60.0)
+    assert "writes_span_render" in report.failed
+
+
+def test_silent_audio_with_extracted_notes_fails() -> None:
+    """The one cross-check against the emulator that needs no inference."""
+    log = [*setup_voice(0, 0, 0x0800), w(10, R_KON, 0x01),
+           w(int(CLOCK_RATE * 9), R_KOFF, 0x01)]
+    extraction = _extraction(log)
+    assert run_checks(extraction, render_seconds=10.0, peak=20000).ok
+    loud_ok = run_checks(extraction, render_seconds=10.0, peak=0)
+    assert "audio_not_silent" in loud_ok.failed
+
+
+def test_a_clean_extraction_passes_every_check() -> None:
+    log = [*setup_voice(0, 0, 0x0800), w(10, R_KON, 0x01),
+           w(int(CLOCK_RATE * 9), R_KOFF, 0x01)]
+    report = run_checks(_extraction(log), render_seconds=10.0, peak=12000)
+    assert report.ok, report.to_dict()
+    assert not report.failed
 
 
 # --- composer-disjoint splits ---------------------------------------------

@@ -149,6 +149,13 @@ class Extraction:
     unhandled: dict[str, int] = field(default_factory=dict)
     n_writes: int = 0
     last_time: int = 0
+    #: KON writes seen, and those that actually set a voice bit. Drivers
+    #: re-upload the whole register block every tick -- the AKAO driver writes
+    #: KON ~205 times a second -- so a raw write count says nothing about
+    #: whether a note started. Final Fantasy VI's ambient tracks write KON
+    #: 12,307 times in 60 s with mask 0 every single time.
+    n_kon_writes: int = 0
+    n_kon_effective: int = 0
 
     def summary(self) -> dict[str, Any]:
         voices = sorted({n.voice for n in self.notes})
@@ -163,6 +170,8 @@ class Extraction:
             "samples_used": samples,
             "n_samples_used": len(samples),
             "n_unfinished_notes": len(self.notes) - len(complete),
+            "n_kon_writes": self.n_kon_writes,
+            "n_kon_effective": self.n_kon_effective,
             "n_noise_notes": sum(1 for n in self.notes if n.noise),
             "n_pitch_modulated_notes": sum(
                 1 for n in self.notes if n.pitch_modulated
@@ -221,6 +230,9 @@ def extract(writes: Iterator[dict[str, Any]]) -> Extraction:
         elif addr == R_PMON:
             pmon_mask = data
         elif addr == R_KON:
+            out.n_kon_writes += 1
+            if data:
+                out.n_kon_effective += 1
             for voice in range(VOICE_COUNT):
                 if not (data >> voice) & 1:
                     continue
