@@ -13,7 +13,7 @@ why the scores arrive progressively rather than all at once.
 |---|---|---|---|
 | 1 | Voice event log | ✅ done | low |
 | 2 | Real SPCs and corpus plumbing | ✅ done — **1,316 tracks, 22 games, splits within 0.3 points** | medium |
-| 3 | Absolute pitch | ⚠️ partial — **81.8% pitched, 10.4% octave-suspect** | medium |
+| 3 | Absolute pitch | ✅ done — 78.7% pitched, **1.78% octave-suspect** (was 9.1%) | medium |
 | 4 | Grid inference | ⚠️ partial — rows + both scores on 866 tracks; the driver tick is **not** in the key-ons | low → medium |
 | 5 | Timbre vocabulary | ❌ **exit criterion not met** — a transferable 2-class split, not an instrument vocabulary | **high — and it was the risk named** |
 | 6 | Publish | ✅ done — **[DATASET.md](DATASET.md)**, three scores, MIDI, intake, splits | low |
@@ -260,6 +260,48 @@ Per game the octave-suspect rate runs from **0.7% (Super Metroid) to 15.3%
 as 5.3-15.3%. On the five original games it was 83% pitched and 8.7% suspect;
 adding four games moved both the wrong way, so the problem is not averaging
 out with scale.
+
+### The octave error, resolved against the spectrum
+
+**Out-of-range pitched notes fell from 9.1% to 1.78%**, and the count the score
+formats had to discard went from 1,589 to **78** on the same corpus.
+
+The ambiguity entered at one line. Both estimators are ambiguous by factors of
+two — autocorrelation can latch onto twice the period, and `nearest =
+round(periods)` in the loop refinement preserves whatever octave the
+autocorrelation handed it. Neither can see its own error.
+
+The spectrum can: **a fundamental an octave too low carries almost no energy at
+its own first harmonic.** Summed magnitude at f0 and its first six harmonics,
+evaluated at exact frequencies by single-bin DFT rather than quantised into a
+transform's bins, peaks at the true fundamental — an octave low misses every
+odd harmonic, an octave high misses the fundamental itself.
+
+| over 179,763 notes | outside MIDI 12-108 |
+|---|---|
+| before | 9.11% |
+| after | **1.96%** |
+| **control: a random octave shift** | **16.42%** |
+
+The control is what makes the result mean anything, and this project has twice
+shipped a measurement that only a control exposed. Two further pieces of
+evidence, neither of which is the in-range metric: the chosen shifts
+concentrate at **−1 octave (328 of 356)**, matching the estimator's known
+failure mode rather than spreading as fitted values would; and the span of
+simultaneously sounding pitches tightens from **34.1 to 29.8 semitones** while
+the random control widens it to 41.5.
+
+**This is not the semitone-grid fit deleted below.** That tried to recover f0 to
+cent precision from PITCH values which are already a semitone ladder among
+themselves, so any f0 fitted and a random one fitted equally well. This
+resolves one bit per octave from the spectrum, and is checked against a
+control that fails.
+
+Honest limits: 237 samples already fully in range were also moved, and the
+in-range metric cannot adjudicate those — the harmonic-energy margin on moves
+is median 2.43× with 77% clearing 1.5×, so about a quarter are marginal. The
+check also roughly doubles extraction time. `octave_shift` and `octave_margin`
+ride on every estimate.
 
 ### What this milestone actually established
 

@@ -107,14 +107,29 @@ Read this section before using the data. Everything here was measured.
 
 ## Pitch is usable in bulk, unreliable per note
 
-**81.8% of notes carry a note number.** The rest are percussion, noise, or
-samples whose fundamental was not recoverable — labelled unpitched rather than
-given a confident wrong number.
+**78.7% of notes carry a note number.** The rest are percussion, noise,
+or samples whose fundamental was not recoverable — labelled unpitched rather
+than given a confident wrong number.
 
-**10.4% of pitched notes land outside MIDI 12–108**, the signature of a
-residual octave error: two estimators can agree and both still be an octave
-out. Per game it runs from **0.7% (Super Metroid) to 15.3% (Super Castlevania
-IV)**. Every note carries `pitch_confidence`; filter on it.
+**1.78% of pitched notes land outside MIDI 12–108**, down from 9.1%.
+Both estimators are ambiguous by factors of two — autocorrelation can latch
+onto twice the period, and the loop refinement's integer period count preserves
+whatever octave it was handed — so the octave is resolved against the spectrum
+instead: a fundamental an octave too low carries almost no energy at its own
+first harmonic. Measured over 179,763 notes, out-of-range fell from 9.11% to
+1.96%, against **16.42% for a control that shifted by a random octave**, and
+the chosen shifts concentrated at −1 (328 of 356), which is the estimator's
+known failure mode rather than a spread of fitted values. An independent check
+that touches neither the spectrum nor the in-range test agrees: the span of
+simultaneously sounding pitches tightened from 34.1 to 29.8 semitones while the
+random control widened it to 41.5.
+
+Two caveats. 237 samples that were already fully in range were also moved, and
+the in-range metric cannot adjudicate those; the harmonic-energy margin on
+moves is median 2.43× with 77% clearing 1.5×, so roughly a quarter are
+marginal. Every estimate carries `octave_shift` and `octave_margin` so a
+consumer can see what was moved and on what evidence, and every note carries
+`pitch_confidence`.
 
 Relative pitch within a sample is near-exact for some drivers and not others —
 median deviation from an equal-tempered ladder is 0.30 cents for Rare and

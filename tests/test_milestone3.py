@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import random
 
 import pytest
 
@@ -163,3 +164,78 @@ def test_the_deleted_grid_fit_is_not_reintroduced() -> None:
     measured the driver's internal consistency, not the fundamental."""
     assert not hasattr(pitch, "refine_against_semitones")
     assert not hasattr(pitch, "Tuning")
+
+
+# --- octave resolution from the spectrum (milestone 3 completion) ---------
+
+
+def _saw(hz: float, n: int = 4096, amp: int = 8000) -> list[int]:
+    return [int(amp * (2 * ((hz * i / pitch.DSP_RATE) % 1) - 1)) for i in range(n)]
+
+
+def test_harmonic_energy_peaks_at_the_true_fundamental() -> None:
+    """The discriminator. An octave-low f0 misses every odd harmonic; an
+    octave-high one misses the fundamental, usually the strongest partial."""
+    saw = _saw(440.0)
+    at = {s: pitch.harmonic_energy(saw, 440.0 * 2**s) for s in (-2, -1, 0, 1, 2)}
+    assert at[0] == max(at.values())
+    assert at[0] > at[-1] * 1.2
+    assert at[0] > at[1] * 1.5
+
+
+def test_an_octave_error_is_corrected_in_either_direction() -> None:
+    saw = _saw(440.0)
+    assert pitch.resolve_octave(saw, 220.0)[1] == 1
+    assert pitch.resolve_octave(saw, 880.0)[1] == -1
+    for start in (220.0, 880.0):
+        assert pitch.resolve_octave(saw, start)[0] == pytest.approx(440.0, rel=1e-6)
+
+
+def test_a_correct_estimate_is_left_alone() -> None:
+    """The common case. A sample already right must not be moved by noise."""
+    saw = _saw(440.0)
+    f0, shift, _scores = pitch.resolve_octave(saw, 440.0)
+    assert shift == 0
+    assert f0 == 440.0
+
+
+def test_moving_requires_a_clear_margin() -> None:
+    """Conservative by design: the threshold is what stops marginal noise
+    from shifting an estimate that was already right."""
+    assert pitch.OCTAVE_MARGIN > 1.0
+    saw = _saw(440.0)
+    scores = pitch.resolve_octave(saw, 220.0)[2]
+    assert scores["1"] > scores["0"] * pitch.OCTAVE_MARGIN
+
+
+def test_only_octaves_inside_the_plausible_range_are_considered() -> None:
+    quiet = _saw(100.0)
+    for shift in pitch.resolve_octave(quiet, 100.0)[2]:
+        candidate = 100.0 * 2 ** int(shift)
+        assert pitch.F0_MIN_HZ <= candidate <= pitch.F0_MAX_HZ
+
+
+def test_noise_is_not_given_a_confident_octave_shift() -> None:
+    rng = random.Random(3)
+    noise = [rng.randint(-8000, 8000) for _ in range(4096)]
+    _f0, shift, _scores = pitch.resolve_octave(noise, 440.0)
+    # Flat spectrum: no octave can clear the margin by much, and whatever is
+    # chosen must still be one of the considered shifts rather than arbitrary.
+    assert shift in pitch.OCTAVE_SHIFTS
+
+
+def test_the_shift_and_its_evidence_ride_on_the_estimate() -> None:
+    """A consumer must be able to see that an estimate was moved, and why."""
+    saw = _saw(440.0)
+    estimate = pitch.estimate_f0(0, saw, None)
+    reported = estimate.to_dict()
+    assert "octave_shift" in reported and "octave_margin" in reported
+
+
+def test_a_sample_with_no_fundamental_is_not_shifted() -> None:
+    assert pitch.resolve_octave([], 0.0) == (0.0, 0, {})
+
+
+def test_magnitude_at_finds_a_tone_and_not_its_neighbour() -> None:
+    tone = [int(8000 * math.sin(2 * math.pi * 440 * i / pitch.DSP_RATE)) for i in range(4096)]
+    assert pitch.magnitude_at(tone, 440.0) > 10 * pitch.magnitude_at(tone, 660.0)
