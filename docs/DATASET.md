@@ -61,9 +61,18 @@ fixed window. A flat 60 s captured 8.8% of Final Fantasy VI's 683-second
 | `midi/*.mid` | 8-track type-1 MIDI, one track per DSP voice |
 | `intake/*.json.gz` | per-voice note trees with absolute times |
 | `splits.json` | composer-disjoint train/valid/test assignment |
-| `summary.json` | corpus-level extraction statistics |
-| `timbre_codebook.json` | the codebook, and the validation that mostly failed |
-| `performance.json` | per-game performance conventions |
+| `summary.json` | corpus-level extraction statistics, including the row-clock census |
+| `provenance.json` | the commit, dirty flag and parameters that built this tree |
+| `performance.json` | per-game performance conventions, over all tracks |
+| `performance_music.json` | the same, restricted to `track_class == music` |
+
+**`timbre_codebook.json` is deliberately not published.** The milestone 5
+codebook failed its own validation -- class agreement across games falls to the
+shuffled null once the leaking features are removed -- and `timbre_class` is
+written as `-1` for every note in this corpus rather than offering a number
+from it. Shipping the file would invite a consumer to use a clustering this
+project has documented as not transferable. The analysis and the negative
+result are in [milestones.md](milestones.md); the artifact carries neither.
 
 ### The three score formats
 
@@ -396,13 +405,32 @@ zero. If you are modelling the S-DSP, this corpus will not exercise either.
 ## Rebuilding
 
 ```sh
-make                                   # builds build/spc_dump
-python3 tools/extract.py data/spc data/out --jobs 8
-python3 tools/timbre_features.py data/out data/out/timbre_features.json
-python3 tools/timbre_codebook.py data/out/timbre_features.json data/out
+make                                                        # build/spc_dump
+python3 tools/extract.py data/spc data/out --jobs 8         # ~50 min
+python3 tools/reclock.py data/out                           # ~10 min, REQUIRED
 python3 tools/performance.py data/out data/out/performance.json
-python3 tools/publish.py data/out <dist-dir>
+python3 tools/performance.py data/out data/out/performance_music.json \
+        --track-class music
+python3 tools/publish.py data/out <dist-dir>                # ~18 min
 ```
+
+**`reclock.py` is not optional.** `extract.py` records the SPC700 timer
+registers but does not derive the row clock from them, and `publish.py` reads
+`row["clock"]`. Omitting the step produces a corpus with **zero** scored
+tracks, silently -- publish simply finds no clock and writes nothing. An
+earlier version of this block omitted it, so these instructions did not work.
+
+That split is an accident of history rather than a design: `reclock.py` exists
+because the clock changed three times and re-extracting took an hour each
+round, so it rebuilds the clock, the envelope census and the scores from note
+records already on disk. Folding it back into `extract.py` is recorded as
+outstanding work -- two code paths that have to agree is the main piece of debt
+in this pipeline.
+
+`tools/timbre_features.py` and `tools/timbre_codebook.py` are deliberately
+absent from this sequence. They still run, and the analysis is in
+[milestones.md](milestones.md), but their output is not published -- see the
+note on `timbre_codebook.json` above.
 
 `publish.py` refuses to write inside a git work tree, because the output is
 derived from research-only material.

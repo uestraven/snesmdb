@@ -1,5 +1,17 @@
 # What real SNES music does with its voices, envelopes and echo
 
+> Figures regenerated over the rebuilt 1,316-track corpus, from
+> `data/out/performance.json` (all tracks) and `performance_music.json`
+> (`track_class == music`, 1,006 tracks). Every number below is the **median
+> over games with its range**, never a track-weighted mean, so a game with
+> many tracks cannot dominate.
+>
+> Restricting to music moves nothing material: voices 4.95 → 5.23, silent
+> fraction 0.017 → 0.015, median note 0.1685 → 0.1687 s, register correlation
+> −0.049 → −0.054. The jingles and effects were not shifting these figures,
+> which is itself worth knowing — it means the conventions below are
+> properties of the drivers and not artifacts of what counts as a song.
+
 Measured over **1,316 tracks from 22 games**, 1,863,499 notes. Not a milestone:
 this is the analysis `docs/design.md` §7 argues is the point of the corpus, and
 it is about **performance** rather than composition for the reason recorded
@@ -33,10 +45,18 @@ and measurement would never have proposed it.
 
 The other two volume shapers tested are **house styles, not conventions**:
 
-| shaper | median | range | who |
-|---|---|---|---|
-| volume vs register | 0.031 | **−0.475 … +0.427** | Mega Man X +0.43, Axelay +0.32 / Super Turrican −0.48, Super Metroid −0.42 |
-| volume vs voice index | −0.083 | **−0.552 … +0.705** | Breath of Fire II +0.71 / DKC2 −0.55, DKC −0.51 |
+| shaper | median | range |
+|---|---|---|
+| volume vs register | **−0.049** | **−0.481 … +0.552** |
+| volume vs voice index | −0.083 | **−0.552 … +0.705** |
+
+The register figure was published as **+0.031** on an earlier extraction and is
+corrected here. It moved because the corpus was rebuilt after voice state began
+being seeded from the SPC's DSP register block, which changed SRCN — and so the
+sample, and so the register a note is read as playing — for 148,422 notes
+across 619 tracks. The sign flip is not a finding; it is a near-zero median
+wobbling about zero, which is the actual result: **register does not shape
+volume corpus-wide.**
 
 Breath of Fire II gets steadily louder up the voice indices and Donkey Kong
 Country steadily quieter, which is two studios' voice-allocation habits rather
@@ -116,7 +136,7 @@ Mario World.**
 
 | | median | range |
 |---|---|---|
-| median absolute pan | 0.169 | 0.000 … 0.500 |
+| median absolute pan | 0.167 | 0.000 … 0.500 |
 | hard-panned share (>0.6) | **0.002** | 0.000 … 0.447 |
 | phase-inverted share | **0.000** | 0.000 … 0.558 |
 

@@ -283,8 +283,13 @@ def main() -> None:
         ),
         indent=1,
     ))
-    for name in ("splits.json", "summary.json", "timbre_codebook.json",
-                 "performance.json", "timbre_assignments.json"):
+    # timbre_codebook.json and timbre_assignments.json are NOT copied. The
+    # milestone 5 codebook failed its own cross-game validation and
+    # `timbre_class` publishes as -1 throughout, so shipping them would offer
+    # a consumer a clustering this project documents as untransferable. The
+    # negative result lives in the docs; the artifact carries neither.
+    for name in ("splits.json", "summary.json",
+                 "performance.json", "performance_music.json"):
         source = args.out_dir / name
         if source.is_file():
             (args.dist_dir / name).write_text(source.read_text())
