@@ -608,39 +608,75 @@ half-step rule would fabricate about 1,200 notes out of an acoustic drone. The
 titles say the same thing: "Giygas' Static", "Strong Wind", "Rumbling",
 "Ozzie Scream", "Teleport", "Fade Out!". The `drone` class was right.
 
-**Isolated pitch steps inside a sounding note do happen, and are common for
-some drivers.** Counting pitch jumps over 0.5 semitones that land strictly
-inside a note under the extractor's own key-on rule, and keeping only those
-where the pitch does not return within 100 ms:
+**Isolated pitch steps inside a sounding note do happen, for some drivers.**
+Implemented in `voices.py` as `LegatoStep`, an independent event table keyed to
+its parent note. The counts, per track:
 
-| track | notes | persisting mid-note steps | implied |
-|---|---|---|---|
-| Mega Man X "Vile 2" | 885 | 1,005 | **+114%** |
-| Star Ocean "Ancient Ruin" | 758 | 350 | +46% |
-| Final Fantasy 6 "Slam Shuffle" | 315 | 114 | +36% |
-| Tales of Phantasia "Underground Way" | 567 | 57 | +10% |
-| Chrono Trigger "The Hidden Truth" | 391 | **0** | 0 |
-| Secret of Mana "A Wish" | 85 | **0** | 0 |
+| track | key-on notes | legato steps | | median interval |
+|---|---|---|---|---|
+| Star Ocean "Ancient Ruin" | 758 | 160 | +21% | 0.67 st |
+| Mega Man X "Vile 2" | 885 | 51 | +6% | 1.00 st |
+| Final Fantasy 6 "Slam Shuffle" | 315 | 20 | +6% | 1.03 st |
+| Tales of Phantasia "Underground Way" | 567 | 3 | +1% | 1.96 st |
+| Chrono Trigger "The Hidden Truth" | 391 | **0** | 0 | — |
+| Lufia 2 "After the Ceremony" | 417 | **0** | 0 | — |
+| Secret of Mana "A Wish" | 85 | **0** | 0 | — |
 
-Two confounds were measured and excluded. These are not vibrato: 78–96% do not
-return to the prior pitch within 100 ms, and the median depth is 1.4–3.0
-semitones. They are not portamento: **69–83% are isolated single steps with a
-maximum monotonic run of 3**, where a slide would show a long one-directional
-run of small increments.
+**THE FIRST MEASUREMENT OF THIS WAS WRONG BY AN ORDER OF MAGNITUDE**, and the
+two reasons are both worth keeping, because each looked like signal.
 
-So Mega Man X's note count would roughly double and Chrono Trigger's would not
-move at all. That is a driver property, and it means the corpus currently
-under-counts notes unevenly across games — which matters more than the absolute
-shortfall, because it biases any per-game comparison.
+It reported +114% for Mega Man X, +46% for Star Ocean, +36% for Final Fantasy
+VI and +10% for Tales of Phantasia. Every one of those is inflated, and the
+last two are entirely artifact — Tales of Phantasia's real figure is +1%.
 
-**Not implemented, and the reason is schema rather than detection.** A note
-inferred from a pitch write is a different kind of claim from a note observed
-at a key-on, and collapsing them would contaminate the hardware-grounded
-majority with an inference. The defensible shape is a separate event class —
-key-on notes stay exactly as they are, legato steps are emitted alongside and
-labelled — so a consumer chooses whether to trust them. That is a schema
-change across the score formats, the MIDI exporter and the manifest, so it is
-a deliberate decision rather than a patch.
+*PITCH is two registers.* One logical pitch change arrives as a write to `$x2`
+then `$x3`, and the state between them is a half-updated value — usually a wild
+interval. Counting those gave 1,006 steps for Mega Man X where there are 51,
+and 96 for a Final Fantasy VI track that has 20. The pair is always adjacent
+instructions, measured at a fixed 10–25 clocks apart per driver (median, p95
+and max all equal), so entries within 256 clocks now collapse to the last.
+
+*Drivers set up the next note before keying it on.* The patch-before-KON lead
+runs 400–4,281 clocks, and that write lands inside the *current* note, where it
+reads as a step. After coalescing, Mega Man X still reported 585 steps whose
+**median observation was 3 ms** — three milliseconds before the note ended,
+which is a setup write, not a note. A 16,384-clock floor on remaining note
+duration cuts those 585 to 51 while leaving the other tracks untouched:
+
+| trailing floor | mmx-06 | so-37 | ff6-205 | top-110 |
+|---|---|---|---|---|
+| 0 | 585 | 160 | 20 | 3 |
+| 4,096 | 260 | 160 | 20 | 3 |
+| **16,384** | **51** | **160** | **20** | **3** |
+| 32,768 | 34 | 160 | 20 | 0 |
+
+A third guard was tried and reverted: requiring 100 ms of room after a step to
+"prove itself" against a vibrato return. Median note duration is **116 ms**
+(Mega Man X) and 107 ms (Star Ocean), so a 100 ms window is the same order as
+the thing it measures and rejected 94% of real steps. The return window is now
+the rest of the note, capped at 100 ms.
+
+The surviving confounds, both excluded by measurement: these are not vibrato
+(the pitch does not return before the note ends) and not portamento (a slide is
+built from increments below the 0.5-semitone floor, so it never qualifies —
+which is also why a long monotonic run needs no rejecting, and run length is
+recorded as evidence rather than used as a filter).
+
+One known false positive remains and is pinned by a test: a modulation that
+*stops* mid-note, holding its final excursion, is indistinguishable from a
+step. Drivers here modulate to the key-off, so it is a limitation rather than
+an observed error.
+
+**Why a separate table rather than more notes.** `notes` stays bound strictly
+to KON edges, so every entry remains traceable to a hardware edge with its
+attack velocity, SRCN and envelope intact; a step hangs off it by
+`parent_note_id` and inherits the parent's sample and envelope by construction,
+since it does not re-key. The split exists for bias, not tidiness: a melodic
+density question wants `notes + steps`, while a voice-allocation or envelope
+question wants `notes` alone, and merging them would make the second
+unanswerable. Each step carries `semitones`, `run_length` and
+`observed_ticks` so a consumer can re-decide rather than inherit these
+thresholds.
 
 ### Resolution: the scores are indexed on the driver's clock, and the grid is not the row unit
 

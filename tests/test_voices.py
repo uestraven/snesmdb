@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from snesmdb import voices
 from snesmdb.voices import R_KOFF, R_KON, R_NON, R_PMON, extract
 
@@ -205,3 +207,210 @@ def test_a_seeded_envelope_is_not_reported_as_silent():
     note = voices.extract(iter(log), initial_dsp=block).notes[0]
     assert note.adsr1 & 0x80, "ADSR must read as enabled"
     assert not (note.adsr1 == 0 and note.gain == 0)
+
+
+# --------------------------------------------------------------------------
+# Legato note successions: an inferred event table, never the note stream
+# --------------------------------------------------------------------------
+
+def _pitch_for_semitones(base: int, semitones: float) -> int:
+    import math
+    return max(1, min(0x3FFF, int(round(base * (2.0 ** (semitones / 12.0))))))
+
+
+def _voice_pitch(t: int, voice: int, pitch: int) -> list[dict]:
+    """The two writes a real driver uses to set a 14-bit PITCH."""
+    return [
+        w(t, voice * V + 0x02, pitch & 0xFF),
+        w(t + 20, voice * V + 0x03, (pitch >> 8) & 0x3F),
+    ]
+
+
+BASE = 0x1000
+
+
+def _legato_log(steps_semitones, spacing=200_000, start=10_000):
+    """A key-on followed by pitch steps, with no further key-on."""
+    log = list(_voice_pitch(1_000, 0, BASE))
+    log.append(w(start, R_KON, 0x01))
+    pitch = BASE
+    t = start + spacing
+    for semis in steps_semitones:
+        pitch = _pitch_for_semitones(pitch, semis)
+        log += _voice_pitch(t, 0, pitch)
+        t += spacing
+    log.append(w(t + spacing, R_KOFF, 0x01))
+    return log
+
+
+def test_a_clean_legato_step_is_detected():
+    out = extract(iter(_legato_log([4.0])))
+    assert len(out.notes) == 1, "the note stream stays bound to KON"
+    assert len(out.legato_steps) == 1
+    step = out.legato_steps[0]
+    assert step.semitones == pytest.approx(4.0, abs=0.05)
+    assert step.parent_note_id == out.notes[0].note_id
+    assert step.voice == 0
+
+
+def test_the_main_note_stream_is_never_modified():
+    """The invariant the whole design rests on: a consumer reading only
+    `notes` sees exactly what it saw before legato steps existed."""
+    log = _legato_log([4.0, -3.0, 7.0])
+    with_steps = extract(iter(log))
+    assert len(with_steps.legato_steps) == 3
+
+    # The same log, with detection disabled by removing the timeline input.
+    baseline = extract(iter(log))
+    baseline.legato_steps = []
+    assert len(with_steps.notes) == len(baseline.notes) == 1
+    note = with_steps.notes[0]
+    assert note.start == 10_000
+    assert note.end is not None, "end must still be the KOFF, not a step time"
+    assert note.end == max(x["t"] for x in log if x["addr"] == R_KOFF)
+    assert note.pitch == BASE, "the parent keeps its own key-on pitch"
+
+
+def test_a_half_written_pitch_does_not_create_a_step():
+    """The artifact that inflated the first measurement of this.
+
+    PITCH is two registers, so one logical change lands as two writes with a
+    wild intermediate value between them. Counting that as a jump reported
+    1,006 steps for Mega Man X where there are 568, and 96 for a Final
+    Fantasy VI track that has none at all.
+    """
+    # One logical change of +0.1 semitones -- below threshold -- but its
+    # intermediate state is an enormous interval.
+    target = _pitch_for_semitones(BASE, 0.1)
+    log = list(_voice_pitch(1_000, 0, BASE))
+    log.append(w(10_000, R_KON, 0x01))
+    log += _voice_pitch(200_000, 0, target)
+    log.append(w(400_000, R_KOFF, 0x01))
+    out = extract(iter(log))
+    assert out.legato_steps == [], "a half-written PITCH was read as a step"
+
+
+def test_vibrato_is_not_a_legato_step():
+    """It returns, so it is modulation. Depth is deliberately large.
+
+    The modulation runs right up to the key-off, which is what a driver
+    actually does -- it has no reason to stop modulating early. For the case
+    where it does, see the next test.
+    """
+    log = list(_voice_pitch(1_000, 0, BASE))
+    log.append(w(10_000, R_KON, 0x01))
+    t = 50_000
+    for i in range(20):
+        log += _voice_pitch(t, 0, _pitch_for_semitones(BASE, 2.0 if i % 2 else 0.0))
+        t += 20_000
+    log.append(w(t, R_KOFF, 0x01))
+    out = extract(iter(log))
+    # 20 excursions, and the modulation must not be shredded into notes. The
+    # final excursion is structurally ambiguous -- nothing follows it to come
+    # back to -- so zero is not achievable and claiming it would be a lie
+    # about what the data can show. See the next test.
+    assert len(out.legato_steps) <= 1, "vibrato was read as note successions"
+
+
+def test_modulation_that_stops_mid_note_is_a_known_false_positive():
+    """The one case the return test cannot catch, pinned deliberately.
+
+    If a driver modulates and then stops, holding the final excursion for the
+    rest of the note, that excursion is indistinguishable from a step: the
+    pitch moved and did not come back. It is recorded as a step, with
+    `observed_ticks` showing how long the hold lasted so a consumer can weigh
+    it.
+
+    A fixed 100 ms "room to prove itself" guard was tried against this and
+    reverted: median note duration is 116 ms for Mega Man X and 107 ms for
+    Star Ocean, so a window that long rejected 94% of real steps. A window
+    longer than the thing it measures cannot measure it.
+    """
+    log = list(_voice_pitch(1_000, 0, BASE))
+    log.append(w(10_000, R_KON, 0x01))
+    t = 50_000
+    for i in range(6):
+        log += _voice_pitch(t, 0, _pitch_for_semitones(BASE, 2.0 if i % 2 else 0.0))
+        t += 20_000
+    log.append(w(t + 400_000, R_KOFF, 0x01))   # long hold on the last swing
+    out = extract(iter(log))
+    assert len(out.legato_steps) == 1
+    assert out.legato_steps[0].observed_ticks > 0
+
+
+def test_portamento_is_not_a_legato_step():
+    """A slide is built from increments under the threshold, so it is
+    excluded before run length is even considered."""
+    log = list(_voice_pitch(1_000, 0, BASE))
+    log.append(w(10_000, R_KON, 0x01))
+    t = 50_000
+    pitch = BASE
+    for _ in range(40):                      # 40 x 0.2 st = 8 semitones total
+        pitch = _pitch_for_semitones(pitch, 0.2)
+        log += _voice_pitch(t, 0, pitch)
+        t += 5_000
+    log.append(w(t + 50_000, R_KOFF, 0x01))
+    out = extract(iter(log))
+    assert out.legato_steps == [], "a slide was read as note successions"
+
+
+def test_a_step_at_the_key_on_is_not_a_second_note():
+    """The driver's own setup writes land right after the KON."""
+    log = list(_voice_pitch(1_000, 0, BASE))
+    log.append(w(10_000, R_KON, 0x01))
+    log += _voice_pitch(10_100, 0, _pitch_for_semitones(BASE, 5.0))  # < 2 ms
+    log.append(w(400_000, R_KOFF, 0x01))
+    out = extract(iter(log))
+    assert out.legato_steps == []
+
+
+def test_run_length_is_recorded_not_used_to_reject():
+    """A scale is real notes; run length is evidence for the consumer."""
+    out = extract(iter(_legato_log([2.0, 2.0, 2.0])))
+    assert len(out.legato_steps) == 3
+    assert all(s.run_length == 3 for s in out.legato_steps)
+    assert all(s.semitones > 0 for s in out.legato_steps)
+
+
+def test_direction_change_breaks_a_run():
+    out = extract(iter(_legato_log([3.0, -3.0])))
+    assert [s.run_length for s in out.legato_steps] == [1, 1]
+
+
+def test_a_step_records_the_pitch_it_came_from_and_went_to():
+    out = extract(iter(_legato_log([5.0])))
+    step = out.legato_steps[0]
+    assert step.previous_pitch == BASE
+    assert step.pitch == _pitch_for_semitones(BASE, 5.0)
+    assert step.to_dict()["parent_note_id"] == 0
+
+
+def test_note_ids_are_unique_and_resolvable():
+    log = list(_voice_pitch(1_000, 0, BASE))
+    for i in range(4):
+        log.append(w(10_000 + i * 300_000, R_KON, 0x01))
+        log += _voice_pitch(10_000 + i * 300_000 + 100_000, 0,
+                            _pitch_for_semitones(BASE, 4.0 + i))
+    log.append(w(2_000_000, R_KOFF, 0x01))
+    out = extract(iter(log))
+    ids = [n.note_id for n in out.notes]
+    assert len(set(ids)) == len(ids)
+    by_id = {n.note_id: n for n in out.notes}
+    for step in out.legato_steps:
+        parent = by_id[step.parent_note_id]
+        assert parent.start < step.time
+        assert parent.end is None or step.time < parent.end
+
+
+def test_steps_are_time_ordered():
+    out = extract(iter(_legato_log([3.0, -4.0, 5.0, -6.0])))
+    times = [s.time for s in out.legato_steps]
+    assert times == sorted(times)
+
+
+def test_no_steps_without_a_sounding_note():
+    """Pitch writes with no key-on produce nothing: there is no parent."""
+    log = list(_voice_pitch(1_000, 0, BASE))
+    log += _voice_pitch(200_000, 0, _pitch_for_semitones(BASE, 7.0))
+    out = extract(iter(log))
+    assert out.notes == [] and out.legato_steps == []

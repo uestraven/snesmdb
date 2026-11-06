@@ -23,6 +23,7 @@ and are enough for interval-level work.
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterator
@@ -36,6 +37,51 @@ V_SRCN, V_ADSR1, V_ADSR2, V_GAIN = 0x04, 0x05, 0x06, 0x07
 
 R_KON, R_KOFF, R_FLG, R_DIR = 0x4C, 0x5C, 0x6C, 0x5D
 R_NON, R_PMON, R_EON = 0x3D, 0x2D, 0x4D
+
+#: LEGATO NOTE SUCCESSIONS. A driver can hand a sounding voice a new note by
+#: writing PITCH, with no key-on. To the DSP that is indistinguishable from a
+#: bend or a vibrato cycle, so the separation is a judgement, and these are
+#: the thresholds it rests on. All three were set from measurement:
+#:
+#: A jump must exceed half a semitone. Vibrato and portamento are built from
+#: increments far smaller -- the "Time Vortex" sweep runs at a median of 0.031
+#: semitones per write, 76% of them under 0.1 -- so this alone excludes both
+#: mechanisms, and is why a long monotonic run does not need rejecting.
+LEGATO_MIN_SEMITONES = 0.5
+
+#: ...and the pitch must not come back. A vibrato cycle returns; a new note
+#: stays. Measured, 78-96% of qualifying jumps never return, and those that do
+#: return do so well inside this window.
+LEGATO_RETURN_WINDOW_TICKS = 102_400          # 100 ms at 1.024 MHz
+LEGATO_RETURN_SEMITONES = 0.25
+
+#: ...and it must be clear of the key-on that started the note, so the
+#: driver's own setup writes are not read as a second note.
+LEGATO_MIN_LEAD_TICKS = 2_048                 # 2 ms
+
+#: ...and it must be clear of the note's END, because a driver sets up the
+#: NEXT note's pitch before keying it on, and that write lands inside the
+#: current note. Measured, the patch-before-KON lead runs 400-4,281 clocks,
+#: and without this floor Mega Man X reported 585 steps whose median
+#: observation was 3,536 clocks -- 3 ms before the note ended, which is a
+#: setup write and not a note. The floor is ~4x the longest observed lead,
+#: and ~7x below the 107-116 ms median note duration, so it excludes setup
+#: without reaching real steps:
+#:
+#:     floor      mmx-06   so-37   ff6-205   top-110
+#:         0         585     160        20         3
+#:     4,096         260     160        20         3
+#:    16,384          51     160        20         3   <- adopted
+#:    32,768          34     160        20         0
+LEGATO_MIN_TRAILING_TICKS = 16_384            # 16 ms
+
+#: PITCH spans two registers, so one logical change is two writes with a
+#: half-updated value between them. Measured, the pair is a fixed 10-25 clocks
+#: apart depending on the driver (median, p95 and max are all equal, so it is
+#: always the same instruction sequence). 256 is an order of magnitude above
+#: that and four orders below any musical interval.
+LEGATO_COALESCE_TICKS = 256
+
 
 VOICE_COUNT = 8
 
@@ -158,6 +204,10 @@ class Note:
     #: the previous voice and the PITCH register alone does not describe it.
     pitch_modulated: bool = False
 
+    #: Index of this note within its track, so a legato step can name its
+    #: parent. Assigned in key-on order and stable for a given write log.
+    note_id: int = -1
+
     @property
     def duration(self) -> int | None:
         return None if self.end is None else self.end - self.start
@@ -190,6 +240,11 @@ class Note:
 @dataclass
 class Extraction:
     notes: list[Note] = field(default_factory=list)
+    #: Inferred note successions, as an INDEPENDENT table. `notes` stays bound
+    #: strictly to KON edges; these hang off it by `parent_note_id`. A melodic
+    #: density question wants both, a voice-allocation or envelope question
+    #: wants `notes` alone -- see `_detect_legato_steps`.
+    legato_steps: list[LegatoStep] = field(default_factory=list)
     #: Register writes the extractor did not interpret, by name, for honesty
     #: about coverage rather than silent omission.
     unhandled: dict[str, int] = field(default_factory=dict)
@@ -222,6 +277,10 @@ class Extraction:
             "n_pitch_modulated_notes": sum(
                 1 for n in self.notes if n.pitch_modulated
             ),
+            # Inferred, and counted separately so no aggregate silently mixes
+            # them with key-on notes. Driver-dependent: 0% for Chrono Trigger
+            # and Secret of Mana, 21% for Star Ocean.
+            "n_legato_steps": len(self.legato_steps),
             "unhandled_writes": dict(sorted(self.unhandled.items())),
         }
 
@@ -232,6 +291,207 @@ def read_log(path: Path) -> Iterator[dict[str, Any]]:
             line = line.strip()
             if line:
                 yield json.loads(line)
+
+
+def _semitones(from_pitch: int, to_pitch: int) -> float:
+    """Interval between two PITCH values.
+
+    PITCH is a resample ratio, so the interval is just the log of the ratio --
+    no reference frequency is needed and the sample's own f0 cancels out.
+    """
+    return 12.0 * math.log2(to_pitch / from_pitch)
+
+
+def _legato_steps(
+    timeline: list[tuple[int, int, int, int]], start: int, end: int
+) -> list[tuple[int, float, int, int, int, int, int, int]]:
+    """Qualifying pitch steps strictly inside one note.
+
+    Returns `(time, semitones, run_length, voll, volr, from_pitch, to_pitch,
+    observed_ticks)` per step. `timeline` is this voice's `(time, pitch, voll, volr)` history,
+    ascending.
+    """
+    opens = start + LEGATO_MIN_LEAD_TICKS
+    window = [row for row in timeline if opens < row[0] < end and row[1] > 0]
+    if not window:
+        return []
+
+    # The baseline is the pitch IN FORCE when the note began, which is
+    # normally written before the key-on and so sits outside the window.
+    # Without it a note that is stepped exactly once has nothing to be
+    # compared against and the step is missed.
+    baseline = next(
+        (row for row in reversed(timeline) if row[0] <= opens and row[1] > 0),
+        None,
+    )
+    if baseline is not None:
+        window = [(start, baseline[1], baseline[2], baseline[3])] + window
+    if len(window) < 2:
+        return []
+
+    # PITCH is two registers, so one logical pitch change arrives as two
+    # writes and the state between them is a half-updated value -- typically a
+    # wild interval that would read as a step. The pair is always adjacent
+    # instructions, measured at a fixed 10-25 clocks apart per driver, so
+    # entries inside LEGATO_COALESCE_TICKS collapse to the last of the run.
+    inside: list[tuple[int, int, int, int]] = []
+    for row in window:
+        if inside and row[0] - inside[-1][0] <= LEGATO_COALESCE_TICKS:
+            inside[-1] = row
+        else:
+            inside.append(row)
+    if len(inside) < 2:
+        return []
+
+    # Every jump over the threshold, with the pitch it came from.
+    jumps: list[tuple[int, float, int, int, int, int, int, int]] = []
+    for index in range(1, len(inside)):
+        previous, current = inside[index - 1], inside[index]
+        interval = _semitones(previous[1], current[1])
+        if abs(interval) <= LEGATO_MIN_SEMITONES:
+            continue
+        # A write in the note's last moments is the next note's setup, not a
+        # step in this one. See LEGATO_MIN_TRAILING_TICKS.
+        if end - current[0] < LEGATO_MIN_TRAILING_TICKS:
+            continue
+        # A vibrato cycle comes back; a new note stays. The window is the
+        # REST OF THE NOTE, capped at LEGATO_RETURN_WINDOW_TICKS.
+        #
+        # It was briefly a fixed 100 ms, which was wrong because that is the
+        # same order as a note: median note duration is 116 ms for Mega Man X
+        # and 107 ms for Star Ocean, so requiring 100 ms of room after a step
+        # rejected 94% of real steps by construction. A window longer than the
+        # thing it measures cannot measure it.
+        horizon = min(current[0] + LEGATO_RETURN_WINDOW_TICKS, end)
+        returned = any(
+            abs(_semitones(previous[1], later[1])) < LEGATO_RETURN_SEMITONES
+            for later in inside[index + 1:]
+            if later[0] <= horizon
+        )
+        if returned:
+            continue
+        # How long the step could actually be observed for. Recorded rather
+        # than thresholded: a step with little room is a weaker claim, and the
+        # consumer filters on it. That is the point of a separate table.
+        observed = end - current[0]
+        jumps.append(
+            (current[0], interval, 0, current[2], current[3],
+             previous[1], current[1], observed)
+        )
+
+    # Run length: how many same-sign qualifying jumps this one sits in. A run
+    # of 2-3 is a scale or arpeggio, so this is recorded as evidence and is
+    # deliberately NOT used to reject -- a portamento is built from increments
+    # under LEGATO_MIN_SEMITONES and so never reaches this point at all.
+    out: list[tuple[int, float, int, int, int, int, int, int]] = []
+    position = 0
+    while position < len(jumps):
+        sign = jumps[position][1] > 0
+        run_end = position
+        while run_end + 1 < len(jumps) and (jumps[run_end + 1][1] > 0) == sign:
+            run_end += 1
+        length = run_end - position + 1
+        for item in jumps[position:run_end + 1]:
+            out.append(
+                (item[0], item[1], length, item[3], item[4], item[5],
+                 item[6], item[7])
+            )
+        position = run_end + 1
+    return out
+
+
+@dataclass
+class LegatoStep:
+    """An inferred note succession: a pitch step on an already-sounding voice.
+
+    Deliberately a separate record type from `Note`. A note is observed at a
+    hardware edge; a step is inferred from a register write the DSP cannot
+    distinguish from a bend, and the two should not be mistaken for each other
+    by anything downstream.
+    """
+
+    time: int
+    voice: int
+    #: `Note.note_id` of the key-on note this step occurred inside.
+    parent_note_id: int
+    previous_pitch: int
+    pitch: int
+    semitones: float
+    run_length: int
+    volume_left: int
+    volume_right: int
+    #: How long the step could be observed before the parent note ended. A
+    #: short observation is a weaker claim; it is recorded so a consumer can
+    #: filter rather than being thresholded away here.
+    observed_ticks: int = 0
+
+    def seconds(self) -> float:
+        return self.time / CLOCK_RATE
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "time": self.time,
+            "time_sec": self.time / CLOCK_RATE,
+            "voice": self.voice,
+            "parent_note_id": self.parent_note_id,
+            "previous_pitch": self.previous_pitch,
+            "pitch": self.pitch,
+            "semitones": self.semitones,
+            "run_length": self.run_length,
+            "volume_left": self.volume_left,
+            "volume_right": self.volume_right,
+            "observed_ticks": self.observed_ticks,
+            "observed_ms": round(self.observed_ticks / CLOCK_RATE * 1000, 2),
+        }
+
+
+def _detect_legato_steps(
+    notes: list[Note],
+    timelines: dict[int, list[tuple[int, int, int, int]]],
+    last_time: int,
+) -> list[LegatoStep]:
+    """Legato steps inside each key-on note, as an independent event table.
+
+    NOTHING IN `notes` IS MODIFIED. The main note stream stays bound strictly
+    to KON edges, so every entry in it remains traceable to a hardware edge
+    with its attack velocity, SRCN and envelope intact. A step is an inferred
+    event hanging off its parent by `parent_note_id`, which is what keeps the
+    chain of custody for the timbre class: a step does not re-key, so it
+    inherits its parent's sample and envelope by construction.
+
+    The split matters for bias rather than for tidiness. Counting steps as
+    notes would inflate Mega Man X by 114% and Chrono Trigger by 0%, so a
+    melodic-density question wants `notes + steps` while a voice-allocation or
+    envelope question wants `notes` alone. Merging them would make the second
+    question unanswerable.
+    """
+    if not timelines:
+        return []
+    steps: list[LegatoStep] = []
+    for note in notes:
+        timeline = timelines.get(note.voice)
+        if not timeline:
+            continue
+        # An unterminated note is bounded by the log, not by a key-off.
+        end = note.end if note.end is not None else last_time + 1
+        for (time, interval, run_length, voll, volr, before, after,
+             observed) in _legato_steps(timeline, note.start, end):
+            steps.append(
+                LegatoStep(
+                    time=time,
+                    voice=note.voice,
+                    parent_note_id=note.note_id,
+                    previous_pitch=before,
+                    pitch=after,
+                    semitones=round(interval, 4),
+                    run_length=run_length,
+                    volume_left=_signed8(voll),
+                    volume_right=_signed8(volr),
+                    observed_ticks=observed,
+                )
+            )
+    steps.sort(key=lambda s: (s.time, s.voice))
+    return steps
 
 
 def extract(
@@ -247,6 +507,10 @@ def extract(
     live: dict[int, Note] = {}
     out = Extraction()
     noise_mask = pmon_mask = 0
+    # Per-voice (time, pitch, voll, volr) history, for legato detection after
+    # the replay. Appended only when one of those four registers moves, so it
+    # is far shorter than the write log.
+    timelines: dict[int, list[tuple[int, int, int, int]]] = {}
 
     for write in writes:
         addr = int(write["addr"])
@@ -276,6 +540,10 @@ def extract(
                     slot.adsr2 = data
                 elif low == V_GAIN:
                     slot.gain = data
+                if low in (V_VOLL, V_VOLR, V_PITCHL, V_PITCHH):
+                    timelines.setdefault(voice, []).append(
+                        (time, slot.pitch, slot.voll, slot.volr)
+                    )
             continue
 
         if addr == R_NON:
@@ -311,6 +579,7 @@ def extract(
                     noise=bool((noise_mask >> voice) & 1),
                     pitch_modulated=bool((pmon_mask >> voice) & 1),
                 )
+                note.note_id = len(out.notes)
                 live[voice] = note
                 out.notes.append(note)
         elif addr == R_KOFF:
@@ -326,4 +595,7 @@ def extract(
             out.unhandled[name] = out.unhandled.get(name, 0) + 1
 
     out.notes.sort(key=lambda n: (n.start, n.voice))
+    # Inferred, and kept out of `out.notes` entirely. Runs after the sort so
+    # parent ids are final; it reads `notes` and never writes to them.
+    out.legato_steps = _detect_legato_steps(out.notes, timelines, out.last_time)
     return out

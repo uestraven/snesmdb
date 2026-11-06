@@ -166,6 +166,9 @@ def process(args: tuple[str, float, bool, str]) -> dict[str, Any]:
                 )
             notes_out.append(item)
         row["notes"] = notes_out
+        # An independent event table, never merged into `notes`. A consumer
+        # reading only `notes` sees exactly the key-on-bound stream.
+        row["legato_steps"] = [s.to_dict() for s in result_extract.legato_steps]
 
         pitched = [n for n in notes_out if n["midi_note"] is not None]
         implausible = [
@@ -355,9 +358,12 @@ def main() -> None:
     manifest: list[dict[str, Any]] = []
     for row in rows:
         notes = row.pop("notes", None)
+        steps = row.pop("legato_steps", None)
         if row.get("ok") and notes is not None:
             record = records_dir / f"{row['track_id'].replace(':', '_')}.json"
-            record.write_text(json.dumps({**row, "notes": notes}, indent=1))
+            record.write_text(json.dumps(
+                {**row, "notes": notes, "legato_steps": steps}, indent=1
+            ))
             row["record_path"] = f"records/{record.name}"
         manifest.append(row)
 
