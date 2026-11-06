@@ -33,6 +33,14 @@ _REPO = Path(__file__).resolve().parent.parent.parent
 
 
 def _git(*args: str) -> str | None:
+    """Git output, or None when git could not answer.
+
+    An EMPTY result is returned as the empty string, not None. `git status
+    --porcelain` says "clean" by printing nothing, and collapsing that into
+    None conflated a clean tree with an unknown one -- which reported
+    `dirty: None` on a committed build and so understated what was known. The
+    whole point of the flag is that None means "could not tell".
+    """
     try:
         done = subprocess.run(
             ["git", "-C", str(_REPO), *args],
@@ -42,7 +50,7 @@ def _git(*args: str) -> str | None:
         return None
     if done.returncode != 0:
         return None
-    return done.stdout.strip() or None
+    return done.stdout.strip()
 
 
 def _dirty_paths(status: str | None) -> list[str] | None:
@@ -79,9 +87,9 @@ def record(**extra: Any) -> dict[str, Any]:
     return {
         "schema": CORPUS_SCHEMA,
         "built_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "git_commit": commit,
-        "git_describe": _git("describe", "--always", "--dirty"),
-        "git_branch": _git("rev-parse", "--abbrev-ref", "HEAD"),
+        "git_commit": commit or None,
+        "git_describe": _git("describe", "--always", "--dirty") or None,
+        "git_branch": _git("rev-parse", "--abbrev-ref", "HEAD") or None,
         # True when the build came from an uncommitted tree, so it cannot be
         # reproduced from `git_commit` alone.
         "dirty": bool(status) if status is not None else None,

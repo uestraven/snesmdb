@@ -55,3 +55,20 @@ def test_dirty_is_a_boolean_so_a_provisional_build_is_visible():
     commit it names, so the flag has to be readable without parsing paths."""
     got = provenance.record()
     assert got["dirty"] in (True, False, None)
+
+
+def test_a_clean_tree_reports_dirty_false_not_none():
+    """`git status --porcelain` says "clean" by printing nothing, and the
+    _git helper used to collapse that into None -- so a committed build
+    reported `dirty: None`, claiming ignorance of something it knew. None is
+    reserved for git being unavailable."""
+    got = provenance.record()
+    # This repo has git, so the flag must be decided either way.
+    assert got["dirty"] in (True, False)
+    assert got["git_commit"], "a repo with git must report a commit"
+
+
+def test_git_returns_empty_string_not_none_for_empty_output():
+    out = provenance._git("status", "--porcelain")
+    assert out is not None, "git is available here, so this is not unknown"
+    assert isinstance(out, str)
