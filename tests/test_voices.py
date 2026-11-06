@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from snesmdb import voices
 from snesmdb.voices import R_KOFF, R_KON, R_NON, R_PMON, extract
 
 V = 0x10  # voice stride
@@ -128,3 +129,79 @@ def test_unrecognised_registers_are_counted_not_dropped() -> None:
     log = [w(0, 0x1D, 0xFF), w(1, 0x1D, 0x00)]
     out = extract(iter(log))
     assert sum(out.unhandled.values()) == 2, out.unhandled
+
+
+# --------------------------------------------------------------------------
+# Seeding from the SPC snapshot
+# --------------------------------------------------------------------------
+
+def _dsp_block(**per_voice):
+    """A 128-byte DSP register block with the given per-voice values."""
+    block = bytearray(128)
+    for voice in range(voices.VOICE_COUNT):
+        base = voice * 0x10
+        for name, offset in (
+            ("voll", voices.V_VOLL), ("volr", voices.V_VOLR),
+            ("pitchl", voices.V_PITCHL), ("pitchh", voices.V_PITCHH),
+            ("srcn", voices.V_SRCN), ("adsr1", voices.V_ADSR1),
+            ("adsr2", voices.V_ADSR2), ("gain", voices.V_GAIN),
+        ):
+            values = per_voice.get(name)
+            if values is not None:
+                block[base + offset] = values[voice]
+    return bytes(block)
+
+
+def test_seed_states_reads_the_snapshot_layout():
+    srcn = [10, 10, 10, 10, 11, 8, 2, 8]        # Super Mario World "Athletic"
+    block = _dsp_block(srcn=srcn, adsr1=[238] * 8, gain=[184] * 8)
+    states = voices.seed_states(block)
+    assert [s.srcn for s in states] == srcn
+    assert all(s.adsr1 == 238 and s.gain == 184 for s in states)
+
+
+def test_seed_states_without_a_block_is_all_zero():
+    assert all(s.srcn == 0 for s in voices.seed_states(None))
+
+
+def test_a_driver_that_never_writes_srcn_still_gets_the_right_sample():
+    """The bug this guards: "Athletic" writes only KON/KOFF/VOL/PITCH for its
+    whole length, so every one of its 1,164 notes was recorded as sample 0
+    instead of samples 2, 8, 10 and 11 -- each pitched against the wrong BRR
+    sample and given the wrong timbre class."""
+    block = _dsp_block(srcn=[10, 10, 10, 10, 11, 8, 2, 8], adsr1=[238] * 8)
+    log = [
+        {"t": 1000, "addr": 0x02, "data": 0x00},   # voice 0 PITCHL
+        {"t": 1001, "addr": 0x03, "data": 0x10},   # voice 0 PITCHH
+        {"t": 1002, "addr": 0x4C, "data": 0x01},   # KON voice 0
+        {"t": 9000, "addr": 0x5C, "data": 0x01},   # KOFF voice 0
+    ]
+    seeded = voices.extract(iter(log), initial_dsp=block)
+    assert [n.srcn for n in seeded.notes] == [10]
+
+    unseeded = voices.extract(iter(log))
+    assert [n.srcn for n in unseeded.notes] == [0], "the old behaviour"
+
+
+def test_seeding_does_not_override_a_driver_that_does_write():
+    block = _dsp_block(srcn=[10] * 8)
+    log = [
+        {"t": 1000, "addr": 0x04, "data": 3},      # voice 0 SRCN := 3
+        {"t": 1002, "addr": 0x4C, "data": 0x01},
+        {"t": 9000, "addr": 0x5C, "data": 0x01},
+    ]
+    out = voices.extract(iter(log), initial_dsp=block)
+    assert [n.srcn for n in out.notes] == [3]
+
+
+def test_a_seeded_envelope_is_not_reported_as_silent():
+    """540 tracks reported ADSR disabled with GAIN 0 -- a silent envelope --
+    while their snapshots have ADSR enabled on every voice."""
+    block = _dsp_block(srcn=[1] * 8, adsr1=[238] * 8, adsr2=[224] * 8, gain=[184] * 8)
+    log = [
+        {"t": 1002, "addr": 0x4C, "data": 0x01},
+        {"t": 9000, "addr": 0x5C, "data": 0x01},
+    ]
+    note = voices.extract(iter(log), initial_dsp=block).notes[0]
+    assert note.adsr1 & 0x80, "ADSR must read as enabled"
+    assert not (note.adsr1 == 0 and note.gain == 0)

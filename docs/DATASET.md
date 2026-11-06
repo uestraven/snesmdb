@@ -207,6 +207,51 @@ of the **onset** period, which is a musical question rather than a hardware one,
 and the scores record it as `onset_grid` for provenance. It is no longer what
 the rows are indexed on.
 
+## Velocity ignores the envelope, and the envelope is not recoverable from key-on state
+
+`velocity` is derived from the two signed side volumes only:
+`(|VOL_L| + |VOL_R|) / 2`. The DSP's actual output is
+`amp = ((sample * env) >> 11) * VOL >> 7`, so loudness is **env × VOL** and
+the envelope is missing from every velocity in this corpus. Three measured
+facts bound how much that costs, and they point in different directions:
+
+**For 88.7% of notes the envelope is ADSR, and for 85.2% of those the sustain
+level is 7** — the envelope holds at full scale, so VOL alone is the loudness
+and nothing is lost. SL is read as `ADSR2 >> 5`, with the decay ending when
+`(env >> 8) == SL`, so the plateau is `SL × 256` and SL=7 means no decay at
+all.
+
+**13% of notes have SL < 7**, where VOL-only velocity overstates sustained
+loudness — worst at SL=0 (3.4% of ADSR notes), which decays to silence. A
+staccato pluck and a held horn with equal VOL currently get equal velocity.
+This part is fixable from data already in the note records.
+
+**For the remaining 11.3% the envelope cannot be read from the key-on state at
+all.** These notes have ADSR disabled and GAIN in direct mode, and the drivers
+that do this run their own software envelope by writing GAIN continuously —
+Mega Man X writes GAIN 390 times against 26 SRCN writes in ten seconds. The
+value at key-on is therefore an arbitrary point on a ramp, and it is **zero for
+most of them** (5.74% of all notes). Scaling velocity by it would silence
+expressive notes rather than correct them. Recovering it needs the envelope's
+peak across the note's span, which means retaining the DSP write log — these
+are not stored, so it needs a re-extraction.
+
+Not an inherited-state artifact: the SPC snapshots have ADSR enabled on nearly
+every voice (ADSR1 bit 7 set), so the zeros are written by the driver.
+
+**Driver envelope strategies differ enough that one rule will not serve.**
+Measured over ten seconds of one track per game, counting writes:
+
+| driver behaviour | games | signature |
+|---|---|---|
+| full voice patch per note | DKC, Kirby, Super Metroid, Star Ocean, Tales of Phantasia, Super Mario World | SRCN/ADSR1/ADSR2/GAIN written in lockstep |
+| ADSR per note, no GAIN | Chrono Trigger, Secret of Mana | GAIN never written |
+| software envelope | Mega Man X | GAIN/ADSR1 written far more often than SRCN |
+| set once, VOL does everything | Earthbound (this track: one write of each) | VOL written 274×, patch 1× |
+
+Phase inversion is also lost: velocity takes the magnitude, and a negative side
+volume inverts that side's phase, which two games do on over half their notes.
+
 ## The timbre axis is a binary distinction, not a vocabulary
 
 `expressive` carries a class from a 5-class codebook over 1,162 distinct

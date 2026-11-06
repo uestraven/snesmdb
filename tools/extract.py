@@ -113,7 +113,11 @@ def process(args: tuple[str, float, bool, str]) -> dict[str, Any]:
             row["error"] = "no DSP writes logged"
             return row
 
-        result_extract = extract(read_log(log))
+        # The snapshot's DSP block seeds the voice state. Without it, every
+        # register the driver never rewrites reads as zero -- which was wrong
+        # for 10.8% of corpus notes on SRCN alone, pitching them against the
+        # wrong BRR sample. See voices.VoiceState.
+        result_extract = extract(read_log(log), initial_dsp=spc.dsp)
         row["summary"] = result_extract.summary()
 
         # Milestone 3: absolute pitch, where it can be had. The PITCH register

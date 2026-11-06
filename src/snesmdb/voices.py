@@ -72,7 +72,25 @@ def _signed8(value: int) -> int:
 
 @dataclass
 class VoiceState:
-    """The registers a driver has written for one voice, so far."""
+    """The registers in force for one voice.
+
+    SEEDED FROM THE SPC SNAPSHOT, not from zero. An SPC is a dump of a running
+    system, so the DSP register block already holds the voice parameters the
+    driver set up before the dump, and a driver has no reason to rewrite a
+    register whose value is already correct. Many do not: Super Mario World's
+    "Athletic" writes only KON, KOFF, VOL and PITCH for its entire length,
+    never SRCN, ADSR1, ADSR2 or GAIN.
+
+    Starting these at zero therefore reported a default for every register the
+    driver happened not to touch, and it was wrong for 10.8% of the corpus's
+    notes on SRCN alone. "Athletic" has a snapshot SRCN of [10,10,10,10,11,8,
+    2,8] and all 1,164 of its notes were recorded as sample 0 -- each pitched
+    against the wrong BRR sample, and assigned the wrong timbre class. Super
+    Turrican was affected on 100% of its notes, Dragon Quest 5 on 41%, Breath
+    of Fire 2 on 37%. It also made 540 tracks report ADSR disabled with a zero
+    GAIN, i.e. a silent envelope, when their snapshots have ADSR enabled on
+    every voice.
+    """
 
     voll: int = 0
     volr: int = 0
@@ -87,6 +105,34 @@ class VoiceState:
     def pitch(self) -> int:
         """The 14-bit PITCH register: a resample RATIO, not a frequency."""
         return ((self.pitchh & 0x3F) << 8) | (self.pitchl & 0xFF)
+
+
+def seed_states(dsp: bytes | None = None) -> list[VoiceState]:
+    """The eight voice states as the SPC snapshot left them.
+
+    `dsp` is the 128-byte DSP register block (offset 0x10100 in an SPC file).
+    Voice *v* occupies the 0x10 bytes at `v * 0x10`, with the same low-nibble
+    layout as a live write, so the seeding reuses the same offsets.
+
+    Passing None gives the old all-zero behaviour, which is correct only for a
+    synthetic log that has no snapshot behind it.
+    """
+    states = [VoiceState() for _ in range(VOICE_COUNT)]
+    if not dsp:
+        return states
+    for voice, slot in enumerate(states):
+        base = voice * 0x10
+        if base + 0x08 > len(dsp):
+            break
+        slot.voll = dsp[base + V_VOLL]
+        slot.volr = dsp[base + V_VOLR]
+        slot.pitchl = dsp[base + V_PITCHL]
+        slot.pitchh = dsp[base + V_PITCHH]
+        slot.srcn = dsp[base + V_SRCN]
+        slot.adsr1 = dsp[base + V_ADSR1]
+        slot.adsr2 = dsp[base + V_ADSR2]
+        slot.gain = dsp[base + V_GAIN]
+    return states
 
 
 @dataclass
@@ -188,9 +234,16 @@ def read_log(path: Path) -> Iterator[dict[str, Any]]:
                 yield json.loads(line)
 
 
-def extract(writes: Iterator[dict[str, Any]]) -> Extraction:
-    """Replay a write log and recover the notes it describes."""
-    state = [VoiceState() for _ in range(VOICE_COUNT)]
+def extract(
+    writes: Iterator[dict[str, Any]], initial_dsp: bytes | None = None
+) -> Extraction:
+    """Replay a write log and recover the notes it describes.
+
+    `initial_dsp` is the SPC's 128-byte DSP register block. Pass it: without
+    it, any voice register the driver never rewrites is reported as zero
+    rather than as the value actually in force. See `VoiceState`.
+    """
+    state = seed_states(initial_dsp)
     live: dict[int, Note] = {}
     out = Extraction()
     noise_mask = pmon_mask = 0
