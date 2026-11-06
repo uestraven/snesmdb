@@ -34,6 +34,7 @@ from snesmdb import brr, pitch  # noqa: E402
 from snesmdb.checks import audio_peak, run as run_checks  # noqa: E402
 from snesmdb import grid as grid_mod, scores as scores_mod, tick as tick_mod  # noqa: E402
 from snesmdb.voices import extract, read_log  # noqa: E402
+from snesmdb import trackclass  # noqa: E402
 
 BINARY = Path(__file__).resolve().parent.parent / "build" / "spc_dump"
 
@@ -356,6 +357,14 @@ def main() -> None:
             row["record_path"] = f"records/{record.name}"
         manifest.append(row)
 
+    # A commercial SPC set is not a song list. Label every track from
+    # measurements already taken -- nothing is dropped, so aggregates can be
+    # reported over everything AND over music only, and the denominator
+    # survives.
+    for row in manifest:
+        if row.get("ok"):
+            row.update(trackclass.classify(row).to_dict())
+
     good = [r for r in manifest if r.get("ok")]
 
     # Composer-disjoint splits over what actually extracted.
@@ -434,6 +443,7 @@ def main() -> None:
             1 for r in good if r.get("checks", {}).get("ok")
         ),
         "check_failures": dict(sorted(failures_by_check.items())),
+        "track_classes": trackclass.census(good),
         # Milestone 4. A grid is reported per track with its fit, so the
         # corpus says how much of itself it has a tempo for rather than
         # claiming one everywhere.

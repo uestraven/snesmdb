@@ -327,13 +327,27 @@ def main() -> None:
         "--echo-sample", type=int, default=8,
         help="tracks per game to read raw logs for; echo needs the full log",
     )
+    parser.add_argument(
+        "--track-class", default="",
+        help="restrict to one track_class, e.g. music. Empty uses every "
+             "track, so a run can be compared against itself to see how much "
+             "the jingles and effects were moving the figures.",
+    )
     args = parser.parse_args()
 
     rows = []
+    skipped = 0
     for line in (args.out_dir / "manifest.jsonl").open():
         row = json.loads(line)
-        if row.get("ok") and row.get("record_path"):
-            rows.append(row)
+        if not (row.get("ok") and row.get("record_path")):
+            continue
+        if args.track_class and row.get("track_class") != args.track_class:
+            skipped += 1
+            continue
+        rows.append(row)
+    if args.track_class:
+        print(f"restricted to track_class={args.track_class}; "
+              f"skipped {skipped} other tracks", file=sys.stderr)
     by_game: dict[str, list[dict]] = defaultdict(list)
     for row in rows:
         by_game[row["tag"]["game"] or "?"].append(row)
@@ -472,7 +486,9 @@ def main() -> None:
         "median_pitch_mod_voices": across(("echo", "median_pitch_mod_voices")),
     }
 
-    args.report.write_text(json.dumps({"corpus": corpus, "per_game": per_game}, indent=1))
+    args.report.write_text(json.dumps(
+        {"track_class": args.track_class or "all", "n_tracks": len(rows),
+         "corpus": corpus, "per_game": per_game}, indent=1))
 
     print("\n=== performance conventions: median over games, and the spread ===")
     print(f"{'measure':28s} {'median':>9s} {'min':>9s} {'max':>9s} {'games':>6s}")
