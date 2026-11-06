@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from snesmdb import (  # noqa: E402
     clock as clock_mod,
     envelope as envelope_mod,
+    provenance as provenance_mod,
     grid as grid_mod,
     midi as midi_mod,
     scores as scores_mod,
@@ -271,6 +272,17 @@ def main() -> None:
         index.append(entry)
 
     (args.dist_dir / "index.json").write_text(json.dumps(index, indent=1))
+    # Stands alone so the artifact is traceable without opening summary.json.
+    (args.dist_dir / "provenance.json").write_text(json.dumps(
+        provenance_mod.record(
+            tool="publish.py",
+            out_dir=str(args.out_dir),
+            dist_dir=str(args.dist_dir),
+            limit=args.limit or None,
+            counts=counts,
+        ),
+        indent=1,
+    ))
     for name in ("splits.json", "summary.json", "timbre_codebook.json",
                  "performance.json", "timbre_assignments.json"):
         source = args.out_dir / name

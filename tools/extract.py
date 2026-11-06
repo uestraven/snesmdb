@@ -34,6 +34,7 @@ from snesmdb import brr, pitch  # noqa: E402
 from snesmdb.checks import audio_peak, run as run_checks  # noqa: E402
 from snesmdb import (  # noqa: E402
     grid as grid_mod,
+    provenance as provenance_mod,
     scores as scores_mod,
     tick as tick_mod,
     timers as timers_mod,
@@ -440,6 +441,19 @@ def main() -> None:
         grid_reasons[reason] = grid_reasons.get(reason, 0) + 1
     grid_reasons = dict(sorted(grid_reasons.items(), key=lambda kv: -kv[1]))
     summary = {
+        # What produced this tree. The per-track sha256 proves the input; this
+        # proves the process, which changed repeatedly over identical inputs.
+        "provenance": provenance_mod.record(
+            tool="extract.py",
+            spc_dir=str(args.spc_dir),
+            out_dir=str(args.out_dir),
+            jobs=args.jobs,
+            seconds=args.seconds,
+            max_seconds=args.max_seconds,
+            valid_fraction=args.valid_fraction,
+            test_fraction=args.test_fraction,
+            seed=args.seed,
+        ),
         "n_sources": len(sources),
         "n_extracted": len(good),
         "n_failed": len(manifest) - len(good),
@@ -463,10 +477,12 @@ def main() -> None:
         ),
         "check_failures": dict(sorted(failures_by_check.items())),
         "track_classes": trackclass.census(good),
-        # Milestone 4. A grid is reported per track with its fit, so the
-        # corpus says how much of itself it has a tempo for rather than
-        # claiming one everywhere.
-        "grid": {
+        # The inferred ONSET period. This is NOT the row clock -- rows are
+        # indexed on the SPC700 timer register, which every track has. Kept
+        # because the onset period is a real and separate musical measurement,
+        # and named so that `n_found: 866` can never be read as the corpus
+        # covering 866 of 1,316 tracks. See reclock.py for the clock block.
+        "onset_grid": {
             "n_found": sum(1 for r in good if r.get("grid", {}).get("found")),
             "n_not_found": sum(
                 1 for r in good if not r.get("grid", {}).get("found")

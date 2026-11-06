@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from snesmdb import (  # noqa: E402
     clock as clock_mod,
     envelope as envelope_mod,
+    provenance as provenance_mod,
     scores as scores_mod,
     spcfile,
     timers as timers_mod,
@@ -196,6 +197,40 @@ def main() -> None:
     if args.dry_run:
         print("\n--dry-run: nothing written", file=sys.stderr)
         return
+
+    # summary.json is written by extract.py and still headlined the ONSET
+    # grid's 866/1,316 as the timing statistic, which contradicted the clock
+    # coverage in the same tree. Rewrite it here, where the clock is decided.
+    summary_path = args.out_dir / "summary.json"
+    if summary_path.is_file():
+        summary = json.loads(summary_path.read_text())
+        if "grid" in summary and "onset_grid" not in summary:
+            summary["onset_grid"] = summary.pop("grid")
+        good = [r for r in updated if r.get("ok")]
+        rates = sorted(
+            r["clock"]["hz"] for r in good if (r.get("clock") or {}).get("hz")
+        )
+        summary["clock"] = {
+            "sources": census,
+            "n_clocked": sum(1 for r in good if (r.get("clock") or {}).get("period_ticks")),
+            "n_tracks": len(good),
+            "distinct_rates": len({round(x, 2) for x in rates}),
+            "hz_min": round(rates[0], 4) if rates else None,
+            "hz_median": round(rates[len(rates) // 2], 4) if rates else None,
+            "hz_max": round(rates[-1], 4) if rates else None,
+            "note": (
+                "One row is one SPC700 timer tick. A row is a uniform "
+                "DEFINITION but not a uniform DURATION -- the rate differs per "
+                "track, so divide by clock.hz before comparing anything "
+                "per-row across games."
+            ),
+        }
+        summary["provenance_reclock"] = provenance_mod.record(
+            tool="reclock.py", out_dir=str(args.out_dir),
+            spc_dir=str(args.spc_dir),
+        )
+        summary_path.write_text(json.dumps(summary, indent=1))
+        print(f"rewrote {summary_path}", file=sys.stderr)
 
     tmp = manifest.with_suffix(".jsonl.new")
     with tmp.open("w", encoding="utf-8") as handle:
