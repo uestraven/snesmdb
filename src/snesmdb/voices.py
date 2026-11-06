@@ -59,6 +59,17 @@ LEGATO_RETURN_SEMITONES = 0.25
 #: driver's own setup writes are not read as a second note.
 LEGATO_MIN_LEAD_TICKS = 2_048                 # 2 ms
 
+#: ...and it must be a musically possible interval. Axelay's driver rewrites
+#: PITCH every tick (250 Hz, so every 4 ms) with values oscillating between
+#: about 45 and 1790 -- a factor of forty, plus or minus SIXTY semitones. That
+#: is ring modulation or a metallic texture, not a note succession, and the
+#: return test misses it because the oscillation comes back to NEAR but not
+#: within LEGATO_RETURN_SEMITONES of where it started (1760 against 1790 is
+#: 0.29 st). A ceiling catches it cleanly: it halves Axelay's rate, 83% to
+#: 40%, and moves no other game by more than 1.5 points. Two octaves is
+#: deliberately generous -- melodic leaps past it essentially do not occur.
+LEGATO_MAX_SEMITONES = 24.0
+
 #: ...and it must be clear of the note's END, because a driver sets up the
 #: NEXT note's pitch before keying it on, and that write lands inside the
 #: current note. Measured, the patch-before-KON lead runs 400-4,281 clocks,
@@ -219,6 +230,10 @@ class Note:
     def to_dict(self) -> dict[str, Any]:
         start_s, end_s = self.seconds()
         return {
+            # Published so `LegatoStep.parent_note_id` resolves. Without it
+            # the link between a step and its parent -- and therefore the
+            # step's sample and envelope -- is unrecoverable from the record.
+            "note_id": self.note_id,
             "voice": self.voice,
             "start": self.start,
             "end": self.end,
@@ -348,7 +363,7 @@ def _legato_steps(
     for index in range(1, len(inside)):
         previous, current = inside[index - 1], inside[index]
         interval = _semitones(previous[1], current[1])
-        if abs(interval) <= LEGATO_MIN_SEMITONES:
+        if not LEGATO_MIN_SEMITONES < abs(interval) <= LEGATO_MAX_SEMITONES:
             continue
         # A write in the note's last moments is the next note's setup, not a
         # step in this one. See LEGATO_MIN_TRAILING_TICKS.

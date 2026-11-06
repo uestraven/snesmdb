@@ -414,3 +414,36 @@ def test_no_steps_without_a_sounding_note():
     log += _voice_pitch(200_000, 0, _pitch_for_semitones(BASE, 7.0))
     out = extract(iter(log))
     assert out.notes == [] and out.legato_steps == []
+
+
+def test_an_absurd_interval_is_not_a_legato_step():
+    """Axelay's driver rewrites PITCH every 4 ms with values oscillating
+    between ~45 and ~1790 -- plus or minus sixty semitones. That is ring
+    modulation, not a note succession, and the return test misses it because
+    the oscillation comes back near but not within tolerance."""
+    log = list(_voice_pitch(1_000, 0, 1790))
+    log.append(w(10_000, R_KON, 0x01))
+    t = 50_000
+    for value in (48, 2937, 1760, 45, 1725, 45, 1699):
+        log += _voice_pitch(t, 0, value)
+        t += 5_000
+    log.append(w(t + 400_000, R_KOFF, 0x01))
+    out = extract(iter(log))
+    assert all(abs(s.semitones) <= voices.LEGATO_MAX_SEMITONES
+               for s in out.legato_steps)
+    assert len(out.legato_steps) <= 2, "ring modulation read as note successions"
+
+
+def test_a_wide_but_plausible_leap_still_counts():
+    """The ceiling must not reject real music. An octave and a half is a
+    large but real melodic leap."""
+    out = extract(iter(_legato_log([18.0])))
+    assert len(out.legato_steps) == 1
+    assert out.legato_steps[0].semitones == pytest.approx(18.0, abs=0.1)
+
+
+def test_the_ceiling_is_generous_enough_to_be_a_pathology_filter():
+    """Measured, a 24-semitone ceiling halves Axelay (83% -> 40%) and moves
+    no other game by more than 1.5 points. It is there to remove a
+    non-musical mechanism, not to trim the interval distribution."""
+    assert voices.LEGATO_MAX_SEMITONES >= 24.0
