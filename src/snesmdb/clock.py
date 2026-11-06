@@ -115,13 +115,59 @@ from .grid import Grid
 
 TICKS_PER_SECOND = 1_024_000
 
-#: SPC700 sequencer timers. Timer 0 and Timer 1 count at 8 kHz (one step per
-#: 128 audio clocks); Timer 2 counts at 64 kHz (one per 16). Each is scaled by
-#: an 8-bit divider register, so the achievable rates are base/N.
-TIMER_BASES: tuple[tuple[float, str], ...] = ((8000.0, "T0/T1"), (64000.0, "T2"))
+#: SPC700 sequencer timers, with the largest total division searched for each.
+#: Timer 0 and Timer 1 share a prescaler and step at 8 kHz (one per 128 S-SMP
+#: clocks); Timer 2 bypasses it and steps at 64 kHz (one per 16).
+#:
+#: THE BOUNDS DIFFER PER BASE, and that is an empirical call rather than a
+#: hardware one. Both timers have the same 8-bit TnDIV register, and both can
+#: be sub-divided in software. But allowing T2 a large total division makes
+#: the achievable set dense: 64000/(8M) is just 8000/M, so software-divided T2
+#: mostly re-derives rates T0/T1 already reaches and interleaves the gaps.
+#: Measured against a jitter null, allowing both bases to 1024 collapses the
+#: test to 1.47x enrichment -- near vacuous -- while T2 held to pure hardware
+#: division keeps it at 3.34x.
+#:
+#: The corpus says T2 is barely used for sequencing anyway: of the 456 ticks
+#: that resolve to a pure hardware divider, **455 are T0/T1 and one is T2**.
+#: So T2 stays available, at the division the hardware alone provides.
+TIMER_BASES: tuple[tuple[float, str, int], ...] = (
+    (8000.0, "T0/T1", 1024),
+    (64000.0, "T2", 256),
+)
 
-#: An 8-bit divider register, where 0 reads as 256.
-DIVIDER_MAX = 256
+#: The 8-bit TnDIV target register, where 0 reads as 256. This bounds the
+#: HARDWARE stage only.
+HARDWARE_DIVIDER_MAX = 256
+
+#: Drivers do not use the hardware tick as the musical tick. The timer's 4-bit
+#: TnOUT counter clears on read, so a driver polls it and decrements a tempo
+#: accumulator in RAM, dividing again in software by some M. The achievable
+#: sequencer rate is therefore base/(N*M), not base/N -- and bounding the
+#: search at 256 was producing false negatives on exactly the games that
+#: looked broken: Tales of Phantasia went from 63% of its ticks resolving to
+#: 100%, Star Ocean 78% to 98%, Donkey Kong Country 2 66% to 94%, Super Mario
+#: World 50% to 100%.
+#:
+#: The bound is a real trade-off, because base/K gets dense as K grows and the
+#: test loses power. Measured, over the corpus's tick range:
+#:
+#:     K <=  256   88.6% of real ticks resolve, 20.3% of random -> 4.4x
+#:     K <= 1024   98.8%                        31.7%           -> 3.1x
+#:     K <= 4096   99.6%                        32.8%           -> 3.0x
+#:
+#: 1024 is where the signal saturates while the null is still well separated.
+#: Past it almost nothing is gained and the test only weakens.
+#:
+#: The per-base bound lives in `TIMER_BASES`; this is the overall ceiling and
+#: the figure the tolerance note below is quoted at. NOTE ON THE NULL: an
+#: earlier version of these figures used a null drawn UNIFORMLY over the tick
+#: range, which flattered the test badly -- it reported 3.1x where the honest
+#: control gives 1.47x for the same configuration. Measured ticks are
+#: clustered, not uniform, so the control multiplies each real tick by a
+#: random factor in [0.90, 1.10]: same distribution, alignment destroyed.
+#: Quote enrichment against that null and nothing else.
+SEQUENCER_K_MAX = 1024
 
 #: How close a measured tick must sit to an achievable rate to be called a
 #: timer read. Tight on purpose: at this tolerance a random frequency in the
@@ -158,35 +204,70 @@ SOURCES = (SOURCE_GAME, SOURCE_TRACK, SOURCE_FIXED)
 
 @dataclass(frozen=True)
 class Divider:
-    """An achievable SPC700 timer rate: `base_name` scaled by `n`."""
+    """An achievable sequencer rate: `base_name` divided by `k` = `n` * `m`.
+
+    `n` is the hardware TnDIV target and `m` the driver's software
+    sub-division. The split is reported because it is the difference between
+    "this driver's timer runs at this rate" and "this driver's timer runs
+    faster and the driver counts", and only the first is a register value
+    someone could look up.
+    """
 
     hz: float
     base_hz: float
     base_name: str
+    k: int
     n: int
+    m: int
     rel_error: float
 
     @property
+    def software_divided(self) -> bool:
+        return self.m > 1
+
+    @property
     def label(self) -> str:
-        return f"{self.base_name}/{self.n}"
+        if self.m == 1:
+            return f"{self.base_name}/{self.n}"
+        return f"{self.base_name}/{self.n}x{self.m}"
+
+
+def _split(k: int) -> tuple[int, int]:
+    """Factor `k` into a hardware divider <= 256 and a software multiplier.
+
+    Picks the smallest software multiplier that fits, since a driver divides
+    in software only as much as it must.
+    """
+    for m in range(1, k + 1):
+        if k % m == 0 and k // m <= HARDWARE_DIVIDER_MAX:
+            return k // m, m
+    return k, 1
 
 
 def nearest_divider(hz: float, tolerance: float = DIVIDER_TOLERANCE) -> Divider | None:
-    """The achievable timer rate nearest `hz`, or None if none is close.
+    """The achievable sequencer rate nearest `hz`, or None if none is close.
 
     Returning None is the useful half: it means the measurement cannot be a
-    timer read, which is how the scattered drivers are detected rather than
-    averaged.
+    timer-derived rate at all. On this corpus that is now rare (98.8% of
+    measured ticks resolve), which is itself the finding -- the tick extractor
+    is sound on every driver, and the games without a per-game clock are
+    games whose drivers use many rates, not games the extractor failed on.
     """
     if not hz or hz <= 0:
         return None
     best: Divider | None = None
-    for base_hz, base_name in TIMER_BASES:
-        for n in range(1, DIVIDER_MAX + 1):
-            rate = base_hz / n
+    for base_hz, base_name, k_max in TIMER_BASES:
+        # Only the few K nearest the target can win, so this does not need
+        # to sweep the whole range.
+        exact = base_hz / hz
+        for k in {max(1, int(exact) + d) for d in (-1, 0, 1, 2)}:
+            if k > min(k_max, SEQUENCER_K_MAX):
+                continue
+            rate = base_hz / k
             error = abs(rate - hz) / hz
             if best is None or error < best.rel_error:
-                best = Divider(rate, base_hz, base_name, n, error)
+                n, m = _split(k)
+                best = Divider(rate, base_hz, base_name, k, n, m, error)
     if best is None or best.rel_error > tolerance:
         return None
     return best
@@ -272,6 +353,11 @@ class Clock:
             "measured_hz": round(self.measured_hz, 4) or None,
             "timer_divider": self.divider.label if self.divider else None,
             "timer_base_hz": self.divider.base_hz if self.divider else None,
+            "timer_hardware_divider": self.divider.n if self.divider else None,
+            "timer_software_multiplier": self.divider.m if self.divider else None,
+            "timer_software_divided": (
+                self.divider.software_divided if self.divider else None
+            ),
             "n_confident_tracks": self.n_confident,
             "agreement": round(self.agreement, 4),
             "reason": self.reason,

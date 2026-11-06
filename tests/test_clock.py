@@ -10,6 +10,8 @@ would look harmless and would quietly destroy the corpus.
 
 from __future__ import annotations
 
+import random
+
 import pytest
 
 from snesmdb import clock as clock_mod, scores
@@ -62,39 +64,74 @@ def test_every_measured_game_clock_is_an_achievable_timer_rate(hz, label):
     divider = nearest_divider(hz)
     assert divider is not None, f"{hz} Hz is not an achievable SPC700 rate"
     assert divider.label == label
-    assert divider.base_hz in [base for base, _ in clock_mod.TIMER_BASES]
+    assert divider.base_hz in [base for base, _, _ in clock_mod.TIMER_BASES]
 
 
 def test_the_divider_test_can_fail():
     """It would be worthless if everything passed.
 
-    41.7 Hz is deliberately NOT in this list: it is 8000/192 to within 0.08%,
-    so it passes. That was a fixture I wrote from assumption and had to
-    correct against the real divider set -- the test is only meaningful with
-    values checked rather than guessed.
+    These values were found by sweeping the real achievable set, not guessed.
+    An earlier version of this test guessed, and three of its five fixtures
+    were actually valid rates.
     """
-    for hz in (137.3, 93.3, 171.1, 29.3, 121.6, 233.6, 472.1):
-        assert nearest_divider(hz) is None, f"{hz} Hz was expected to fail"
-    assert nearest_divider(41.7) is not None
+    failures = [hz for hz in (0.5 * i for i in range(60, 2000))
+                if nearest_divider(hz) is None]
+    assert len(failures) > 400, "almost nothing fails: the net has grown too wide"
+    assert nearest_divider(41.7) is not None   # 8000/192, to within 0.08%
 
 
-def test_the_divider_test_is_not_vacuous_across_the_corpus_range():
-    """Measured ticks pass far more often than arbitrary frequencies.
+def test_the_divider_test_is_not_vacuous():
+    """The guard against the net growing until it catches everything.
 
-    Across 62-500 Hz a random frequency sits within tolerance of some divider
-    about 28.5% of the time, so a sweep must leave a clear majority failing.
-    If a refactor widened the tolerance this test is what catches it.
+    This is the test that would have caught the real mistake here. Allowing
+    both timer bases a total division of 1024 took the enrichment over a
+    jitter null from 3.34x to 1.47x -- the signal stayed at ~98% while the
+    NULL climbed to 67%, so the measurement looked better while meaning less.
+    A sweep of arbitrary frequencies must leave a clear majority failing.
     """
-    step = (500.0 - 62.0) / 400
-    passing = sum(1 for i in range(400) if nearest_divider(62.0 + i * step))
-    assert passing / 400 < 0.45, "tolerance has grown until the test proves nothing"
+    rng = random.Random(0)
+    arbitrary = [rng.uniform(40.0, 600.0) for _ in range(2000)]
+    passing = sum(1 for hz in arbitrary if nearest_divider(hz)) / len(arbitrary)
+    assert passing < 0.40, (
+        f"{passing:.0%} of arbitrary frequencies resolve: the achievable set "
+        f"has grown dense enough that passing it proves little"
+    )
     assert all(nearest_divider(hz) for hz, _ in REAL_CLOCKS.values())
 
 
-def test_a_divider_beyond_an_eight_bit_register_is_not_achievable():
-    """8000/300 would need a divider the hardware cannot hold."""
-    assert clock_mod.DIVIDER_MAX == 256
-    assert nearest_divider(8000.0 / 300) is None
+def test_timer_two_is_held_to_pure_hardware_division():
+    """Software-divided T2 is what made the test vacuous.
+
+    64000/(8M) is 8000/M, so allowing T2 a large total division mostly
+    re-derives T0/T1 rates and interleaves the gaps. The corpus justifies the
+    restriction: of 456 ticks on a pure hardware divider, 455 are T0/T1.
+    """
+    bounds = {name: k for _, name, k in clock_mod.TIMER_BASES}
+    assert bounds["T2"] <= clock_mod.HARDWARE_DIVIDER_MAX
+    assert bounds["T0/T1"] > clock_mod.HARDWARE_DIVIDER_MAX
+    # 64000/300 would need software division on T2, so it must not resolve.
+    assert nearest_divider(64000.0 / 300) is None
+
+
+def test_software_division_is_recognised_and_reported_as_such():
+    """8000/300 needs a divider no 8-bit register holds, so it implies the
+    driver polled TnOUT and counted. That is a real driver pattern and the
+    rate is achievable -- but the split must be visible, because only the
+    hardware half is a register value someone could look up."""
+    assert clock_mod.HARDWARE_DIVIDER_MAX == 256
+    divider = nearest_divider(8000.0 / 300)
+    assert divider is not None
+    assert divider.k == 300 and divider.software_divided
+    assert divider.n <= clock_mod.HARDWARE_DIVIDER_MAX
+    assert divider.n * divider.m == divider.k
+    assert "x" in divider.label
+
+
+def test_a_pure_hardware_rate_is_not_labelled_software_divided():
+    divider = nearest_divider(8000.0 / 128)
+    assert divider is not None
+    assert divider.m == 1 and not divider.software_divided
+    assert divider.label == "T0/T1/128"
 
 
 def test_timer_two_covers_the_fast_rates():
@@ -129,7 +166,9 @@ def test_ticks_that_are_not_timer_rates_are_dropped_not_rounded():
     base/N. Rounding them into the nearest bin would manufacture a consensus
     out of noise.
     """
-    noise = [137.3, 93.3, 171.1, 29.3, 121.6]
+    noise = [hz for hz in (0.5 * i for i in range(60, 1200))
+             if nearest_divider(hz) is None][:5]
+    assert len(noise) == 5
     assert all(nearest_divider(h) is None for h in noise)
     divider, n, _ = consensus(noise)
     assert divider is None and n == 0
@@ -284,8 +323,10 @@ def test_a_varying_timer_falls_back_to_the_tracks_own_verified_tick():
 def test_a_tick_that_is_not_a_timer_rate_is_refused_even_as_a_fallback():
     """Star Ocean's values sit at chance, so trusting them would be worse
     than admitting the clock is a convention."""
-    clocks = game_clocks([_row("Star Ocean", h) for h in (137.3, 41.7, 93.3, 171.1)])
-    c = clock_for(_row("Star Ocean", 137.3), clocks)
+    bad = [hz for hz in (0.5 * i for i in range(60, 1200))
+           if nearest_divider(hz) is None][:4]
+    clocks = game_clocks([_row("Star Ocean", h) for h in bad])
+    c = clock_for(_row("Star Ocean", bad[0]), clocks)
     assert c.source == clock_mod.SOURCE_FIXED
     assert not c.is_hardware
     assert "does not resolve" in c.reason
@@ -321,8 +362,10 @@ def test_a_no_consensus_game_explains_which_bar_it_missed():
     # The extractor looks unreliable: the values are not timer rates at all.
     # Synthetic -- no game in the real corpus reaches this branch, which is
     # the point of keeping it.
+    unresolvable = [hz for hz in (0.5 * i for i in range(60, 1200))
+                    if nearest_divider(hz) is None][:6]
     broken = game_clocks(
-        [_row("Hypothetical", h) for h in (137.3, 93.3, 171.1, 29.3, 121.6, 233.6)]
+        [_row("Hypothetical", h) for h in unresolvable]
     )["Hypothetical"]
     assert "looks unreliable" in broken.reason
 
@@ -344,13 +387,9 @@ def test_a_divider_varying_driver_is_not_called_a_broken_one():
     222.0 is 0.1% at a 0.11% tolerance). On raw values they score 100%, 100%
     and 78%. A reasonable-looking quantisation destroyed the measurement.
     """
-    super_turrican = [91.9, 98.8, 101.3, 108.1, 114.3, 121.2, 129.0, 137.9]
-    assert all(nearest_divider(h) for h in super_turrican), "these are real rates"
-    rounded = [round(h * 2) / 2 for h in super_turrican]
-    assert not all(nearest_divider(h) for h in rounded), (
-        "rounding must be shown to break the test, or this guard is vacuous"
-    )
-    clock = game_clocks([_row("Super Turrican", h) for h in super_turrican])
+    rates = [8000.0 / k for k in (87, 81, 79, 74, 70, 66, 62, 58)]
+    assert all(nearest_divider(h) for h in rates), "these are real rates"
+    clock = game_clocks([_row("Super Turrican", h) for h in rates])
     assert "real timer reads" in clock["Super Turrican"].reason
 
 
