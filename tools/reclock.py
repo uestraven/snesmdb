@@ -55,10 +55,17 @@ def rebuild(
     # alone while the DSP computes env x VOL. The census says how much that
     # costs per track without changing any existing field.
     row["envelope"] = envelope_mod.census(notes)
+    row["expressive_channels"] = list(scores_mod.CHANNELS)
     render_ticks = int(float(row.get("render_seconds") or 0.0) * TICKS)
     grid = clock.to_grid(render_ticks)
     built = scores_mod.build(notes, grid, render_ticks)
     row["scores"] = built.stats()
+    # The third score format. It existed in `scores.py` from milestone 6 but
+    # was never emitted, so neither it nor its sustain channel reached any
+    # published file. `timbre_of` is left None deliberately: the milestone 5
+    # codebook failed its own cross-game validation, so every class is written
+    # as -1 rather than as a number a consumer might trust.
+    expressive = scores_mod.expressive(notes, grid, None, render_ticks)
 
     if not (grid.found and built.n_rows):
         row.pop("scores_path", None)
@@ -81,6 +88,7 @@ def rebuild(
                     # indexed on, and the fit that made it look reasonable.
                     "onset_grid": row.get("grid"),
                     **built.to_dict(),
+                    "expressive": expressive,
                 },
                 handle,
                 separators=(",", ":"),

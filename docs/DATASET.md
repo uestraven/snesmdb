@@ -240,37 +240,44 @@ of the **onset** period, which is a musical question rather than a hardware one,
 and the scores record it as `onset_grid` for provenance. It is no longer what
 the rows are indexed on.
 
-## Velocity ignores the envelope, and the envelope is not recoverable from key-on state
+## Velocity is the attack; sustain is a separate channel
 
-`velocity` is derived from the two signed side volumes only:
-`(|VOL_L| + |VOL_R|) / 2`. The DSP's actual output is
+The DSP computes
 
     out = (sample * env) >> 11        # env is the 11-bit internal envelope
     amp = (out * VOL) >> 7            # VOL signed 8-bit, per side
 
-so loudness is **env × VOL**, and the envelope is absent from every velocity
-here. An `envelope` block on each manifest row now says what that costs, and
-the answer splits cleanly:
+so amplitude is **env x VOL**, and `velocity` carries VOL alone. That is
+correct for the ATTACK: in ADSR mode the attack phase drives env to full scale
+whatever the rate, so peak loudness really is VOL. What VOL cannot express is
+where the note SETTLES, which is why the expressive score has a fourth
+channel.
 
-**Velocity is correct as *attack* intensity.** In ADSR mode the attack phase
-drives env to full scale whatever the attack rate, so peak loudness genuinely
-is VOL. 93.73% of the corpus's 1,863,499 notes are in ADSR mode; the remaining
-6.27% are in GAIN *direct* mode, where the level is a plain static number. No
-note in the corpus uses a ramping GAIN mode, so the envelope is **100%
-decidable** — nothing has to be guessed or left out.
+`expressive.channels` is `(note, velocity, timbre_class, sustain)`. Channel 3
+is the sustained amplitude on the same 0..127 scale as velocity, so the two
+compare directly: equal means the note holds, lower means it decays to that
+level. **-1 means the envelope cannot be read from the key-on state** -- a
+ramping GAIN mode -- and is not zero, because zero means silent. No note in
+this corpus uses a ramping mode, so -1 should not appear.
 
-**What is missing is the sustain plateau.** 80.0% of notes hold at full scale
-and need no correction at all. The other **20.0% (372,538 notes) settle
-below full**, down to silence at SL=0, and for those a staccato pluck and a
-held horn with equal VOL are currently indistinguishable. That is articulation
-rather than velocity, so it is exposed as `env_sustain_fraction` instead of
-being folded into the velocity byte.
+Corpus-wide over 1,863,499 notes: **93.73% ADSR, 6.27% GAIN direct, no ramping
+modes**, so the envelope is 100% decidable. **80.0% of notes hold at full
+scale** and need no correction; the other **20.0% (372,538 notes)** settle
+below, down to silence at sustain level 0. Measured over expressive CELLS,
+which are duration-weighted rather than note-weighted, 90.3% hold, 6.2% decay
+and 3.5% are silent.
 
 Sustain level is `ADSR2 >> 5`, and the hardware leaves decay when
-`(env >> 8) == SL`, so **the plateau is `SL × 256`** — the bottom of a
-256-wide band, not `(SL+1) × 256`, which is that band's top edge. SL=7 is
+`(env >> 8) == SL`, so **the plateau is `SL x 256`** -- the bottom of a
+256-wide band, not `(SL+1) x 256`, which is that band's top edge. SL=7 is
 special: env is already `0x7FF` when the attack ends and `0x7FF >> 8` is 7, so
 decay never runs.
+
+Note that the expressive score was present in `scores.py` from milestone 6 but
+**was never emitted to disk until this change**, so neither it nor the sustain
+channel reached any published file before now. `timbre_class` is written as -1
+throughout: the milestone 5 codebook failed its own cross-game validation, so
+no class number from it is offered.
 
 **Driver envelope strategies differ, which is why one rule would not serve.**
 Measured over ten seconds of one track per game, counting register writes:
@@ -279,10 +286,10 @@ Measured over ten seconds of one track per game, counting register writes:
 |---|---|---|
 | full voice patch per note | DKC, Kirby, Super Metroid, Star Ocean, Tales of Phantasia, Super Mario World | SRCN/ADSR1/ADSR2/GAIN written in lockstep |
 | ADSR per note, no GAIN | Chrono Trigger, Secret of Mana | GAIN never written |
-| software envelope | Mega Man X | GAIN written 390× against 26 SRCN writes |
-| set once, VOL does everything | Earthbound (one track: one write of each) | VOL written 274×, patch 1× |
+| software envelope | Mega Man X | GAIN written 390x against 26 SRCN writes |
+| set once, VOL does everything | Earthbound (one track: one write of each) | VOL written 274x, patch 1x |
 
-That last row is why voice state must be seeded from the SPC's DSP block —
+That last row is why voice state must be seeded from the SPC's DSP block --
 see the note on SRCN above. Before it was, 540 tracks reported ADSR disabled
 with GAIN 0, i.e. a silent envelope, purely because their drivers never
 rewrote those registers. That artifact was 5.74% of notes; it is now 0.05%.
@@ -291,7 +298,7 @@ rewrote those registers. That artifact was 5.74% of notes; it is now 0.05%.
 reading the registers at the key-on instant captures the authoritative block.
 Measured: Mega Man X 174/174 key-ons have the patch already in place (median
 400 clocks earlier), Star Ocean 139/139 (4,281), Super Mario World 121/200
-(2,202), and no driver writes a patch register in the 64–128 clocks following
+(2,202), and no driver writes a patch register in the 64-128 clocks following
 a KON.
 
 Phase inversion is still lost: velocity takes the magnitude, and a negative

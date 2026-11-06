@@ -44,10 +44,17 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Sequence
 
+from . import envelope as envelope_mod
 from .grid import Grid
 
 #: DSP voices. Fixed by the hardware.
 N_VOICES = 8
+
+#: The per-row channels of the expressive score, in order. `sustain` was added
+#: after `velocity` was found to carry only VOL, which is half of the DSP's
+#: amplitude -- see `expressive`. Appended rather than inserted, so a consumer
+#: indexing 0..2 is unaffected.
+CHANNELS = ("note", "velocity", "timbre_class", "sustain")
 
 #: 0 is silence in both formats, so the usable note range is 1..127.
 MIN_NOTE = 1
@@ -168,28 +175,61 @@ def _velocity(note: dict[str, Any]) -> int:
     return max(0, min(127, int(round((left + right) / 2.0))))
 
 
+def _sustain(note: dict[str, Any], velocity: int) -> int:
+    """Sustained amplitude, 0..127, or -1 when the envelope cannot be read.
+
+    `velocity` is the attack peak (VOL alone, which is correct because the
+    ADSR attack always reaches full envelope). This scales it by where the
+    envelope settles, so the two channels are in the same units.
+    """
+    env = envelope_mod.of_note(note)
+    fraction = env.sustain_fraction
+    if fraction is None:
+        return -1
+    return max(0, min(127, int(round(velocity * fraction))))
+
+
 def expressive(
     notes: Sequence[dict[str, Any]],
     grid: Grid,
     timbre_of: dict[int, int] | None = None,
     render_ticks: int = 0,
 ) -> dict[str, Any]:
-    """The third score format: note, velocity and timbre class per voice-row.
+    """The third score format, per voice-row: note, velocity, timbre, sustain.
 
     `timbre_of` maps a sample index (SRCN) to its codebook class. Absent, the
     timbre axis is written as -1 throughout rather than as a plausible zero,
     so a missing codebook can never be mistaken for class 0.
+
+    THE FOURTH CHANNEL IS SUSTAIN, and it exists because `velocity` is only
+    half of loudness. The DSP computes `((sample * env) >> 11) * VOL >> 7`, so
+    amplitude is env x VOL while `velocity` carries VOL alone. That is right
+    for the ATTACK -- the ADSR attack phase drives env to full scale whatever
+    the rate, so peak loudness really is VOL -- but it says nothing about where
+    the note settles.
+
+    It settles below full scale for **20.0% of the corpus, 372,538 notes**,
+    down to silence at sustain level 0. Without this channel a staccato pluck
+    and a held horn with equal VOL are identical in the score, which is wrong
+    for one note in five.
+
+    Channel 3 is the sustained amplitude on the same 0..127 scale as velocity,
+    so the two compare directly: equal means the note holds, lower means it
+    decays to that level. -1 marks an envelope whose level cannot be read from
+    the key-on state -- a ramping GAIN mode, which no note in this corpus uses,
+    so it should not appear. -1 rather than 0, because 0 means silent.
     """
     base = build(notes, grid, render_ticks)
     if not base.n_rows:
         return {
             "n_rows": 0, "voices": [], "timbre_classes_present": [],
             "timbre_validated": "tonal_vs_percussive_only",
+            "channels": CHANNELS,
         }
 
     n_rows = base.n_rows
     voices: list[list[list[int]]] = [
-        [[0, 0, -1] for _ in range(n_rows)] for _ in range(N_VOICES)
+        [[0, 0, -1, 0] for _ in range(n_rows)] for _ in range(N_VOICES)
     ]
     ends = _clamped_ends(notes, render_ticks or max(
         (int(n["end"]) for n in notes if n.get("end") is not None), default=0
@@ -203,6 +243,7 @@ def expressive(
         if not 0 <= voice < N_VOICES:
             continue
         velocity = _velocity(note)
+        sustain = _sustain(note, velocity)
         klass = (timbre_of or {}).get(int(note["srcn"]), -1)
         present.add(klass)
         start = int(note["start"])
@@ -215,13 +256,16 @@ def expressive(
                 continue
             rows = range(snapped, snapped + 1)
         for row in rows:
-            voices[voice][row] = [number, velocity, klass]
+            voices[voice][row] = [number, velocity, klass, sustain]
     return {
         "n_rows": n_rows,
         "voices": voices,
         "timbre_classes_present": sorted(present),
         # The claim a consumer may rely on, carried with the data.
         "timbre_validated": "tonal_vs_percussive_only",
+        # Named so a consumer never has to count positions, and so the
+        # fourth channel's arrival is self-describing in old and new files.
+        "channels": CHANNELS,
     }
 
 

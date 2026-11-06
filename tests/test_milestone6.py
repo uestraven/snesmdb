@@ -173,14 +173,79 @@ def test_an_unterminated_note_still_gets_a_note_off() -> None:
 # --- the expressive score -------------------------------------------------
 
 
-def test_expressive_carries_note_velocity_and_timbre() -> None:
+def test_expressive_carries_note_velocity_timbre_and_sustain() -> None:
+    g = Grid(found=True, period_ticks=ROW, phase_ticks=0, n_rows=4)
+    # ADSR enabled with sustain level 7 holds full scale, so sustain == velocity.
+    notes = [_note(0, 0, 2 * ROW, 60, vl=30, vr=50, srcn=7)]
+    notes[0].update({"adsr1": 0x80, "adsr2": 0xE0})
+    out = scores.expressive(notes, g, {7: 3}, render_ticks=4 * ROW)
+    assert out["channels"] == ("note", "velocity", "timbre_class", "sustain")
+    assert out["voices"][0][0] == [60, 40, 3, 40]
+    assert out["voices"][0][1] == [60, 40, 3, 40]
+    assert out["voices"][0][2] == [0, 0, -1, 0]
+    assert out["timbre_classes_present"] == [3]
+
+
+def test_appending_sustain_did_not_move_the_first_three_channels() -> None:
+    """A consumer indexing 0..2 must be unaffected by the new channel."""
     g = Grid(found=True, period_ticks=ROW, phase_ticks=0, n_rows=4)
     notes = [_note(0, 0, 2 * ROW, 60, vl=30, vr=50, srcn=7)]
-    out = scores.expressive(notes, g, {7: 3}, render_ticks=4 * ROW)
-    assert out["voices"][0][0] == [60, 40, 3]
-    assert out["voices"][0][1] == [60, 40, 3]
-    assert out["voices"][0][2] == [0, 0, -1]
-    assert out["timbre_classes_present"] == [3]
+    notes[0].update({"adsr1": 0x80, "adsr2": 0x60})       # sustain level 3
+    cell = scores.expressive(notes, g, {7: 3}, render_ticks=4 * ROW)["voices"][0][0]
+    assert cell[:3] == [60, 40, 3]
+    assert cell[3] != cell[1], "a decaying note must differ from its attack"
+
+
+def test_sustain_level_scales_the_sustain_channel() -> None:
+    """The 20% of notes this exists for: VOL alone overstates them.
+
+    Sustain level 3 settles at 3*256 of 2047, so a note struck at velocity 40
+    holds at about 15 -- and before this channel existed the score said 40.
+    """
+    g = Grid(found=True, period_ticks=ROW, phase_ticks=0, n_rows=4)
+    seen = {}
+    for level in (0, 3, 7):
+        notes = [_note(0, 0, 2 * ROW, 60, vl=40, vr=40, srcn=7)]
+        notes[0].update({"adsr1": 0x80, "adsr2": level << 5})
+        cell = scores.expressive(notes, g, None, render_ticks=4 * ROW)["voices"][0][0]
+        seen[level] = cell[3]
+        assert cell[1] == 40, "the attack is VOL and must not change"
+    assert seen[0] == 0, "sustain level 0 decays to silence"
+    assert seen[7] == 40, "sustain level 7 holds full scale"
+    assert 0 < seen[3] < 40
+    assert seen[0] < seen[3] < seen[7]
+
+
+def test_a_staccato_pluck_and_a_held_horn_are_now_distinguishable() -> None:
+    """The exact failure this channel removes: equal VOL, different envelope."""
+    g = Grid(found=True, period_ticks=ROW, phase_ticks=0, n_rows=4)
+    cells = []
+    for adsr2 in (0x00, 0xE0):                      # SL 0 vs SL 7
+        notes = [_note(0, 0, 2 * ROW, 60, vl=40, vr=40, srcn=7)]
+        notes[0].update({"adsr1": 0x80, "adsr2": adsr2})
+        cells.append(
+            scores.expressive(notes, g, None, render_ticks=4 * ROW)["voices"][0][0]
+        )
+    assert cells[0][1] == cells[1][1], "identical VOL, so identical velocity"
+    assert cells[0] != cells[1], "but the rows must not be identical"
+
+
+def test_direct_gain_sets_sustain_from_the_gain_register() -> None:
+    g = Grid(found=True, period_ticks=ROW, phase_ticks=0, n_rows=4)
+    notes = [_note(0, 0, 2 * ROW, 60, vl=40, vr=40, srcn=7)]
+    notes[0].update({"adsr1": 0x00, "adsr2": 0x00, "gain": 64})   # env 1024/2047
+    cell = scores.expressive(notes, g, None, render_ticks=4 * ROW)["voices"][0][0]
+    assert 0 < cell[3] < 40
+
+
+def test_an_unreadable_envelope_is_minus_one_not_silent() -> None:
+    """A ramping GAIN mode cannot be read from a key-on. Zero would claim the
+    note is silent, which would mute exactly the most expressive drivers."""
+    g = Grid(found=True, period_ticks=ROW, phase_ticks=0, n_rows=4)
+    notes = [_note(0, 0, 2 * ROW, 60, vl=40, vr=40, srcn=7)]
+    notes[0].update({"adsr1": 0x00, "adsr2": 0x00, "gain": (4 << 5) | 0x18})
+    cell = scores.expressive(notes, g, None, render_ticks=4 * ROW)["voices"][0][0]
+    assert cell[3] == -1
 
 
 def test_a_missing_codebook_is_minus_one_not_class_zero() -> None:
