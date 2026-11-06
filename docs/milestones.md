@@ -610,62 +610,53 @@ titles say the same thing: "Giygas' Static", "Strong Wind", "Rumbling",
 
 **Isolated pitch steps inside a sounding note do happen, for some drivers.**
 Implemented in `voices.py` as `LegatoStep`, an independent event table keyed to
-its parent note. The counts, per track:
+its parent note. Full corpus, with the 24-semitone ceiling applied:
+**154,910 steps against 1,863,499 notes, 8.3%**, in 21 of 22 games, ranging
+0.0% to 45.5%.
 
-| track | key-on notes | legato steps | | median interval |
-|---|---|---|---|---|
-| Star Ocean "Ancient Ruin" | 758 | 160 | +21% | 0.67 st |
-| Mega Man X "Vile 2" | 885 | 51 | +6% | 1.00 st |
-| Final Fantasy 6 "Slam Shuffle" | 315 | 20 | +6% | 1.03 st |
-| Tales of Phantasia "Underground Way" | 567 | 3 | +1% | 1.96 st |
-| Chrono Trigger "The Hidden Truth" | 391 | **0** | 0 | — |
-| Lufia 2 "After the Ceremony" | 417 | **0** | 0 | — |
-| Secret of Mana "A Wish" | 85 | **0** | 0 | — |
+**That 8.3% is not a melodic figure, and the games with the highest rates are
+the ones that prove it.** A driver writes PITCH for notes and for effects.
+Equal temperament separates them: a note succession lands on a whole semitone,
+while portamento, vibrato and pitch effects are continuous. Per game, the share
+of steps within 0.1 st of a whole semitone, against a null that jitters each
+interval by +/-6%:
 
-**THE FIRST MEASUREMENT OF THIS WAS WRONG BY AN ORDER OF MAGNITUDE**, and the
-two reasons are both worth keeping, because each looked like signal.
+| game | notes | steps | rate | tempered | vs null | verdict |
+|---|---|---|---|---|---|---|
+| Super Turrican | 38,440 | 4,162 | 10.8% | 99.2% | **2.38x** | melodic |
+| Batman Returns | 44,849 | 1,334 | 3.0% | 83.7% | 1.91x | melodic |
+| Super Castlevania 4 | 55,823 | 3,771 | 6.8% | 94.7% | 1.75x | melodic |
+| Plok! | 66,687 | 12,005 | 18.0% | 78.5% | 1.54x | melodic |
+| Breath of Fire 2 | 58,186 | 3,191 | 5.5% | 82.8% | 1.42x | melodic |
+| Lufia 2 | 88,644 | 76 | 0.1% | 5.3% | 1.33x | melodic |
+| Dragon Quest 5 | 40,014 | 121 | 0.3% | 91.7% | 1.31x | melodic |
+| Chrono Trigger | 117,153 | 4,380 | 3.7% | 33.3% | 1.25x | melodic |
+| Final Fantasy 6 | 149,512 | 5,653 | 3.8% | 83.3% | 1.18x | melodic |
+| Mega Man X | 57,612 | 4,197 | 7.3% | 74.0% | 1.16x | melodic |
+| Secret of Mana | 122,553 | 632 | 0.5% | 23.6% | 1.15x | marginal |
+| **Earthbound** | 155,212 | **70,633** | **45.5%** | 17.5% | **1.02x** | **not melodic** |
+| **Axelay** | 53,315 | **21,512** | **40.3%** | 18.9% | **0.98x** | **not melodic** |
+| Star Ocean | 127,948 | 2,987 | 2.3% | 21.4% | 1.01x | not melodic |
+| Kirby Super Star | 136,308 | 5,065 | 3.7% | 15.8% | 0.98x | not melodic |
+| Donkey Kong Country | 80,367 | 5,931 | 7.4% | 15.1% | 0.94x | not melodic |
+| Donkey Kong Country 2 | 124,003 | 6,022 | 4.9% | 8.3% | 0.92x | not melodic |
+| Tales of Phantasia | 187,629 | 1,389 | 0.7% | 14.8% | 0.98x | not melodic |
+| Super Mario World | 70,142 | 1,529 | 2.2% | 3.5% | 1.06x | not melodic |
+| Super Metroid | 28,439 | 0 | 0.0% | — | — | no steps |
 
-It reported +114% for Mega Man X, +46% for Star Ocean, +36% for Final Fantasy
-VI and +10% for Tales of Phantasia. Every one of those is inflated, and the
-last two are entirely artifact — Tales of Phantasia's real figure is +1%.
+Earthbound (70,633) and Axelay (21,512) hold **59% of all steps in the corpus**
+and neither is melodic: those drivers use PITCH for continuous modulation, so
+their steps are real register events that are not notes. **Restricted to games
+whose steps pass the test, the rate is 2.1% of notes, not 8.3%** -- and the
+honest headline is the smaller number.
 
-*PITCH is two registers.* One logical pitch change arrives as a write to `$x2`
-then `$x3`, and the state between them is a half-updated value — usually a wild
-interval. Counting those gave 1,006 steps for Mega Man X where there are 51,
-and 96 for a Final Fantasy VI track that has 20. The pair is always adjacent
-instructions, measured at a fixed 10–25 clocks apart per driver (median, p95
-and max all equal), so entries within 256 clocks now collapse to the last.
-
-*Drivers set up the next note before keying it on.* The patch-before-KON lead
-runs 400–4,281 clocks, and that write lands inside the *current* note, where it
-reads as a step. After coalescing, Mega Man X still reported 585 steps whose
-**median observation was 3 ms** — three milliseconds before the note ended,
-which is a setup write, not a note. A 16,384-clock floor on remaining note
-duration cuts those 585 to 51 while leaving the other tracks untouched:
-
-| trailing floor | mmx-06 | so-37 | ff6-205 | top-110 |
-|---|---|---|---|---|
-| 0 | 585 | 160 | 20 | 3 |
-| 4,096 | 260 | 160 | 20 | 3 |
-| **16,384** | **51** | **160** | **20** | **3** |
-| 32,768 | 34 | 160 | 20 | 0 |
-
-A third guard was tried and reverted: requiring 100 ms of room after a step to
-"prove itself" against a vibrato return. Median note duration is **116 ms**
-(Mega Man X) and 107 ms (Star Ocean), so a 100 ms window is the same order as
-the thing it measures and rejected 94% of real steps. The return window is now
-the rest of the note, capped at 100 ms.
-
-The surviving confounds, both excluded by measurement: these are not vibrato
-(the pitch does not return before the note ends) and not portamento (a slide is
-built from increments below the 0.5-semitone floor, so it never qualifies —
-which is also why a long monotonic run needs no rejecting, and run length is
-recorded as evidence rather than used as a filter).
-
-One known false positive remains and is pinned by a test: a modulation that
-*stops* mid-note, holding its final excursion, is indistinguishable from a
-step. Drivers here modulate to the key-off, so it is a limitation rather than
-an observed error.
+Two caveats on the table itself. The 1.10x cutoff is mine, not derived, and two
+games sit close enough to it to flip: Super Mario World read melodic at 1.15x
+on the pre-ceiling data and 1.06x after, Secret of Mana moved the other way.
+For those two the verdict is a coin-toss on an arbitrary threshold. And the
+test is a POPULATION statistic -- a single interval sits near a whole semitone
+20-30% of the time by chance -- so nothing is filtered on it and no individual
+step is labelled.
 
 **Why a separate table rather than more notes.** `notes` stays bound strictly
 to KON edges, so every entry remains traceable to a hardware edge with its
