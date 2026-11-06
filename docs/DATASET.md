@@ -235,6 +235,29 @@ unplaced and 2 cells are contested. The `grid` block is still reported as the
 **onset** period — a real and separate musical measurement — but it no longer
 indexes anything.
 
+## A row is a hardware tick; the musical row needs `software_divisor_m`
+
+One row is one SPC700 timer tick. Where a driver counts M ticks per sequencer
+row, rows are M times finer than the music and a note spans several of them.
+
+`timing.software_divisor_m` in the intake tree, and `software_divisor_m` in
+each score, carries M where it can be recovered: it is the ratio of the
+register clock to the rate `tick.py` measures from DSP write cadence, since the
+first is the timer and the second is the sequencer. That ratio is a clean
+integer for **403 of 1,316 tracks (31%)** -- 462 of the 519 that have a
+write-cadence estimate at all, 89% of them, median ratio exactly 1.00.
+
+**It is `null`, never 1, where unknown.** Defaulting to 1 would silently assert
+that the row IS the musical row for the other 913 tracks. A consumer wanting
+musical rows must either restrict to tracks where M is known or accept rows at
+timer resolution.
+
+`driver_tick_hz` is published beside it as the quantity M derives from. It is
+the SEQUENCER rate rather than the timer, is absent for 797 tracks, and is
+wrong for 20 that report exactly 2,048 ticks -- intra-burst write spacing
+mistaken for a timer. Those 20 are refused a divisor because their ratio is not
+a clean integer, which is the guard working rather than an accident.
+
 ## Velocity is the attack; sustain is a separate channel
 
 The DSP computes

@@ -28,19 +28,32 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from snesmdb import grid as grid_mod, midi as midi_mod, scores as scores_mod  # noqa: E402
+from snesmdb import (  # noqa: E402
+    clock as clock_mod,
+    envelope as envelope_mod,
+    grid as grid_mod,
+    midi as midi_mod,
+    scores as scores_mod,
+)
 
 TICKS = grid_mod.TICKS_PER_SECOND
 
 
-def _grid_from_dict(info: dict[str, Any]) -> grid_mod.Grid:
-    g = grid_mod.Grid(found=bool(info.get("found")))
-    g.period_ticks = int(info.get("period_ticks") or 0)
-    g.phase_ticks = int(info.get("phase_ticks") or 0)
-    g.n_rows = int(info.get("n_rows") or 0)
-    g.fit = float(info.get("fit") or 0.0)
-    g.cluster_ticks = int(info.get("cluster_ticks") or 0)
-    return g
+def _clock_from_dict(info: dict[str, Any]) -> clock_mod.Clock:
+    """The row clock a manifest row was scored on.
+
+    THIS USED TO READ `row["grid"]`, the inferred ONSET period, which is no
+    longer what rows are indexed on -- and because the grid was only found for
+    866 of 1,316 tracks, publishing from it silently dropped a third of the
+    corpus that the clock covers in full. The onset grid is still carried
+    through to the payload as provenance; it just does not decide anything.
+    """
+    return clock_mod.Clock(
+        period_ticks=int(info.get("period_ticks") or 0),
+        source=str(info.get("source") or clock_mod.SOURCE_FIXED),
+        reason=str(info.get("reason") or ""),
+        measured_hz=float(info.get("measured_hz") or 0.0),
+    )
 
 
 def _timbre_map(out_dir: Path) -> dict[str, dict[int, int]]:
@@ -64,6 +77,33 @@ def _timbre_map(out_dir: Path) -> dict[str, dict[int, int]]:
                for srcn, counts in by_srcn.items()}
         for game, by_srcn in votes.items()
     }
+
+
+def _software_divisor(row: dict[str, Any], clock_hz: float) -> int | None:
+    """How many timer ticks the driver counts per sequencer row, or None.
+
+    A row in this dataset is one HARDWARE timer tick. Where a driver counts M
+    ticks per musical row, rows are M times finer than the music -- and M is
+    exactly the ratio between the register clock and the rate `tick.py`
+    measures from write cadence, because the former is the timer and the
+    latter is the sequencer.
+
+    Recoverable only where the write-cadence estimate exists AND the ratio is
+    a clean integer: 462 of the 519 tracks with a tick, 89%, and about a third
+    of the corpus. None everywhere else, which is honest rather than assuming
+    M = 1 -- assuming it would silently claim the row IS the musical row for
+    two thirds of the corpus.
+    """
+    tick = (row.get("tick") or {})
+    if not tick.get("found") or not tick.get("hz") or not clock_hz:
+        return None
+    ratio = clock_hz / float(tick["hz"])
+    if ratio < 1.0:
+        return None
+    nearest = round(ratio)
+    if nearest < 1 or abs(ratio - nearest) > 0.02:
+        return None
+    return int(nearest)
 
 
 def main() -> None:
@@ -95,9 +135,10 @@ def main() -> None:
         (args.dist_dir / sub).mkdir(parents=True, exist_ok=True)
 
     counts = {
-        "tracks": 0, "with_grid": 0, "scores_written": 0, "midi_written": 0,
+        "tracks": 0, "with_clock": 0, "scores_written": 0, "midi_written": 0,
         "midi_notes_written": 0, "midi_notes_dropped": 0,
         "expressive_with_timbre": 0, "intake_written": 0,
+        "with_software_divisor": 0,
     }
     index: list[dict[str, Any]] = []
 
@@ -121,7 +162,7 @@ def main() -> None:
             "checks_passed": bool(row.get("checks", {}).get("ok")),
         }
 
-        # MIDI: available for every track with any pitched note, grid or not.
+        # MIDI: available for every track with any pitched note.
         data = midi_mod.from_notes(
             notes, render_ticks=render_ticks,
             name=f"{row['tag']['game']} - {row['tag']['title']}",
@@ -137,10 +178,12 @@ def main() -> None:
             entry["midi"] = f"midi/{stem}.mid"
             entry["midi_summary"] = info
 
-        # The three scores need a grid.
-        track_grid = _grid_from_dict(row.get("grid", {}))
-        if track_grid.found and track_grid.period_ticks:
-            counts["with_grid"] += 1
+        # The three scores are indexed on the SPC700 timer register, which
+        # every track has, so this is no longer conditional on an inference.
+        track_clock = _clock_from_dict(row.get("clock", {}))
+        if track_clock.period_ticks:
+            counts["with_clock"] += 1
+            track_grid = track_clock.to_grid(render_ticks)
             built = scores_mod.build(notes, track_grid, render_ticks)
             timbre_of = timbre_by_game.get(row["tag"]["game"] or "", {})
             expr = scores_mod.expressive(notes, track_grid, timbre_of, render_ticks)
@@ -148,7 +191,13 @@ def main() -> None:
                 counts["expressive_with_timbre"] += 1
             payload = {
                 "track_id": row["track_id"],
-                "grid": row["grid"],
+                "clock": row.get("clock"),
+                "software_divisor_m": _software_divisor(row, track_clock.hz),
+                "timers": row.get("timers"),
+                "envelope": row.get("envelope"),
+                # Provenance only: the inferred ONSET period, which is a
+                # separate musical measurement and indexes nothing.
+                "onset_grid": row.get("grid"),
                 "tick": row.get("tick"),
                 "separated": built.separated,
                 "blended": built.blended,
@@ -169,8 +218,22 @@ def main() -> None:
                 "source": {"track_id": row["track_id"], "sha256": row["sha256"]},
                 "timing": {
                     "ticks_per_second": TICKS,
-                    "row_period_ticks": track_grid.period_ticks,
-                    "rows_per_second": row["grid"].get("rows_per_second"),
+                    "row_period_ticks": track_clock.period_ticks,
+                    "rows_per_second": round(track_clock.hz, 4),
+                    "row_clock_source": track_clock.source,
+                    # One row is one physical timer tick. Where a driver counts
+                    # M ticks per sequencer row, rows are M times finer than the
+                    # music and M is not recoverable here -- see DATASET.md.
+                    "sequencer_timer": (row.get("timers") or {}).get(
+                        "sequencer_timer"
+                    ),
+                    # Timer ticks per musical row, where it can be recovered.
+                    # Multiply a row index by this to get a sequencer row.
+                    # None means it is not known -- not that it is 1.
+                    "software_divisor_m": _software_divisor(row, track_clock.hz),
+                    # The write-cadence estimate the divisor comes from. It is
+                    # the SEQUENCER rate, not the timer, and it is absent for
+                    # 797 tracks and wrong for a documented 20.
                     "driver_tick_hz": (row.get("tick") or {}).get("hz"),
                 },
                 "voices": [
@@ -182,6 +245,13 @@ def main() -> None:
                                 "end_sec": n.get("end_sec"),
                                 "midi_note": n.get("midi_note"),
                                 "velocity": scores_mod._velocity(n),
+                                # Velocity is the ATTACK (VOL alone, which is
+                                # correct because the ADSR attack reaches full
+                                # envelope). Sustain is where it settles, and
+                                # differs for 20% of the corpus.
+                                "sustain": scores_mod._sustain(
+                                    n, scores_mod._velocity(n)
+                                ),
                                 "srcn": n["srcn"],
                                 "timbre_class": timbre_of.get(int(n["srcn"]), -1),
                             }
@@ -194,12 +264,15 @@ def main() -> None:
             with gzip.open(args.dist_dir / "intake" / f"{stem}.json.gz", "wt") as handle:
                 json.dump(intake, handle, separators=(",", ":"))
             counts["intake_written"] += 1
+            if _software_divisor(row, track_clock.hz):
+                counts["with_software_divisor"] += 1
             entry["intake"] = f"intake/{stem}.json.gz"
 
         index.append(entry)
 
     (args.dist_dir / "index.json").write_text(json.dumps(index, indent=1))
-    for name in ("splits.json", "summary.json", "timbre_codebook.json", "performance.json"):
+    for name in ("splits.json", "summary.json", "timbre_codebook.json",
+                 "performance.json", "timbre_assignments.json"):
         source = args.out_dir / name
         if source.is_file():
             (args.dist_dir / name).write_text(source.read_text())

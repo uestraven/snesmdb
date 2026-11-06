@@ -13,10 +13,27 @@ why the scores arrive progressively rather than all at once.
 |---|---|---|---|
 | 1 | Voice event log | ✅ done | low |
 | 2 | Real SPCs and corpus plumbing | ✅ done — **1,316 tracks, 22 games, splits within 0.3 points** | medium |
-| 3 | Absolute pitch | ✅ done — 78.7% pitched, **1.78% octave-suspect** (was 9.1%) | medium |
-| 4 | Grid inference | ⚠️ partial — 866 tracks gridded; the other third have **several** grids, not none | low → medium |
+| 3 | Absolute pitch | ✅ done — **78.3% pitched** (1,458,211 of 1,863,499 notes) | medium |
+| 4 | Row clock | ✅ done — **all 1,316 tracks**, read from the SPC700 timer register | low |
 | 5 | Timbre vocabulary | ❌ **exit criterion not met** — a transferable 2-class split, not an instrument vocabulary | **high — and it was the risk named** |
 | 6 | Publish | ✅ done — **[DATASET.md](DATASET.md)**, three scores, MIDI, intake, splits | low |
+
+Milestone 4 was originally "grid inference" and its exit criterion was a
+fitted tempo grid per track. That criterion was met for 866 tracks and then
+**abandoned as the wrong target**: the row unit is a hardware timer the SPC
+file states outright, not something to infer from onsets. The inferred onset
+grid is still computed and published as provenance, because the onset period
+is a real and separate musical measurement -- it just indexes nothing. See
+"The timer is stored in the SPC file" below.
+
+Two figures in this table moved after the voice-state seeding fix and are
+worth not confusing. Pitched coverage went 78.7% to 78.3%, slightly DOWN,
+because some newly-correct samples fail the f0 plausibility test that the
+wrong ones passed. And the old "1.78% octave-suspect" counted a different
+thing from today's 42.83% of sample estimates carrying a non-zero
+`octave_shift`: the first was a residual-error estimate, the second is how
+often the resolver applied a correction. They are not comparable and the
+second is not a regression.
 
 ---
 
@@ -1172,6 +1189,66 @@ runs from 0% to 73.5% of notes under 100 ms.
 And two of the S-DSP's distinctive features are dead hardware here: **106 noise
 notes and 727 pitch-modulated notes out of 1,863,499**. Drivers write NON and
 PMON 1.48 million times in a 40-track sample, always zero.
+
+## Open defects, in one place
+
+Everything here is measured, reproducible and unfixed. None of it is hidden in
+a subsection.
+
+**The row clock is a hardware tick, not a sequencer row, and M is recoverable
+for only about a third of the corpus.** Where a driver counts M timer ticks per
+musical row, rows are M times finer than the music and a note spans several of
+them. M is the ratio between the register clock and the write-cadence estimate,
+since the first is the timer and the second is the sequencer -- and that ratio
+is a clean integer for **462 of the 519 tracks that have a tick at all (89%)**,
+roughly a third of the corpus. It is published as
+`timing.software_divisor_m`, and is **null** rather than 1 where unknown,
+because assuming 1 would silently claim the row IS the musical row for the
+other two thirds.
+
+An earlier version of this entry said M was "not recoverable" at all. That was
+wrong: the vestigial `tick` field turned out to encode it, with a median ratio
+of exactly 1.00 against the register clock. The limitation is real but
+narrower than first stated.
+
+**A modulation that stops mid-note is read as a legato step.** If a driver
+modulates pitch and then holds its final excursion to the key-off, that is
+indistinguishable from a note succession: the pitch moved and did not come
+back. Pinned by a test. Drivers in this corpus modulate to the key-off, so it
+is a limitation rather than an observed error.
+
+**2.8% of notes report `srcn = 0`** (52,093 of 1,863,499). Seeding voice state
+from the SPC's DSP block fixed 8.0% of notes, and this floor is what remains.
+Sample 0 is a legitimate index, so some of these are correct and the residual
+is not separable.
+
+**The 2,048-tick artifact.** 20 tracks across six unrelated games report a
+driver tick of exactly 2,048 ticks, which is intra-burst write spacing and not
+a timer. It survives in the `tick` field, which is now vestigial -- the row
+clock comes from the timer register -- so it misleads only a consumer reading
+`tick` directly.
+
+**The timbre codebook does not transfer across games** and milestone 5's exit
+criterion is not met. Class agreement across games falls to the shuffled null
+once the leaking features are removed. `timbre_class` is published as -1
+throughout rather than offering a number from it.
+
+**The 1.10x enrichment cutoff for "melodic" legato is arbitrary.** Two games
+sit close enough to flip on it, and did: Super Mario World read melodic before
+the interval ceiling and not after, Secret of Mana the reverse.
+
+**`$F1` is write-only on real hardware.** The byte an SPC carries there is a
+convention of the dump format, not something the CPU could read back. It is
+trusted because it reproduces ten independently measured clocks exactly, which
+is empirical corroboration and not a guarantee.
+
+**Phase inversion is lost.** Velocity takes the magnitude of the side volumes,
+and a negative side volume inverts that side's phase, which two games do on
+over half their notes.
+
+**The intake schema is unverified against its consumer.** Its shape is
+documented but is not checked against the renderer's `acquire(from_extracted=
+True)`, which lives in a sibling project not present here.
 
 ## What this does not promise
 

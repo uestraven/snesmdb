@@ -147,3 +147,54 @@ def test_a_register_clock_still_reports_its_divider():
     got = clock_mod.clock_for(_row("G", timer_hz=500.0), {})
     assert got.divider is not None
     assert got.divider.label == "T0/T1/16"
+
+
+# --------------------------------------------------------------------------
+# The software divisor M, recovered from the two clocks disagreeing
+# --------------------------------------------------------------------------
+
+def _publish_module():
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location(
+        "publish", Path(__file__).resolve().parent.parent / "tools" / "publish.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_m_is_the_ratio_of_the_timer_to_the_sequencer():
+    """Mega Man X: register 125 Hz, write cadence 62.5 Hz, so M = 2.
+
+    The register gives the hardware timer and the cadence gives the sequencer,
+    so their ratio is how many ticks the driver counts per musical row.
+    """
+    pub = _publish_module()
+    row = {"tick": {"found": True, "hz": 62.5}}
+    assert pub._software_divisor(row, 125.0) == 2
+
+
+def test_m_is_one_when_the_two_clocks_agree():
+    pub = _publish_module()
+    row = {"tick": {"found": True, "hz": 190.476}}
+    assert pub._software_divisor(row, 190.476) == 1
+
+
+def test_m_is_none_rather_than_one_when_unknown():
+    """Assuming 1 would claim the row IS the musical row for two thirds of
+    the corpus. None is the honest answer."""
+    pub = _publish_module()
+    assert pub._software_divisor({}, 500.0) is None
+    assert pub._software_divisor({"tick": {"found": False, "hz": 62.5}}, 500.0) is None
+    assert pub._software_divisor({"tick": {"found": True, "hz": 62.5}}, 0.0) is None
+
+
+def test_a_non_integer_ratio_is_refused():
+    """The 11% where the tick is not a clean multiple -- including the 20
+    tracks carrying the 2,048-tick artifact -- must not yield a divisor."""
+    pub = _publish_module()
+    row = {"tick": {"found": True, "hz": 18.574}}
+    assert pub._software_divisor(row, 500.0) is None     # ratio 26.9
+    row = {"tick": {"found": True, "hz": 1196.26}}
+    assert pub._software_divisor(row, 80.0) is None      # tick faster than clock
