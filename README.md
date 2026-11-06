@@ -11,11 +11,24 @@ That shielding is harder here than on the NES, and the reasons are worth
 understanding before choosing a format — see the
 [SNES Synthesizer Primer](#snes-synthesizer-primer).
 
-**Status: [milestone 1 of 6](docs/milestones.md).** The SPC700 runs, every DSP register write is
-logged with absolute timestamps, and notes are recovered from that log. No real
-SPC has been processed yet, pitch is still a raw register value, and there is
-no timbre vocabulary. Formats below are marked accordingly. Nothing here is a
-published dataset yet.
+**Status: five of six [milestones](docs/milestones.md) met, one failed.**
+**1,316 tracks from 22 games, 1,863,499 notes**, composer-disjoint splits
+(1,049 / 135 / 132), every track clocked from its own SPC700 timer register.
+Scores, MIDI and intake trees all build, and `make verify` gates the result on
+13 checks.
+
+**Milestone 5 — the timbre vocabulary — did not work**, and that is the headline
+rather than a footnote. A cross-game instrument vocabulary was the one piece
+NES-MDB gets free and this project had to construct, it was named as the
+project's main risk at the outset, and the risk landed: class agreement across
+games collapses to the shuffled null once features that leak are removed. So
+`timbre_class` is published as `-1` for every note in the corpus. The
+expressive score's third channel carries no information, and no codebook is
+shipped. See [the analysis](docs/milestones.md).
+
+Known defects are listed in one place in
+[milestones.md](docs/milestones.md) rather than scattered: nine of them, all
+measured and reproducible.
 
 ## Contents
 
@@ -31,7 +44,12 @@ published dataset yet.
 - [Relationship to the renderer](#relationship-to-the-renderer)
 - [Attribution](#attribution)
 
-Planning docs: [milestones](docs/milestones.md), [design](docs/design.md).
+Docs: [DATASET.md](docs/DATASET.md) is the deliverable — what the corpus
+contains and what it gets wrong. [milestones.md](docs/milestones.md) is the
+build log, including the open-defect list and the things that were tried and
+reverted. [design.md](docs/design.md) is the original plan.
+[performance-conventions.md](docs/performance-conventions.md) is the analysis
+the corpus exists to support.
 
 ## Dataset information
 
@@ -46,33 +64,62 @@ representation, start from the raw format.
 SPC700 clocks, the 14-bit PITCH register, the sample index (SRCN), left and
 right volume, and the envelope registers (ADSR1, ADSR2, GAIN).
 
-Caveats, because they decide whether this format suits you. Pitch is the raw
-register value — a *resample ratio*, not a note number — so intervals are
-exact but absolute pitch is not yet available. Voices playing noise (NON) or
-under pitch modulation (PMON) are flagged rather than given a pitch, since the
-PITCH register does not describe what sounded. A note still running when the
-log ends is marked unfinished rather than given an invented end time.
+Each note also carries a `midi_note` where absolute pitch could be recovered —
+**78.3% of notes** — by decoding the BRR sample and estimating its fundamental,
+then applying the PITCH ratio. The rest keep the raw register value only.
+
+Caveats, because they decide whether this format suits you. Voices playing
+noise (NON) or under pitch modulation (PMON) are flagged rather than given a
+pitch, since the PITCH register does not describe what sounded. A note still
+running when the log ends is marked unfinished rather than given an invented
+end time. Velocity is the two side volumes and so is the **attack** only — the
+envelope is the other half of loudness, and 20% of notes settle below full
+scale (see the sustain channel below).
+
+A parallel `legato_steps` table records notes the driver delivered by writing
+PITCH to an already-sounding voice, with no key-on — **154,910 of them**. They
+are kept out of the note stream deliberately: a note is observed at a hardware
+edge, a step is inferred from a register write the DSP cannot distinguish from
+a pitch bend, and the two are not equally strong claims. Each step names its
+parent note. Only about a third of them look melodic; the rest come from
+drivers using PITCH for continuous modulation, and the per-game breakdown is in
+the docs.
 
 ### Score formats
 
-**Planned (milestones 3–5).** Dense piano-roll representations on an inferred
-tracker grid, in the same three flavours NES-MDB publishes:
+**Implemented**, for all 1,316 tracks, in the same three flavours NES-MDB
+publishes:
 
-- *expressive* — full per-voice state: pitch, velocity, and timbre class
-- *separated* — notes only, velocity and timbre dropped
-- *blended* — voices flattened into chords
+- *expressive* — per voice-row: `(note, velocity, timbre_class, sustain)`
+- *separated* — one row-indexed track per DSP voice, notes only
+- *blended* — voices flattened into chords, derived *from* separated so
+  polyphony above eight voices is arithmetically impossible
 
 These are lossy, as NES-MDB's are. The blended score loses voice information
 and is not recommended for generating novel SNES music; it is included for
 comparability.
 
-The expressive score needs a **timbre vocabulary**, which the NES gets for free
-and the SNES does not (see the primer). Building one is the main open research
-problem in this project, not a detail.
+Two things to know before using the expressive score. **`timbre_class` is `-1`
+everywhere** — the codebook failed (see Status), so that channel is inert.
+And the fourth channel, `sustain`, exists because `velocity` is only half of
+loudness: the DSP computes `env × VOL`, and 20% of notes settle below full
+envelope scale. Channel 3 is the sustained amplitude on velocity's own 0..127
+scale, so equal means the note holds and lower means it decays to that level.
+
+**One row is one SPC700 timer tick**, read from the `$F1`/`$FA`–`$FC` registers
+the SPC file carries. That is a uniform *definition* but not a uniform
+*duration* — the rate differs per game, 2.00 ms in Super Mario World against
+12.50 ms in Donkey Kong Country — so divide by `clock.hz` before comparing
+anything per-row across games. An earlier design inferred the row period from
+note onsets instead; it produced 346 distinct rates across 664 tracks and was
+abandoned. The onset period is still computed and published as `onset_grid`,
+because it is a real musical measurement, but it indexes nothing.
 
 ### MIDI
 
-**Planned (milestone 6).** Eight tracks, one per voice. Note that
+**Implemented** — 1,243 files, one per track with at least one pitched note.
+Eight tracks, one per DSP voice, type 1, with no GM program change emitted
+because this corpus has no trustworthy instrument mapping to offer. Note that
 [VGMTrans](https://github.com/vgmtrans/vgmtrans) already produces good
 per-driver SPC→MIDI conversions and exports instrument data as SF2/DLS; if MIDI
 is all you need, use that rather than waiting for this.
@@ -90,10 +137,26 @@ You only need to build the C++ tool if you want to process SPCs yourself; the
 Python extractor works on an existing log.
 
 ```sh
-make                                   # builds build/spc_dump
+make                        # builds build/spc_dump
+make test                   # 287 tests, no skips
+make corpus                 # full rebuild: ~80 min on 8 jobs
+make verify                 # 13 checks on an existing corpus and dist tree
+```
+
+`make corpus` is the only entry point that guarantees the ordering, and the
+ordering used to be documented as prose that was **wrong** — it omitted the
+step that derived the row clock, which produced a corpus with zero scored
+tracks, silently. A recipe that executes cannot drift from the recipe that is
+written down, which is why the sequence lives in the Makefile now. `make
+verify` exists for the same reason: every one of its checks corresponds to a
+defect that really shipped from this pipeline, and not one of them announced
+itself.
+
+To poke at a single SPC without building a corpus:
+
+```sh
 python3 tools/make_test_spc.py out.spc --notes 6
 ./build/spc_dump out.spc writes.jsonl 3.0 --wav out.wav --aram out.bin
-pytest                                 # 13 tests, no skips
 ```
 
 ## SNES Synthesizer Primer
@@ -107,7 +170,7 @@ traces back to this table.
 | channel identity | **5 fixed roles** — pulse 1, pulse 2, triangle, noise, DMC — the same in every game | **8 generic voices**, no fixed role, assignment varies per game and can change mid-song |
 | timbre vocabulary | a **closed set of 4** duty values, meaning the same thing in all 397 games | an **open set** — "BRR sample #N in this game's ARAM", an arbitrary index with no cross-game meaning |
 | pitch | a period register, **one universal formula** to Hz | a 14-bit **resample ratio** relative to each sample's own base frequency, which lives in the game's private instrument table |
-| time grid | **60.0988 Hz video frames**, universal; music advances on frames | a **per-driver tick rate** — N-SPC, AKAO, Rare, Konami, Capcom and Hudson all differ |
+| time grid | **60.0988 Hz video frames**, universal; most engines run off the vblank NMI | a **per-track timer**, but it is *stored in the SPC file* — `$FA` over 8 kHz — so it is read, not inferred |
 
 The S-DSP has eight voices, each playing a BRR-compressed sample: 9 bytes per
 16 samples, a 4-bit range and 2-bit filter per block, with four integer
@@ -119,7 +182,26 @@ Two consequences for anyone reading the extracted data. Absolute pitch requires
 recovering each sample's fundamental from the sample data itself, because no
 standard field records it. And a cross-game timbre vocabulary has to be
 *constructed* — by decoding every sample in the corpus and clustering them into
-classes — where the NES simply has four duty cycles.
+classes — where the NES simply has four duty cycles. The first worked for 78.3%
+of notes. **The second did not work at all**, which is milestone 5's failure
+above.
+
+One row of that table was wrong for most of this project's life, and the
+correction is the single most useful thing in it. The time grid was treated as
+something to *infer* — fit a period to note onsets, or recover the driver's
+tick from its write cadence — and both approaches fought the hardware for
+months. The SPC700's timer configuration is part of the dump: `$F1` holds the
+enable bits and `$FA`/`$FB`/`$FC` the targets, so the rate the audio CPU woke
+up at is simply `8000/$FA`. Reading it reproduced every clock the write-cadence
+estimator had found *and* supplied one for the eight games it could not. Three
+hypotheses about why inference failed on N-SPC were tested against write logs
+and all three were refused: the periodic signal is not hidden, it is absent.
+
+A note on the SRCN column, because it bites harder than it reads. An index does
+not name a fixed instrument even *within one game* — each SPC is its own ARAM
+snapshot and drivers reload their bank per track, so Super Turrican's 8 indices
+resolve to 48 distinct samples across 12 tracks. Identify samples by the hash
+of their decoded BRR block, not by index.
 
 ## Design decisions
 
@@ -163,6 +245,12 @@ them as research-use-only. Do not ship models, audio, or datasets derived from
 this data commercially without a rights review. If you publish a corpus built
 with these tools, say what it was derived from.
 
+`tools/publish.py` enforces a weak form of this by **refusing to write inside a
+git work tree**, so a built corpus cannot be committed by accident. That is all
+it can enforce. The scores, MIDI and intake trees are derived works of
+copyrighted material, and `make verify` additionally fails if any audio or SPC
+file is found in a published tree.
+
 ## Relationship to the renderer
 
 snesmdb has **no code dependency** on the SNES renderer that consumes its
@@ -171,6 +259,13 @@ writes intake JSON trees, and the renderer ingests them. The pieces borrowed
 from it — a BRR decoder, fundamental-frequency estimation, and onset-grid
 detection — are copied rather than imported, because a one-way copy beats a
 circular dependency between a dataset tool and its consumer.
+
+The borrowed onset-grid detection is still here and still runs, but it no
+longer decides anything: rows are indexed on the SPC700 timer register
+instead. The intake schema's shape is documented and is **not** verified
+against the renderer's `acquire(from_extracted=True)`, which lives in a
+sibling project not present here — that is recorded as a limitation rather
+than assumed compatible.
 
 ## Attribution
 
