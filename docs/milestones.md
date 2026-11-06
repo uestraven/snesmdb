@@ -541,12 +541,44 @@ on the full data still moved 2 of 11 spot-checked tracks, including
 "Gang-Plank Galleon" from 0.9992 to 0.915 — a regression on a track that was
 already correct, which is worse than being slow.
 
-So the remaining work is a genuinely cheaper fit, not a sampling trick:
-computing the residual distribution by histogram rather than per-onset, or an
-FFT-based periodicity estimate. Bounded, but not a small change, and the
-corpus is usable without it: both timbre-free scores and the MIDI exist for
-every track that has a single grid, and MIDI exists for every track with a
-pitched note regardless.
+### Why the obvious speed-ups all fail: the hill-climb is doing search
+
+Three attempts, all reverted, and the third explains the first two.
+
+**Subsampling the onsets for ranking** took "Dancing Mad" from fit 0.394 to
+0.193. A coarse period fits a sparse subsample better, and the coarsest-wins
+guard then selects it.
+
+**Shortlisting on a subsample and deciding on full data** still moved 2 of 11
+spot-checked tracks, including "Gang-Plank Galleon" from 0.9992 to 0.915 — a
+regression on a track that was already correct.
+
+**Replacing the hill-climb with a closed-form least-squares period fit** looked
+like the clean answer: assign each onset to a grid index and the optimal period
+is ordinary least squares of time on index, which is exact and converges in
+about four passes instead of thirty-two. It made **47 of 68 spot-checked tracks
+worse and lost 13 grids**. Restricting the regression to on-grid onsets only —
+on the theory that the measure counts inliers while least squares is dominated
+by outliers — changed nothing: 46 of 68.
+
+The reason is the one that matters. `_refine` already refuses any period
+scoring worse than the candidate it started from, so it cannot regress on its
+own input. The losses come from the hill-climb reaching periods the candidate
+generator never proposed: stepping outward and halving is a **local search**,
+and on most tracks it walks to a better optimum than any seeded candidate.
+Those thirty-two scoring passes are not polishing a known answer, they are
+finding a different one, and the fit depends on it.
+
+So "refine more cleverly" is the wrong shape of fix. What would work is
+attacking the other factor — either **better candidate generation**, so the
+search starts near the answer and needs fewer steps, or a formulation that
+evaluates every period at once, which an **FFT-based periodogram** over the
+onset train does. The second is the real answer and it is a different
+algorithm, not an optimisation.
+
+Bounded, but not a small change, and the corpus is usable without it: both
+timbre-free scores and the MIDI exist for every track that has a single grid,
+and MIDI exists for every track with a pitched note regardless.
 
 ### Two limits that are properties of the problem, not of the code
 
