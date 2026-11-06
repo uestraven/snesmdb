@@ -470,7 +470,7 @@ lowering the bar would emit grids that do not describe the music.
 **They are multi-section pieces.** The listener's description of Final Fantasy
 VI's "Dancing Mad (Full)" — a classical work whose sections are completely
 different from one another — is directly testable, and recursive splitting
-finds exactly that:
+finds section structure:
 
 | section | onsets | fit |
 |---|---|---|
@@ -488,6 +488,41 @@ multi-movement set pieces. A single tempo was never going to describe them.
 So the honest statement of the milestone's shortfall changes. It is not "the
 grid fails on a third of tracks"; it is **"a third of tracks have no single
 grid, because they have several, and only one grid per track is emitted."**
+
+### Section count is not movement count, and the boundaries were partly mine
+
+The piece has **four** movements, one per tier of the final battle, each
+carrying its own motifs — "Omen" and "Catastrophe" in the first, the "Kefka"
+theme in the third, the opening material returning in the fourth. Recursive
+splitting found three sections, and it would have been wrong to present that as
+three of four found.
+
+A sliding 60-second window, stepped 15 seconds, says why. It reports three
+*regimes* rather than four sections:
+
+| | fit | grid recovered |
+|---|---|---|
+| 0–135 s | 0.65–0.84 | partly — 26.0 and 12.6 rows/s |
+| **135–465 s** | **0.29–0.78** | **none, in any window** |
+| 465–630 s | 0.79–**1.00** | yes — 17.0 and 5.7 rows/s |
+
+And four of the six boundaries that detector flagged are an artifact of this
+code rather than events in the music: **17.0 / 5.7 = 2.98**, so it is switching
+between describing the same passage as beats and as triplets. That is the
+subdivision guard changing its mind window to window, and it would have been
+read as a tempo change by anything keying off period jumps.
+
+**The distinction to keep.** A movement boundary is thematic; a grid boundary
+is metric. Four movements can share a tempo, and one movement can change tempo
+inside itself, so the two counts need not agree and neither validates the
+other. What a grid estimator can honestly claim is where the music admits a
+single period, and for this piece that is: the opening partly, the long middle
+not at all, the finale almost perfectly.
+
+The useful consequence for a piecewise grid is that it would recover **part** of
+such a track rather than all of it. The finale reaches fit 1.00 and would score
+cleanly; the 330-second middle resists a grid even in one-minute windows, and
+would still be reported as having none.
 
 ### What closing this properly needs, and why it is not done here
 
