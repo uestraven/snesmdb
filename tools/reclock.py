@@ -19,6 +19,7 @@ is which of the two the scores are indexed on.
 from __future__ import annotations
 
 import argparse
+import glob
 import gzip
 import json
 import sys
@@ -31,6 +32,8 @@ from snesmdb import (  # noqa: E402
     clock as clock_mod,
     envelope as envelope_mod,
     scores as scores_mod,
+    spcfile,
+    timers as timers_mod,
 )
 
 TICKS = clock_mod.TICKS_PER_SECOND
@@ -102,6 +105,10 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("out_dir", type=Path)
     parser.add_argument(
+        "--spc-dir", type=Path, default=Path("data/spc"),
+        help="where to find SPC files, to backfill timer registers",
+    )
+    parser.add_argument(
         "--dry-run", action="store_true",
         help="report the clocks and the census, write nothing",
     )
@@ -109,22 +116,45 @@ def main() -> None:
 
     manifest = args.out_dir / "manifest.jsonl"
     rows = [json.loads(line) for line in manifest.open()]
+
+    # Backfill the timer registers for manifests written before they were
+    # recorded, so this needs no re-extraction. Keyed on the SPC filename.
+    missing = [r for r in rows if r.get("ok") and not r.get("timers")]
+    if missing:
+        index = {
+            Path(p).name: p
+            for p in glob.glob(str(args.spc_dir / "*" / "*.spc"))
+        }
+        found = 0
+        for row in missing:
+            path = index.get(row.get("source", ""))
+            if not path:
+                continue
+            try:
+                spc = spcfile.load(Path(path))
+            except Exception:
+                continue
+            row["timers"] = timers_mod.read(spc.aram).to_dict()
+            found += 1
+        print(
+            f"backfilled timer registers for {found}/{len(missing)} tracks",
+            file=sys.stderr,
+        )
+
     clocks = clock_mod.game_clocks(rows)
 
-    print("=== per-game clocks ===", file=sys.stderr)
-    for game, clock in sorted(clocks.items()):
-        if clock.period_ticks:
-            print(
-                f"  {game[:30]:32s}{clock.hz:8.2f} Hz  "
-                f"{(clock.divider.label if clock.divider else ''):11s}"
-                f"period {clock.period_ticks:6d} ticks  "
-                f"(n={clock.n_confident}, {clock.agreement:.0%})",
-                file=sys.stderr,
-            )
-    print(file=sys.stderr)
-    for game, clock in sorted(clocks.items()):
-        if not clock.period_ticks:
-            print(f"  {game[:30]:32s}no clock: {clock.reason}", file=sys.stderr)
+    # The per-game tick consensus is now only a FALLBACK, used when a track
+    # has no readable timer register. Printing its failures as headline output
+    # reported problems with a path that no longer decides anything, so it is
+    # summarised rather than enumerated.
+    usable = sum(1 for c in clocks.values() if c.period_ticks)
+    print(
+        f"per-game tick consensus (fallback only): {usable}/{len(clocks)} "
+        f"games have one",
+        file=sys.stderr,
+    )
+
+
 
     updated: list[dict[str, Any]] = []
     changed = 0
@@ -147,7 +177,10 @@ def main() -> None:
             f"  {source:12s}{count:5d} ({100 * count / total:4.1f}%)",
             file=sys.stderr,
         )
-    hardware = census["game_tick"] + census["track_tick"]
+    hardware = sum(
+        count for source, count in census.items()
+        if source != clock_mod.SOURCE_FIXED
+    )
     print(
         f"  hardware-grounded: {hardware}/{total} "
         f"({100 * hardware / total:.1f}%)",

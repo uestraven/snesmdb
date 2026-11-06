@@ -419,7 +419,9 @@ def test_census_counts_every_row():
     rows = [{"clock": {"source": s}} for s in
             ("game_tick", "game_tick", "track_tick", "fixed")]
     counts = clock_mod.census(rows)
-    assert counts == {"game_tick": 2, "track_tick": 1, "fixed": 0 + 1}
+    assert counts == {
+        "timer_register": 0, "game_tick": 2, "track_tick": 1, "fixed": 1,
+    }
     assert sum(counts.values()) == len(rows)
 
 

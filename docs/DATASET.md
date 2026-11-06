@@ -170,75 +170,70 @@ Pitched-note coverage fell slightly, 78.7% to 78.3%, because some of the
 newly-correct samples fail the f0 plausibility test that the wrong ones passed.
 Fewer and right beats more and wrong.
 
-## Rows are indexed on the driver's own clock, not on an inferred grid
+## Rows are indexed on the SPC700's own timer register
 
-Every one of the **1,316 tracks** has row scores, because every track has a row
-clock. What varies is the strength of the evidence behind it, and the `clock`
-block says which of three rules produced it:
+Every one of the **1,316 tracks** is clocked from a hardware register read out
+of the SPC file. Nothing is inferred and nothing is averaged:
 
-| `clock.source` | tracks | what it means |
+| `clock.source` | tracks | |
 |---|---|---|
-| `game_tick` | 926 (70.4%) | an SPC700 timer rate corroborated across the game |
-| `track_tick` | 140 (10.6%) | this track's own rate, verified against the hardware |
-| `fixed` | 250 (19.0%) | a 100 Hz convention, not a measurement |
+| `timer_register` | **1,316 (100%)** | read from `$F1`/`$FA`-`$FC` |
+| `game_tick` | 0 | inferred from write cadence (fallback) |
+| `track_tick` | 0 | inferred, single track (fallback) |
+| `fixed` | **0** | a fabricated 100 Hz convention |
 
-**81.0% of tracks are indexed on a measured hardware clock** (798 of 1,006
-music tracks). Treat `fixed` rows as having an arbitrary time unit.
+An SPC dump carries the whole 64 KB of ARAM, and the SPC700's timer registers
+live in its I/O page: `$F1` holds the enable bits, `$FA`/`$FB`/`$FC` the T0, T1
+and T2 targets. T0/T1 count at 8 kHz and T2 at 64 kHz, each divided by an
+8-bit target where 0 means 256. The lowest enabled timer is taken as the
+sequencer: **T0 for 1,295 tracks, T2 for 20, T1 for 1**.
 
-**Why not the onset grid.** The first design fitted a period to note onsets,
-reasoning by analogy with the NES, where every game inherits one row clock. The
-analogy is false twice over. On the NES the shared rate is the **PPU** frame
-rate of 60.0988 Hz, which music engines pick up because they run off the vblank
-NMI — not the APU frame counter, which is a separate ~240 Hz divider driving
-envelopes. And the SNES has no equivalent signal at all: the SPC700 and DSP sit
-on their own crystal, isolated from the CPU and PPU, and each driver programs
-its own timer. There is no universal SNES row rate to borrow.
+**One row is one physical timer tick.** That is a deliberate choice over the
+musical alternative. Where a driver counts M timer ticks per sequencer row,
+rows are M times finer than the music and a note spans several of them; but M
+is only recoverable from write cadence, which fails on 220 tracks, so dividing
+by it would make a row mean different things in different tracks. The uniform
+definition won.
 
-Fitting onsets instead produced **346 distinct row rates across 664 tracks,
-75% of them unique within a single game** — Final Fantasy VI alone got twenty,
-including 2.2 and 2.3 as separate values. One row meant 4 ms in one track and
-847 ms in another, so the row arrays were not comparable across the corpus,
-which is the one property that makes row arrays worth having.
+**A row is a uniform definition, not a uniform duration.** `$FA` differs per
+game, so a row is 2.00 ms in Super Mario World and 12.50 ms in Donkey Kong
+Country — 80 distinct clock rates across the corpus, 32.8 Hz to 500.0 Hz,
+median 205.1 Hz. Any cross-game comparison of a per-row quantity has to divide
+by `clock.hz`.
 
-**The clock is not the tempo.** Timer 0 and Timer 1 count at a base 8 kHz and
-Timer 2 at 64 kHz, each scaled by an 8-bit divider, so the clock is the quantum
-the sequence is measured in. Tempo is how many ticks a note consumes and varies
-freely: Final Fantasy VI holds 205.13 Hz across all 55 music tracks while its
-median inter-onset spacing runs from 13.8 driver ticks to 183.0, a 13× spread,
-clustering near 24/36/48/72 — tracker row durations.
+**Why this replaced an inferred clock, twice over.** The first design fitted a
+period to note onsets, which produced 346 distinct row rates across 664
+tracks, 75% of them unique within a single game. The second measured the
+driver's tick from DSP write cadence, which worked for most drivers and failed
+for 220 tracks — 178 of them music — that fell back to a fabricated 100 Hz.
+Three hypotheses for that failure were tested against write logs and all three
+were refused: N-SPC does not expose a periodic tick in its DSP writes at all,
+in either the music or the global registers, at any rate between 30 and 800 Hz.
+The information was never in the write log; it was in the file.
 
-**The hardware constrains the measurement, which is how it is checked.** A real
-timer read must land on base/N. Across the corpus range a random frequency does
-so 20.4% of the time; **89% of the 519 measured ticks do**, and all fourteen
-per-game clocks resolve to a plain Timer 0/1 divider — Final Fantasy VI
-8000/39, Chrono Trigger 8000/42, Secret of Mana 8000/36, Mega Man X 8000/128,
-Super Metroid 8000/16. Clocks are snapped to the nearest achievable divider,
-and a track's own tick is trusted only if it passes.
+**The register corroborates the estimator where both exist.** `8000/$FA`
+reproduces every clock write cadence found — Chrono Trigger 190.48 Hz, Super
+Metroid 500, Final Fantasy VI 205.13, Secret of Mana 222.22, Donkey Kong
+Country 80, Earthbound 500, Kirby 500, Dragon Quest 5 200, Castlevania IV 250
+— and four games differ by an exact power of two (Batman Returns 2x, Breath of
+Fire 2 and Mega Man X ½, Plok! ¼), which is the software divisor M. Ten exact
+agreements and four clean ratios.
 
-**Eight games have no per-game clock, and for five the driver is the reason.**
-Star Ocean, Tales of Phantasia, Lufia 2, Super Turrican and Plok! put 63–100%
-of their ticks on real dividers but spread them over 4–23 distinct rates: these
-drivers set tempo by reprogramming the divider rather than counting a fixed
-tick, so no constant exists and each track is indexed on its own verified rate.
-The other three (Actraiser, Axelay, Zelda, Super Mario World) simply have too
-few confident ticks. **A game does not have one tempo, and this is where that
-shows up** — it is a property of the drivers, not a failure of the clock.
+Being per-track, the read also handles the drivers that reprogram their
+divider mid-game: Tales of Phantasia dumps 31 distinct timer values across its
+tracks, Star Ocean 26, Lufia 2 21, Super Turrican 13, Plok! 10. Each track gets
+its own rate rather than a per-game average or a fallback.
 
-**0.03% of placed notes are shorter than one row** (410 of 1,465,861) and were
-snapped onto the nearest, moving their onset. On the inferred grid this was
-**11.3%**, up to 32.4% for Kirby Super Star: the fitted period was coarser than
-the music it described and was displacing one note in nine. The driver clock is
-a fine subdivision, so almost nothing is lost. Contested cells — two notes of
-one voice falling in one row — number 16 across 1,863,499 notes.
+**Caveat on the source.** `$F1` is write-only on real hardware, so the byte an
+SPC carries there is a convention of the dump format rather than something the
+CPU could read back. It is trusted because it validates against those ten
+independent measurements, which is empirical corroboration and not a guarantee.
 
-One known artifact survives in the underlying `tick` field: 20 tracks across
-six unrelated games report exactly 2,048 ticks, which is intra-burst write
-spacing rather than a timer.
-
-The `grid` block is still present on every row. It remains a real measurement
-of the **onset** period, which is a musical question rather than a hardware one,
-and the scores record it as `onset_grid` for provenance. It is no longer what
-the rows are indexed on.
+**Quantisation cost is negligible.** 529 of 1,458,115 placed notes (0.036%)
+are shorter than one row and were snapped to the nearest; 5 notes went
+unplaced and 2 cells are contested. The `grid` block is still reported as the
+**onset** period — a real and separate musical measurement — but it no longer
+indexes anything.
 
 ## Velocity is the attack; sustain is a separate channel
 

@@ -32,7 +32,12 @@ from snesmdb import splits as splits_mod  # noqa: E402
 from snesmdb.spcfile import SpcError, load  # noqa: E402
 from snesmdb import brr, pitch  # noqa: E402
 from snesmdb.checks import audio_peak, run as run_checks  # noqa: E402
-from snesmdb import grid as grid_mod, scores as scores_mod, tick as tick_mod  # noqa: E402
+from snesmdb import (  # noqa: E402
+    grid as grid_mod,
+    scores as scores_mod,
+    tick as tick_mod,
+    timers as timers_mod,
+)
 from snesmdb.voices import extract, read_log  # noqa: E402
 from snesmdb import trackclass  # noqa: E402
 
@@ -117,6 +122,10 @@ def process(args: tuple[str, float, bool, str]) -> dict[str, Any]:
         # register the driver never rewrites reads as zero -- which was wrong
         # for 10.8% of corpus notes on SRCN alone, pitching them against the
         # wrong BRR sample. See voices.VoiceState.
+        # The SPC700's own timer configuration, straight out of ARAM. This
+        # is the row clock: a stored hardware register rather than anything
+        # inferred from write cadence. See timers.py.
+        row["timers"] = timers_mod.read(spc.aram).to_dict()
         result_extract = extract(read_log(log), initial_dsp=spc.dsp)
         row["summary"] = result_extract.summary()
 

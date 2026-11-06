@@ -196,10 +196,15 @@ MIN_AGREEMENT = 0.5
 #: millisecond, for a quantum shared across the corpus instead of one of 346.
 FALLBACK_HZ = 100.0
 
+#: Read straight out of the SPC's own timer registers. Outranks everything
+#: else: it is a stored hardware configuration rather than an inference, it
+#: covers 1,316 of 1,316 tracks, and it reproduces every clock the
+#: write-cadence estimator found. See `timers.py`.
+SOURCE_TIMER = "timer_register"
 SOURCE_GAME = "game_tick"
 SOURCE_TRACK = "track_tick"
 SOURCE_FIXED = "fixed"
-SOURCES = (SOURCE_GAME, SOURCE_TRACK, SOURCE_FIXED)
+SOURCES = (SOURCE_TIMER, SOURCE_GAME, SOURCE_TRACK, SOURCE_FIXED)
 
 
 @dataclass(frozen=True)
@@ -314,8 +319,16 @@ class Clock:
 
     @property
     def is_hardware(self) -> bool:
-        """True when the clock was measured and verified, not chosen."""
-        return self.source in (SOURCE_GAME, SOURCE_TRACK)
+        """True when the clock was read or measured, not chosen."""
+        return self.source in (SOURCE_TIMER, SOURCE_GAME, SOURCE_TRACK)
+
+    @property
+    def is_register_read(self) -> bool:
+        """True when the clock came from the chip's own configuration.
+
+        Stronger than `is_hardware`: no inference of any kind took place.
+        """
+        return self.source == SOURCE_TIMER
 
     def n_rows(self, render_ticks: int) -> int:
         if not self.period_ticks or render_ticks <= 0:
@@ -350,6 +363,7 @@ class Clock:
             "period_sec": round(self.period_sec, 9),
             "source": self.source,
             "is_hardware": self.is_hardware,
+            "is_register_read": self.is_register_read,
             "measured_hz": round(self.measured_hz, 4) or None,
             "timer_divider": self.divider.label if self.divider else None,
             "timer_base_hz": self.divider.base_hz if self.divider else None,
@@ -480,6 +494,28 @@ def clock_for(row: dict[str, Any], clocks: dict[str, Clock]) -> Clock:
     the track has one, because the shared quantum is the whole point and a
     single track's measurement is the noisier of the two.
     """
+    # The SPC's own timer registers outrank every inference. Recorded per
+    # track, so the drivers that reprogram their divider -- Star Ocean with 26
+    # distinct values, Tales of Phantasia 31, Lufia 2 21 -- get their real
+    # per-track rate instead of a per-game average or a fallback.
+    timers = row.get("timers") or {}
+    hz = timers.get("sequencer_hz")
+    if hz:
+        divider = nearest_divider(float(hz))
+        return Clock(
+            period_ticks=period_for_hz(float(hz)),
+            source=SOURCE_TIMER,
+            reason=(
+                f"read from the SPC's own timer configuration: "
+                f"{timers.get('sequencer_timer')} target "
+                f"{(timers.get('targets') or {}).get(timers.get('sequencer_timer'), '?')} "
+                f"gives {float(hz):.2f} Hz. A stored hardware register, not an "
+                f"inference, so one row is one physical timer tick"
+            ),
+            measured_hz=float(hz),
+            divider=divider,
+        )
+
     game = clocks.get(_game_of(row))
     if game is not None and game.period_ticks:
         return game
