@@ -405,27 +405,41 @@ zero. If you are modelling the S-DSP, this corpus will not exercise either.
 ## Rebuilding
 
 ```sh
-make                                                        # build/spc_dump
-python3 tools/extract.py data/spc data/out --jobs 8         # ~50 min
-python3 tools/reclock.py data/out                           # ~10 min, REQUIRED
-python3 tools/performance.py data/out data/out/performance.json
-python3 tools/performance.py data/out data/out/performance_music.json \
-        --track-class music
-python3 tools/publish.py data/out <dist-dir>                # ~18 min
+make corpus          # the whole thing: ~80 min on 8 jobs
 ```
 
-**`reclock.py` is not optional.** `extract.py` records the SPC700 timer
-registers but does not derive the row clock from them, and `publish.py` reads
-`row["clock"]`. Omitting the step produces a corpus with **zero** scored
-tracks, silently -- publish simply finds no clock and writes nothing. An
-earlier version of this block omitted it, so these instructions did not work.
+That is the only entry point that guarantees the ordering, and the ordering is
+load-bearing. The steps, if you need them individually:
 
-That split is an accident of history rather than a design: `reclock.py` exists
-because the clock changed three times and re-extracting took an hour each
+```sh
+make                 # build/spc_dump
+make extract         # ~50 min  SPCs -> manifest, records, raw logs
+make reclock         # ~10 min  row clock from the timer registers  REQUIRED
+make performance     #          the §7 analysis, all tracks and music-only
+make publish         # ~18 min  -> DIST_DIR
+make verify          #          13 checks; exits non-zero on any failure
+```
+
+Override with `SPC_DIR=`, `OUT_DIR=`, `DIST_DIR=`, `JOBS=`.
+
+**`reclock` is not optional.** `extract` records the SPC700 timer registers but
+does not derive the row clock from them, and `publish` reads `row["clock"]`.
+Omitting the step produces a corpus with **zero** scored tracks, silently --
+publish finds no clock and writes nothing without erroring.
+
+This used to be documented here as a list of commands to type, and that list
+omitted `reclock`, so **these instructions did not work**. The ordering now
+lives in the Makefile, where it executes, because a recipe that runs cannot
+drift from the recipe that is written down. `make verify` exists for the same
+reason: every one of its checks corresponds to a defect that really shipped
+from this pipeline, and not one of them announced itself.
+
+The `reclock` split is an accident of history rather than a design. It exists
+because the row clock changed three times and re-extracting cost an hour a
 round, so it rebuilds the clock, the envelope census and the scores from note
-records already on disk. Folding it back into `extract.py` is recorded as
-outstanding work -- two code paths that have to agree is the main piece of debt
-in this pipeline.
+records already on disk. Folding it into `extract` is outstanding work --
+two code paths that have to agree is the main debt in this pipeline, and the
+broken recipe above is what it cost.
 
 `tools/timbre_features.py` and `tools/timbre_codebook.py` are deliberately
 absent from this sequence. They still run, and the analysis is in
