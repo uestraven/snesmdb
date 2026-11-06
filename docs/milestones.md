@@ -580,6 +580,68 @@ Bounded, but not a small change, and the corpus is usable without it: both
 timbre-free scores and the MIDI exist for every track that has a single grid,
 and MIDI exists for every track with a pitched note regardless.
 
+### Legato note successions: notes with no key-on, and how many there are
+
+A voice can be given a new note without a KON edge — the driver just writes a
+new PITCH. To the DSP a pitch bend, a vibrato cycle, a legato step and a new
+note are the same thing: a write to `$x2`/`$x3`. The extractor only creates a
+note on a KON write, so any note delivered this way is merged into its
+predecessor.
+
+Three candidate boundary rules were tested against write logs. Two of them do
+not occur in this corpus at all, which is worth recording so they are not
+re-proposed:
+
+**A mid-voice SRCN change never happens.** It would be the ideal splitter — a
+driver has no reason to swap the sample on a live voice except to start
+something new, so it carries no risk of inventing a note. Measured across 12
+tracks spanning seven drivers, including five of the drone tracks: **zero
+occurrences**. The rule is sound and useless here.
+
+**The drone tracks contain nothing to recover.** All 17 have no effective
+key-on, and the obvious hope is that they are legato-driven music. They are
+not. Three of five sampled have **zero pitch updates** across their whole
+length, including Final Fantasy VI's "Grand Finale (part 1)" at 31,800 writes;
+they are static sustained voices. "Time Vortex" has 11,889 pitch updates at a
+**median of 0.031 semitones**, 76% below 0.1 — a continuous sweep, where a
+half-step rule would fabricate about 1,200 notes out of an acoustic drone. The
+titles say the same thing: "Giygas' Static", "Strong Wind", "Rumbling",
+"Ozzie Scream", "Teleport", "Fade Out!". The `drone` class was right.
+
+**Isolated pitch steps inside a sounding note do happen, and are common for
+some drivers.** Counting pitch jumps over 0.5 semitones that land strictly
+inside a note under the extractor's own key-on rule, and keeping only those
+where the pitch does not return within 100 ms:
+
+| track | notes | persisting mid-note steps | implied |
+|---|---|---|---|
+| Mega Man X "Vile 2" | 885 | 1,005 | **+114%** |
+| Star Ocean "Ancient Ruin" | 758 | 350 | +46% |
+| Final Fantasy 6 "Slam Shuffle" | 315 | 114 | +36% |
+| Tales of Phantasia "Underground Way" | 567 | 57 | +10% |
+| Chrono Trigger "The Hidden Truth" | 391 | **0** | 0 |
+| Secret of Mana "A Wish" | 85 | **0** | 0 |
+
+Two confounds were measured and excluded. These are not vibrato: 78–96% do not
+return to the prior pitch within 100 ms, and the median depth is 1.4–3.0
+semitones. They are not portamento: **69–83% are isolated single steps with a
+maximum monotonic run of 3**, where a slide would show a long one-directional
+run of small increments.
+
+So Mega Man X's note count would roughly double and Chrono Trigger's would not
+move at all. That is a driver property, and it means the corpus currently
+under-counts notes unevenly across games — which matters more than the absolute
+shortfall, because it biases any per-game comparison.
+
+**Not implemented, and the reason is schema rather than detection.** A note
+inferred from a pitch write is a different kind of claim from a note observed
+at a key-on, and collapsing them would contaminate the hardware-grounded
+majority with an inference. The defensible shape is a separate event class —
+key-on notes stay exactly as they are, legato steps are emitted alongside and
+labelled — so a consumer chooses whether to trust them. That is a schema
+change across the score formats, the MIDI exporter and the manifest, so it is
+a deliberate decision rather than a patch.
+
 ### Resolution: the scores are indexed on the driver's clock, and the grid is not the row unit
 
 Everything below this heading was an attempt to make an *inferred* row grid
