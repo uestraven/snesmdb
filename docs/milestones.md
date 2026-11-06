@@ -580,6 +580,67 @@ Bounded, but not a small change, and the corpus is usable without it: both
 timbre-free scores and the MIDI exist for every track that has a single grid,
 and MIDI exists for every track with a pitched note regardless.
 
+### The driver tick is an independent witness, and it puts the bar at 0.70
+
+Everything above argues about the threshold using fit, which is circular. The
+driver tick is not: it comes from DSP write cadence, which the grid estimator
+never sees. If a grid is metrically real it should sit on a whole number of
+driver ticks, because that is how a driver advances a sequence. So on the 366
+music tracks that have both a confident tick and a grid, how close is
+`period_ticks / tick_period` to an integer?
+
+| fit band | n | median &#124;ratio − nearest integer&#124; | within 0.05 of an integer |
+|---|---|---|---|
+| 0.45–0.60 | 37 | 0.200 | 27% |
+| 0.60–0.70 | 42 | 0.252 | 31% |
+| **0.70–0.80** | **45** | **0.008** | **56%** |
+| 0.80–0.90 | 75 | 0.000 | 71% |
+| 0.90–1.01 | 144 | 0.001 | 58% |
+| *random ratios (control)* | 5,000 | 0.250 | 9% |
+
+**The break is at 0.70, not 0.80.** Below it the median residual, 0.20–0.25, is
+indistinguishable from the 0.25 of uniformly random ratios — those grids are
+not tick-locked at all, and the 27–31% hit rate against a 9% control is weak
+corroboration at best. At 0.70 the median residual collapses by a factor of
+twenty-five and the hit rate roughly doubles. The 0.70–0.80 band, which the
+pipeline currently discards, is as tick-locked as the 0.90+ band (56% at median
+0.008 against 58% at 0.001).
+
+Moving the bar to 0.70 would admit **124 more tracks overall (65.8% → 75.2%)
+and 111 more music tracks (66.0% → 77.0%)**. That is not done yet, because a
+hardware witness is evidence about *metric reality* and the bar is also doing a
+second job — guaranteeing the emitted score is usable — and 366 of 1,006 music
+tracks is a biased sample, confined to the four or five drivers whose write
+style yields a confident tick at all.
+
+Two further things fall out of the same table. **Fit is not monotone**:
+0.80–0.90 beats 0.90–1.01 on both statistics, which suggests fit saturates and
+the top band is partly sparse tracks that are easy to fit rather than
+well-measured ones. And the corpus **row rates are not beats** — they run 1.2
+to 1,000 per second with a median of 13.3, and 74% exceed 8/second, so the
+inferred period is generally a tracker row several subdivisions below the beat.
+Any consumer reading `rows_per_second` as a tempo is reading it wrong, which is
+why `bpm_assuming_4_rows_per_beat` carries its assumption in its name.
+
+### The listening set, and why a statistic could not have caught its first bug
+
+`tools/grid_calibration.py` emits 25 MIDI files sampled across fit bands
+straddling 0.70, each with a metronome on channel 10 at the inferred period and
+phase, plus a `calibration.csv` with blank verdict columns. The point is to get
+at the one thing no measurement here reaches: whether a high-fit grid is *the
+beat*, and whether a low-fit grid is wrong or merely ornamented.
+
+The first version clicked the raw grid period, and at a median 13.3 rows/second
+that is a 13 Hz buzz, not a metronome — 74% of the corpus was unjudgeable. Every
+file parsed as valid Type-1 MIDI; the defect was purely audible. The fix clicks
+an integer multiple of the row chosen to land near 120 BPM, recorded per track
+as `rows_per_beat`, so the subdivision assumption is explicit in the CSV rather
+than buried in the period. A verdict of "subdivision" therefore indicts
+`rows_per_beat` and not necessarily the grid, while "drifts" — a wrong period
+with a right phase, which fits the opening bars and slides out, and which
+whole-track fit still scores well — indicts the grid and cannot be fixed by
+remultiplying.
+
 ### Two limits that are properties of the problem, not of the code
 
 **A sub-multiple can be indistinguishable from the tick.** When a driver
