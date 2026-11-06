@@ -1,0 +1,261 @@
+{
+ "source": "mo2-s011.spc",
+ "ok": true,
+ "render_source": "id666",
+ "render_seconds": 3.0,
+ "track_id": "mo2-s011:f921cf7f290c",
+ "sha256": "f921cf7f290c662e222b35b019b47a469522474cef13ec0300c2c9d9b039a8c1",
+ "size": 66188,
+ "tag": {
+  "title": "Buzz Buzz's Demise",
+  "game": "Earthbound",
+  "composer": "Akio Ohmori, Ritsuo Kamimura, Ke",
+  "composers": [
+   "Akio Ohmori",
+   "Ritsuo Kamimura",
+   "Ke"
+  ],
+  "composer_truncated": true,
+  "dumper": "Too Many to List",
+  "comments": "",
+  "date": "",
+  "seconds": 3,
+  "fade_ms": 0,
+  "layout": "text",
+  "layout_reason": "date field is ASCII digits/separators"
+ },
+ "summary": {
+  "n_writes": 16431,
+  "n_notes": 4,
+  "duration_sec": 2.9999873046875,
+  "voices_used": [
+   0,
+   1,
+   2
+  ],
+  "n_voices_used": 3,
+  "samples_used": [
+   0
+  ],
+  "n_samples_used": 1,
+  "n_unfinished_notes": 0,
+  "n_kon_writes": 1257,
+  "n_kon_effective": 4,
+  "n_noise_notes": 0,
+  "n_pitch_modulated_notes": 0,
+  "unhandled_writes": {}
+ },
+ "samples": {
+  "0": {
+   "index": 0,
+   "start": 28672,
+   "loop": 28825,
+   "srcn": 0,
+   "f0_hz": 2000.0,
+   "method": "loop+autocorrelation",
+   "confidence": "high",
+   "detail": "loop spans 32 period(s); the two estimates agree to 0 cents; the spectrum put -1 octave(s) 4.05x ahead of the original",
+   "autocorrelation_hz": 4000.0,
+   "loop_hz": 125.0,
+   "loop_periods": 32,
+   "octave_shift": -1,
+   "octave_margin": 4.048
+  }
+ },
+ "pitch": {
+  "n_pitched": 4,
+  "n_unpitched": 0,
+  "n_implausible_register": 1,
+  "n_samples": 1,
+  "n_samples_with_f0": 1
+ },
+ "tick": {
+  "found": false,
+  "reason": "the write cadence has no single period: phase concentration 0.08 at its best candidate, below 0.25",
+  "period_ticks": 2048,
+  "hz": 500.0,
+  "concentration": 0.0846,
+  "sharpness": 0.0432,
+  "n_candidates": 135,
+  "n_agreeing": 179,
+  "n_gaps": 4146,
+  "burst_window": 64,
+  "n_writes": 16431
+ },
+ "grid": {
+  "found": false,
+  "reason": "only 4 distinct onsets; a period fitted to fewer than 8 describes noise",
+  "period_ticks": 0,
+  "period_sec": 0.0,
+  "rows_per_second": 0.0,
+  "bpm_assuming_4_rows_per_beat": 0.0,
+  "phase_ticks": 0,
+  "n_rows": 0,
+  "fit": 0.0,
+  "median_abs_residual_ticks": 0.0,
+  "median_abs_residual_fraction": 0.0,
+  "row_occupancy": 0.0,
+  "n_onsets": 4,
+  "n_distinct_onsets": 4,
+  "n_candidates": 0,
+  "cluster_ticks": 0,
+  "cluster_ms": 0.0,
+  "snapped_to_tick": false,
+  "tick_multiple": 0,
+  "onset_grid_over_tick": null
+ },
+ "scores": {
+  "n_rows": 0,
+  "n_notes": 4,
+  "n_notes_represented": 0,
+  "n_notes_unpitched": 0,
+  "n_notes_out_of_range": 0,
+  "n_notes_snapped": 0,
+  "n_notes_unplaced": 0,
+  "n_cells_contested": 0,
+  "coverage": 0.0,
+  "n_cells_filled": 0,
+  "separated_density": 0.0,
+  "n_rows_sounding": 0,
+  "rows_sounding_fraction": 0.0,
+  "max_polyphony": 0
+ },
+ "checks": {
+  "ok": true,
+  "failed": [],
+  "checks": [
+   {
+    "name": "notes_present",
+    "passed": true,
+    "value": {
+     "n_notes": 4,
+     "n_kon_writes": 1257,
+     "n_kon_effective": 4
+    },
+    "detail": "no notes were extracted. n_kon_effective tells you which case this is: zero means nothing was ever keyed on in this window (a drone already sounding at the snapshot), non-zero means key-ons were seen and the extractor failed to pair them"
+   },
+   {
+    "name": "no_unhandled_registers",
+    "passed": true,
+    "value": {},
+    "detail": "a DSP register this extractor does not model was written, so something about the track is not represented"
+   },
+   {
+    "name": "some_notes_completed",
+    "passed": true,
+    "value": "0/4",
+    "detail": "every note still sounding at the end means no key-off was ever observed, so no duration in this track is real"
+   },
+   {
+    "name": "durations_positive",
+    "passed": true,
+    "value": 0,
+    "detail": "a note ending at or before it started means key-on and key-off were paired wrongly"
+   },
+   {
+    "name": "notes_within_render",
+    "passed": true,
+    "value": 0,
+    "detail": "a note starting after the render ended means the timestamp base is wrong -- the symptom an earlier chunk-relative clock produced"
+   },
+   {
+    "name": "writes_span_render",
+    "passed": true,
+    "value": 3.0,
+    "detail": "DSP writes stopped well before the end of the render, so the driver halted or looped into silence and most of the window is not music"
+   },
+   {
+    "name": "audio_not_silent",
+    "passed": true,
+    "value": 19496,
+    "detail": "the emulator produced (near-)silence while notes were extracted, so the two disagree about whether anything played"
+   }
+  ]
+ },
+ "raw_path": "raw/mo2-s011_f921cf7f290c.jsonl.gz",
+ "raw_bytes": 81504,
+ "notes": [
+  {
+   "voice": 0,
+   "start": 69609,
+   "end": 319741,
+   "start_sec": 0.0679775390625,
+   "end_sec": 0.3122470703125,
+   "pitch_register": 1405,
+   "srcn": 0,
+   "volume_left": 3,
+   "volume_right": 3,
+   "adsr1": 0,
+   "adsr2": 0,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 686.03515625,
+   "midi_note": 76.68934783494859,
+   "pitch_confidence": "high"
+  },
+  {
+   "voice": 2,
+   "start": 142316,
+   "end": 306185,
+   "start_sec": 0.13898046875,
+   "end_sec": 0.2990087890625,
+   "pitch_register": 1405,
+   "srcn": 0,
+   "volume_left": 0,
+   "volume_right": 1,
+   "adsr1": 0,
+   "adsr2": 0,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 686.03515625,
+   "midi_note": 76.68934783494859,
+   "pitch_confidence": "high"
+  },
+  {
+   "voice": 1,
+   "start": 271326,
+   "end": 305487,
+   "start_sec": 0.264966796875,
+   "end_sec": 0.2983271484375,
+   "pitch_register": 10592,
+   "srcn": 0,
+   "volume_left": 33,
+   "volume_right": 26,
+   "adsr1": 0,
+   "adsr2": 0,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 5171.875,
+   "midi_note": 111.66134373533575,
+   "pitch_confidence": "high"
+  },
+  {
+   "voice": 1,
+   "start": 699960,
+   "end": 2399667,
+   "start_sec": 0.6835546875,
+   "end_sec": 2.3434248046875,
+   "pitch_register": 5650,
+   "srcn": 0,
+   "volume_left": 37,
+   "volume_right": 20,
+   "adsr1": 0,
+   "adsr2": 0,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 2758.7890625,
+   "midi_note": 100.78151667992807,
+   "pitch_confidence": "high"
+  }
+ ],
+ "track_class": "effect",
+ "track_class_reason": "4 notes is fewer than the 10 needed to carry a phrase, at any duration"
+}

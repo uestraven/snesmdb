@@ -1,0 +1,159 @@
+{
+ "source": "bof2-s04.spc",
+ "ok": true,
+ "render_source": "id666",
+ "render_seconds": 3.0,
+ "track_id": "bof2-s04:47f452ed006b",
+ "sha256": "47f452ed006b978a76fd657169a8ef68ccfb3e1286b89d948b175003e0b40c86",
+ "size": 66080,
+ "tag": {
+  "title": "Unpleasant Surprise",
+  "game": "Breath of Fire 2",
+  "composer": "Yuko Takehara",
+  "composers": [
+   "Yuko Takehara"
+  ],
+  "composer_truncated": false,
+  "dumper": "YK",
+  "comments": "Shock/Surprise",
+  "date": "",
+  "seconds": 3,
+  "fade_ms": 0,
+  "layout": "text",
+  "layout_reason": "date field is ASCII digits/separators"
+ },
+ "summary": {
+  "n_writes": 7508,
+  "n_notes": 0,
+  "duration_sec": 2.999416015625,
+  "voices_used": [],
+  "n_voices_used": 0,
+  "samples_used": [],
+  "n_samples_used": 0,
+  "n_unfinished_notes": 0,
+  "n_kon_writes": 187,
+  "n_kon_effective": 0,
+  "n_noise_notes": 0,
+  "n_pitch_modulated_notes": 0,
+  "unhandled_writes": {}
+ },
+ "samples": {},
+ "pitch": {
+  "n_pitched": 0,
+  "n_unpitched": 0,
+  "n_implausible_register": 0,
+  "n_samples": 0,
+  "n_samples_with_f0": 0
+ },
+ "tick": {
+  "found": true,
+  "reason": "",
+  "period_ticks": 16398,
+  "hz": 62.447,
+  "concentration": 0.3715,
+  "sharpness": 0.7166,
+  "n_candidates": 150,
+  "n_agreeing": 134,
+  "n_gaps": 187,
+  "burst_window": 1024,
+  "n_writes": 7508
+ },
+ "grid": {
+  "found": false,
+  "reason": "only 0 distinct onsets; a period fitted to fewer than 8 describes noise",
+  "period_ticks": 0,
+  "period_sec": 0.0,
+  "rows_per_second": 0.0,
+  "bpm_assuming_4_rows_per_beat": 0.0,
+  "phase_ticks": 0,
+  "n_rows": 0,
+  "fit": 0.0,
+  "median_abs_residual_ticks": 0.0,
+  "median_abs_residual_fraction": 0.0,
+  "row_occupancy": 0.0,
+  "n_onsets": 0,
+  "n_distinct_onsets": 0,
+  "n_candidates": 0,
+  "cluster_ticks": 0,
+  "cluster_ms": 0.0,
+  "snapped_to_tick": false,
+  "tick_multiple": 0,
+  "onset_grid_over_tick": 0.0
+ },
+ "scores": {
+  "n_rows": 0,
+  "n_notes": 0,
+  "n_notes_represented": 0,
+  "n_notes_unpitched": 0,
+  "n_notes_out_of_range": 0,
+  "n_notes_snapped": 0,
+  "n_notes_unplaced": 0,
+  "n_cells_contested": 0,
+  "coverage": 0.0,
+  "n_cells_filled": 0,
+  "separated_density": 0.0,
+  "n_rows_sounding": 0,
+  "rows_sounding_fraction": 0.0,
+  "max_polyphony": 0
+ },
+ "checks": {
+  "ok": false,
+  "failed": [
+   "notes_present",
+   "some_notes_completed"
+  ],
+  "checks": [
+   {
+    "name": "notes_present",
+    "passed": false,
+    "value": {
+     "n_notes": 0,
+     "n_kon_writes": 187,
+     "n_kon_effective": 0
+    },
+    "detail": "no notes were extracted. n_kon_effective tells you which case this is: zero means nothing was ever keyed on in this window (a drone already sounding at the snapshot), non-zero means key-ons were seen and the extractor failed to pair them"
+   },
+   {
+    "name": "no_unhandled_registers",
+    "passed": true,
+    "value": {},
+    "detail": "a DSP register this extractor does not model was written, so something about the track is not represented"
+   },
+   {
+    "name": "some_notes_completed",
+    "passed": false,
+    "value": "0/0",
+    "detail": "every note still sounding at the end means no key-off was ever observed, so no duration in this track is real"
+   },
+   {
+    "name": "durations_positive",
+    "passed": true,
+    "value": 0,
+    "detail": "a note ending at or before it started means key-on and key-off were paired wrongly"
+   },
+   {
+    "name": "notes_within_render",
+    "passed": true,
+    "value": 0,
+    "detail": "a note starting after the render ended means the timestamp base is wrong -- the symptom an earlier chunk-relative clock produced"
+   },
+   {
+    "name": "writes_span_render",
+    "passed": true,
+    "value": 2.999,
+    "detail": "DSP writes stopped well before the end of the render, so the driver halted or looped into silence and most of the window is not music"
+   },
+   {
+    "name": "audio_not_silent",
+    "passed": true,
+    "value": 21175,
+    "detail": "the emulator produced (near-)silence while notes were extracted, so the two disagree about whether anything played"
+   }
+  ]
+ },
+ "raw_path": "raw/bof2-s04_47f452ed006b.jsonl.gz",
+ "raw_bytes": 45321,
+ "notes": [],
+ "track_class": "drone",
+ "track_class_reason": "no key-on took effect in the render window: an SPC is a snapshot of a running system, so this track was already sounding and was never re-keyed. The note model cannot represent it, and that is a property of the track rather than a failure"
+}

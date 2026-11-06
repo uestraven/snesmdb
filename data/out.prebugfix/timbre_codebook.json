@@ -1,0 +1,365 @@
+{
+ "k": 5,
+ "k_reason": "k=5 maximises mean usage separation (24.7) over k=2..10; silhouette is reported but not optimised, because the classes exist to predict usage rather than to be round in feature space",
+ "seed": 0,
+ "silhouette": 0.2379,
+ "sweep": [
+  {
+   "k": 2,
+   "inertia": 8760.96,
+   "inertia_per_sample": 7.5396,
+   "silhouette": 0.7869,
+   "usage_variance_ratio": {
+    "median_midi": 0.0,
+    "median_duration_sec": 0.0,
+    "unpitched_fraction": 14.04
+   }
+  },
+  {
+   "k": 3,
+   "inertia": 7188.04,
+   "inertia_per_sample": 6.1859,
+   "silhouette": 0.2946,
+   "usage_variance_ratio": {
+    "median_midi": 10.21,
+    "median_duration_sec": 0.65,
+    "unpitched_fraction": 7.05
+   }
+  },
+  {
+   "k": 4,
+   "inertia": 5064.36,
+   "inertia_per_sample": 4.3583,
+   "silhouette": 0.2971,
+   "usage_variance_ratio": {
+    "median_midi": 6.55,
+    "median_duration_sec": 0.38,
+    "unpitched_fraction": 39.62
+   }
+  },
+  {
+   "k": 5,
+   "inertia": 4451.36,
+   "inertia_per_sample": 3.8308,
+   "silhouette": 0.2379,
+   "usage_variance_ratio": {
+    "median_midi": 10.22,
+    "median_duration_sec": 0.75,
+    "unpitched_fraction": 63.27
+   }
+  },
+  {
+   "k": 6,
+   "inertia": 3864.15,
+   "inertia_per_sample": 3.3254,
+   "silhouette": 0.2481,
+   "usage_variance_ratio": {
+    "median_midi": 7.04,
+    "median_duration_sec": 7.03,
+    "unpitched_fraction": 36.31
+   }
+  },
+  {
+   "k": 7,
+   "inertia": 3552.9,
+   "inertia_per_sample": 3.0576,
+   "silhouette": 0.251,
+   "usage_variance_ratio": {
+    "median_midi": 5.43,
+    "median_duration_sec": 6.47,
+    "unpitched_fraction": 35.03
+   }
+  },
+  {
+   "k": 8,
+   "inertia": 3178.28,
+   "inertia_per_sample": 2.7352,
+   "silhouette": 0.2667,
+   "usage_variance_ratio": {
+    "median_midi": 14.47,
+    "median_duration_sec": 7.67,
+    "unpitched_fraction": 35.72
+   }
+  },
+  {
+   "k": 9,
+   "inertia": 2949.74,
+   "inertia_per_sample": 2.5385,
+   "silhouette": 0.2701,
+   "usage_variance_ratio": {
+    "median_midi": 12.39,
+    "median_duration_sec": 7.0,
+    "unpitched_fraction": 34.01
+   }
+  },
+  {
+   "k": 10,
+   "inertia": 2650.58,
+   "inertia_per_sample": 2.2811,
+   "silhouette": 0.2848,
+   "usage_variance_ratio": {
+    "median_midi": 10.49,
+    "median_duration_sec": 6.59,
+    "unpitched_fraction": 32.06
+   }
+  }
+ ],
+ "codebook": {
+  "k": 5,
+  "axes": [
+   "log_n_samples",
+   "looped",
+   "loop_fraction",
+   "attack_fraction",
+   "log_zcr",
+   "log_centroid",
+   "log_spread",
+   "log_rolloff",
+   "flatness"
+  ],
+  "centroids": [
+   [
+    0.1771,
+    0.4211,
+    0.0253,
+    0.1002,
+    -0.1391,
+    -0.0421,
+    0.071,
+    0.0309,
+    -0.4048
+   ],
+   [
+    -0.5791,
+    -0.5109,
+    0.2003,
+    -0.283,
+    -5.3449,
+    -8.2927,
+    -10.9426,
+    -7.85,
+    -1.4013
+   ],
+   [
+    0.3577,
+    0.0936,
+    -0.4877,
+    -0.0924,
+    -0.9307,
+    -1.1735,
+    -0.9207,
+    -1.2619,
+    -1.1663
+   ],
+   [
+    -0.6968,
+    0.4211,
+    0.7864,
+    0.1356,
+    0.6508,
+    0.7516,
+    0.5295,
+    0.7092,
+    1.0651
+   ],
+   [
+    0.4973,
+    -2.3749,
+    -1.1159,
+    -0.4648,
+    0.5952,
+    0.5543,
+    0.4278,
+    0.5379,
+    0.6859
+   ]
+  ],
+  "means": [
+   7.411115,
+   0.849398,
+   0.470462,
+   0.237236,
+   8.0473,
+   7.947035,
+   7.882679,
+   8.465808,
+   0.329491
+  ],
+  "scales": [
+   1.568691,
+   0.357661,
+   0.421591,
+   0.248946,
+   1.211315,
+   0.958317,
+   0.720364,
+   1.078453,
+   0.235133
+  ],
+  "inertia": 4451.3569,
+  "n_samples": 1162,
+  "iterations": 20
+ },
+ "class_profiles": {
+  "0": {
+   "n": 457,
+   "median_midi": 69.92360865343176,
+   "median_duration_sec": 0.18785876971005658,
+   "unpitched_fraction": 0.0
+  },
+  "1": {
+   "n": 6,
+   "median_midi": null,
+   "median_duration_sec": 0.11132979530791837,
+   "unpitched_fraction": 1.0
+  },
+  "2": {
+   "n": 222,
+   "median_midi": 81.99933417216633,
+   "median_duration_sec": 0.20478725880102416,
+   "unpitched_fraction": 0.0
+  },
+  "3": {
+   "n": 330,
+   "median_midi": 74.76162016564882,
+   "median_duration_sec": 0.16091444072675776,
+   "unpitched_fraction": 1.0
+  },
+  "4": {
+   "n": 147,
+   "median_midi": 66.95629858706907,
+   "median_duration_sec": 0.17874542721957987,
+   "unpitched_fraction": 0.0
+  }
+ },
+ "test_1_separation": {
+  "median_midi": {
+   "real": 10.218,
+   "shuffled": 1.072
+  },
+  "median_duration_sec": {
+   "real": 0.752,
+   "shuffled": 0.855
+  },
+  "unpitched_fraction": {
+   "real": 63.273,
+   "shuffled": 0.059
+  }
+ },
+ "test_2_cross_game_agreement": {
+  "real": {
+   "median_midi": 0.546,
+   "median_duration_sec": 0.255,
+   "unpitched_fraction": 0.509
+  },
+  "shuffled": {
+   "median_midi": 0.505,
+   "median_duration_sec": 0.328,
+   "unpitched_fraction": 0.552
+  }
+ },
+ "test_3_held_out_games": {
+  "n_train_samples": 951,
+  "n_heldout_samples": 211,
+  "train_games": [
+   "Axelay",
+   "Batman Returns",
+   "Breath of Fire 2",
+   "Chrono Trigger",
+   "Donkey Kong Country",
+   "Donkey Kong Country 2",
+   "Earthbound",
+   "Final Fantasy 6",
+   "Kirby Super Star",
+   "Legend of Zelda: A Link to the P",
+   "Megaman X",
+   "Plok!",
+   "Star Ocean",
+   "Super Castlevania 4",
+   "Super Mario World",
+   "Tales of Phantasia"
+  ],
+  "heldout_games": [
+   "Actraiser",
+   "Dragon Quest 5",
+   "Lufia 2",
+   "Secret of Mana",
+   "Super Metroid",
+   "Super Turrican"
+  ],
+  "profile_difference_in_sd": {
+   "median_midi": 0.444,
+   "median_duration_sec": 0.202,
+   "unpitched_fraction": 0.0
+  },
+  "classes_compared": {
+   "median_midi": 4,
+   "median_duration_sec": 5,
+   "unpitched_fraction": 5
+  },
+  "profile_train": {
+   "0": {
+    "n": 173,
+    "median_midi": 83.95764850629502,
+    "median_duration_sec": 0.19392893787977653,
+    "unpitched_fraction": 0.0
+   },
+   "1": {
+    "n": 324,
+    "median_midi": 75.87411149849736,
+    "median_duration_sec": 0.16178247674237792,
+    "unpitched_fraction": 1.0
+   },
+   "2": {
+    "n": 99,
+    "median_midi": 73.75061137531813,
+    "median_duration_sec": 0.18152941370436143,
+    "unpitched_fraction": 0.0
+   },
+   "3": {
+    "n": 4,
+    "median_midi": null,
+    "median_duration_sec": 0.11132979530791837,
+    "unpitched_fraction": 1.0
+   },
+   "4": {
+    "n": 351,
+    "median_midi": 70.93472800852774,
+    "median_duration_sec": 0.17685743689372352,
+    "unpitched_fraction": 0.0
+   }
+  },
+  "profile_heldout": {
+   "0": {
+    "n": 51,
+    "median_midi": 77.42776123079773,
+    "median_duration_sec": 0.25013800957516585,
+    "unpitched_fraction": 0.0
+   },
+   "1": {
+    "n": 24,
+    "median_midi": 68.00047697816191,
+    "median_duration_sec": 0.21215409090913726,
+    "unpitched_fraction": 1.0
+   },
+   "2": {
+    "n": 52,
+    "median_midi": 59.21309485364913,
+    "median_duration_sec": 0.17605447368700644,
+    "unpitched_fraction": 0.0
+   },
+   "3": {
+    "n": 2,
+    "median_midi": null,
+    "median_duration_sec": 0.36310378789267084,
+    "unpitched_fraction": 1.0
+   },
+   "4": {
+    "n": 82,
+    "median_midi": 67.46940634739661,
+    "median_duration_sec": 0.27124886293407297,
+    "unpitched_fraction": 0.0
+   }
+  }
+ }
+}

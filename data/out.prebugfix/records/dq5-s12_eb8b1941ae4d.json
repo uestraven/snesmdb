@@ -1,0 +1,237 @@
+{
+ "source": "dq5-s12.spc",
+ "ok": true,
+ "render_source": "id666",
+ "render_seconds": 3.0,
+ "track_id": "dq5-s12:eb8b1941ae4d",
+ "sha256": "eb8b1941ae4d0456e36a5141e98ad76008896c74547196123a8ce4574ba7a44e",
+ "size": 66080,
+ "tag": {
+  "title": "Faerie Horn",
+  "game": "Dragon Quest 5",
+  "composer": "Koichi Sugiyama",
+  "composers": [
+   "Koichi Sugiyama"
+  ],
+  "composer_truncated": false,
+  "dumper": "YK",
+  "comments": "Faerie Horn (Short)",
+  "date": "",
+  "seconds": 3,
+  "fade_ms": 0,
+  "layout": "text",
+  "layout_reason": "date field is ASCII digits/separators"
+ },
+ "summary": {
+  "n_writes": 1092,
+  "n_notes": 3,
+  "duration_sec": 2.99993359375,
+  "voices_used": [
+   0
+  ],
+  "n_voices_used": 1,
+  "samples_used": [
+   0
+  ],
+  "n_samples_used": 1,
+  "n_unfinished_notes": 0,
+  "n_kon_writes": 470,
+  "n_kon_effective": 3,
+  "n_noise_notes": 0,
+  "n_pitch_modulated_notes": 0,
+  "unhandled_writes": {}
+ },
+ "samples": {
+  "0": {
+   "index": 0,
+   "start": 10845,
+   "loop": 12843,
+   "srcn": 0,
+   "f0_hz": 522.8310502283105,
+   "method": "loop+autocorrelation",
+   "confidence": "high",
+   "detail": "loop spans 229 period(s); the two estimates agree to 1 cents",
+   "autocorrelation_hz": 522.5172351507713,
+   "loop_hz": null,
+   "loop_periods": 229,
+   "octave_shift": 0,
+   "octave_margin": 0.0
+  }
+ },
+ "pitch": {
+  "n_pitched": 3,
+  "n_unpitched": 0,
+  "n_implausible_register": 0,
+  "n_samples": 1,
+  "n_samples_with_f0": 1
+ },
+ "tick": {
+  "found": false,
+  "reason": "the write cadence has no single period: phase concentration 0.14 at its best candidate, below 0.25",
+  "period_ticks": 5108,
+  "hz": 200.47,
+  "concentration": 0.1409,
+  "sharpness": 0.121,
+  "n_candidates": 77,
+  "n_agreeing": 132,
+  "n_gaps": 1091,
+  "burst_window": 64,
+  "n_writes": 1092
+ },
+ "grid": {
+  "found": false,
+  "reason": "only 3 distinct onsets; a period fitted to fewer than 8 describes noise",
+  "period_ticks": 0,
+  "period_sec": 0.0,
+  "rows_per_second": 0.0,
+  "bpm_assuming_4_rows_per_beat": 0.0,
+  "phase_ticks": 0,
+  "n_rows": 0,
+  "fit": 0.0,
+  "median_abs_residual_ticks": 0.0,
+  "median_abs_residual_fraction": 0.0,
+  "row_occupancy": 0.0,
+  "n_onsets": 3,
+  "n_distinct_onsets": 3,
+  "n_candidates": 0,
+  "cluster_ticks": 0,
+  "cluster_ms": 0.0,
+  "snapped_to_tick": false,
+  "tick_multiple": 0,
+  "onset_grid_over_tick": null
+ },
+ "scores": {
+  "n_rows": 0,
+  "n_notes": 3,
+  "n_notes_represented": 0,
+  "n_notes_unpitched": 0,
+  "n_notes_out_of_range": 0,
+  "n_notes_snapped": 0,
+  "n_notes_unplaced": 0,
+  "n_cells_contested": 0,
+  "coverage": 0.0,
+  "n_cells_filled": 0,
+  "separated_density": 0.0,
+  "n_rows_sounding": 0,
+  "rows_sounding_fraction": 0.0,
+  "max_polyphony": 0
+ },
+ "checks": {
+  "ok": true,
+  "failed": [],
+  "checks": [
+   {
+    "name": "notes_present",
+    "passed": true,
+    "value": {
+     "n_notes": 3,
+     "n_kon_writes": 470,
+     "n_kon_effective": 3
+    },
+    "detail": "no notes were extracted. n_kon_effective tells you which case this is: zero means nothing was ever keyed on in this window (a drone already sounding at the snapshot), non-zero means key-ons were seen and the extractor failed to pair them"
+   },
+   {
+    "name": "no_unhandled_registers",
+    "passed": true,
+    "value": {},
+    "detail": "a DSP register this extractor does not model was written, so something about the track is not represented"
+   },
+   {
+    "name": "some_notes_completed",
+    "passed": true,
+    "value": "0/3",
+    "detail": "every note still sounding at the end means no key-off was ever observed, so no duration in this track is real"
+   },
+   {
+    "name": "durations_positive",
+    "passed": true,
+    "value": 0,
+    "detail": "a note ending at or before it started means key-on and key-off were paired wrongly"
+   },
+   {
+    "name": "notes_within_render",
+    "passed": true,
+    "value": 0,
+    "detail": "a note starting after the render ended means the timestamp base is wrong -- the symptom an earlier chunk-relative clock produced"
+   },
+   {
+    "name": "writes_span_render",
+    "passed": true,
+    "value": 3.0,
+    "detail": "DSP writes stopped well before the end of the render, so the driver halted or looped into silence and most of the window is not music"
+   },
+   {
+    "name": "audio_not_silent",
+    "passed": true,
+    "value": 6030,
+    "detail": "the emulator produced (near-)silence while notes were extracted, so the two disagree about whether anything played"
+   }
+  ]
+ },
+ "raw_path": "raw/dq5-s12_eb8b1941ae4d.jsonl.gz",
+ "raw_bytes": 5266,
+ "notes": [
+  {
+   "voice": 0,
+   "start": 339348,
+   "end": 666020,
+   "start_sec": 0.33139453125,
+   "end_sec": 0.65041015625,
+   "pitch_register": 3576,
+   "srcn": 0,
+   "volume_left": 0,
+   "volume_right": 0,
+   "adsr1": 0,
+   "adsr2": 224,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 456.4560145547945,
+   "midi_note": 69.63566784979818,
+   "pitch_confidence": "high"
+  },
+  {
+   "voice": 0,
+   "start": 682358,
+   "end": 1009050,
+   "start_sec": 0.666365234375,
+   "end_sec": 0.985400390625,
+   "pitch_register": 4014,
+   "srcn": 0,
+   "volume_left": 0,
+   "volume_right": 0,
+   "adsr1": 0,
+   "adsr2": 224,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 512.3642176797945,
+   "midi_note": 71.63599441194978,
+   "pitch_confidence": "high"
+  },
+  {
+   "voice": 0,
+   "start": 1025541,
+   "end": 2371007,
+   "start_sec": 1.0015048828125,
+   "end_sec": 2.3154365234375,
+   "pitch_register": 3375,
+   "srcn": 0,
+   "volume_left": 0,
+   "volume_right": 0,
+   "adsr1": 0,
+   "adsr2": 224,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 430.7995103809931,
+   "midi_note": 68.63415703750505,
+   "pitch_confidence": "high"
+  }
+ ],
+ "track_class": "effect",
+ "track_class_reason": "3 notes is fewer than the 10 needed to carry a phrase, at any duration"
+}

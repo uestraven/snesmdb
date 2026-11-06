@@ -1,0 +1,217 @@
+{
+ "source": "smw-s01.spc",
+ "ok": true,
+ "render_source": "id666",
+ "render_seconds": 1.0,
+ "track_id": "smw-s01:1b66e48c6bb7",
+ "sha256": "1b66e48c6bb70b27117180dc9dd800e0b39edad800f13d2168a11a383205558a",
+ "size": 66084,
+ "tag": {
+  "title": "Yoshi",
+  "game": "Super Mario World",
+  "composer": "Koji Kondo",
+  "composers": [
+   "Koji Kondo"
+  ],
+  "composer_truncated": false,
+  "dumper": "nensondubois",
+  "comments": "",
+  "date": "",
+  "seconds": 1,
+  "fade_ms": 0,
+  "layout": "text",
+  "layout_reason": "date field is ASCII digits/separators"
+ },
+ "summary": {
+  "n_writes": 5102,
+  "n_notes": 2,
+  "duration_sec": 0.99853515625,
+  "voices_used": [
+   6
+  ],
+  "n_voices_used": 1,
+  "samples_used": [
+   0
+  ],
+  "n_samples_used": 1,
+  "n_unfinished_notes": 0,
+  "n_kon_writes": 503,
+  "n_kon_effective": 2,
+  "n_noise_notes": 0,
+  "n_pitch_modulated_notes": 0,
+  "unhandled_writes": {}
+ },
+ "samples": {
+  "0": {
+   "index": 0,
+   "start": 16384,
+   "loop": 16411,
+   "srcn": 0,
+   "f0_hz": 374.6217134509596,
+   "method": "autocorrelation",
+   "confidence": "low",
+   "detail": "loop length implies 1.12 periods, which disagrees with autocorrelation by 202 cents; the sample is likely inharmonic or the loop is not periodic; the spectrum put -1 octave(s) 1.98x ahead of the original",
+   "autocorrelation_hz": 749.2434269019192,
+   "loop_hz": 666.6666666666666,
+   "loop_periods": null,
+   "octave_shift": -1,
+   "octave_margin": 1.98
+  }
+ },
+ "pitch": {
+  "n_pitched": 0,
+  "n_unpitched": 2,
+  "n_implausible_register": 0,
+  "n_samples": 1,
+  "n_samples_with_f0": 0
+ },
+ "tick": {
+  "found": false,
+  "reason": "the write cadence has no single period: phase concentration 0.20 at its best candidate, below 0.25",
+  "period_ticks": 2045,
+  "hz": 500.733,
+  "concentration": 0.2036,
+  "sharpness": 0.367,
+  "n_candidates": 78,
+  "n_agreeing": 200,
+  "n_gaps": 545,
+  "burst_window": 64,
+  "n_writes": 5102
+ },
+ "grid": {
+  "found": false,
+  "reason": "only 2 distinct onsets; a period fitted to fewer than 8 describes noise",
+  "period_ticks": 0,
+  "period_sec": 0.0,
+  "rows_per_second": 0.0,
+  "bpm_assuming_4_rows_per_beat": 0.0,
+  "phase_ticks": 0,
+  "n_rows": 0,
+  "fit": 0.0,
+  "median_abs_residual_ticks": 0.0,
+  "median_abs_residual_fraction": 0.0,
+  "row_occupancy": 0.0,
+  "n_onsets": 2,
+  "n_distinct_onsets": 2,
+  "n_candidates": 0,
+  "cluster_ticks": 0,
+  "cluster_ms": 0.0,
+  "snapped_to_tick": false,
+  "tick_multiple": 0,
+  "onset_grid_over_tick": null
+ },
+ "scores": {
+  "n_rows": 0,
+  "n_notes": 2,
+  "n_notes_represented": 0,
+  "n_notes_unpitched": 0,
+  "n_notes_out_of_range": 0,
+  "n_notes_snapped": 0,
+  "n_notes_unplaced": 0,
+  "n_cells_contested": 0,
+  "coverage": 0.0,
+  "n_cells_filled": 0,
+  "separated_density": 0.0,
+  "n_rows_sounding": 0,
+  "rows_sounding_fraction": 0.0,
+  "max_polyphony": 0
+ },
+ "checks": {
+  "ok": true,
+  "failed": [],
+  "checks": [
+   {
+    "name": "notes_present",
+    "passed": true,
+    "value": {
+     "n_notes": 2,
+     "n_kon_writes": 503,
+     "n_kon_effective": 2
+    },
+    "detail": "no notes were extracted. n_kon_effective tells you which case this is: zero means nothing was ever keyed on in this window (a drone already sounding at the snapshot), non-zero means key-ons were seen and the extractor failed to pair them"
+   },
+   {
+    "name": "no_unhandled_registers",
+    "passed": true,
+    "value": {},
+    "detail": "a DSP register this extractor does not model was written, so something about the track is not represented"
+   },
+   {
+    "name": "some_notes_completed",
+    "passed": true,
+    "value": "0/2",
+    "detail": "every note still sounding at the end means no key-off was ever observed, so no duration in this track is real"
+   },
+   {
+    "name": "durations_positive",
+    "passed": true,
+    "value": 0,
+    "detail": "a note ending at or before it started means key-on and key-off were paired wrongly"
+   },
+   {
+    "name": "notes_within_render",
+    "passed": true,
+    "value": 0,
+    "detail": "a note starting after the render ended means the timestamp base is wrong -- the symptom an earlier chunk-relative clock produced"
+   },
+   {
+    "name": "writes_span_render",
+    "passed": true,
+    "value": 0.999,
+    "detail": "DSP writes stopped well before the end of the render, so the driver halted or looped into silence and most of the window is not music"
+   },
+   {
+    "name": "audio_not_silent",
+    "passed": true,
+    "value": 6655,
+    "detail": "the emulator produced (near-)silence while notes were extracted, so the two disagree about whether anything played"
+   }
+  ]
+ },
+ "raw_path": "raw/smw-s01_1b66e48c6bb7.jsonl.gz",
+ "raw_bytes": 24161,
+ "notes": [
+  {
+   "voice": 6,
+   "start": 140336,
+   "end": 260422,
+   "start_sec": 0.137046875,
+   "end_sec": 0.254318359375,
+   "pitch_register": 399,
+   "srcn": 0,
+   "volume_left": 0,
+   "volume_right": 0,
+   "adsr1": 0,
+   "adsr2": 0,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": null,
+   "midi_note": null,
+   "pitch_confidence": "low"
+  },
+  {
+   "voice": 6,
+   "start": 279555,
+   "end": 512325,
+   "start_sec": 0.2730029296875,
+   "end_sec": 0.5003173828125,
+   "pitch_register": 1605,
+   "srcn": 0,
+   "volume_left": 50,
+   "volume_right": 50,
+   "adsr1": 0,
+   "adsr2": 0,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": null,
+   "midi_note": null,
+   "pitch_confidence": "low"
+  }
+ ],
+ "track_class": "effect",
+ "track_class_reason": "2 notes is fewer than the 10 needed to carry a phrase, at any duration"
+}

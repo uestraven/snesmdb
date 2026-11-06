@@ -27,7 +27,11 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from snesmdb import clock as clock_mod, scores as scores_mod  # noqa: E402
+from snesmdb import (  # noqa: E402
+    clock as clock_mod,
+    envelope as envelope_mod,
+    scores as scores_mod,
+)
 
 TICKS = clock_mod.TICKS_PER_SECOND
 
@@ -47,6 +51,10 @@ def rebuild(
         return row
 
     notes = json.loads((out_dir / record_path).read_text())["notes"]
+    # The envelope is the factor missing from `velocity`, which uses VOL
+    # alone while the DSP computes env x VOL. The census says how much that
+    # costs per track without changing any existing field.
+    row["envelope"] = envelope_mod.census(notes)
     render_ticks = int(float(row.get("render_seconds") or 0.0) * TICKS)
     grid = clock.to_grid(render_ticks)
     built = scores_mod.build(notes, grid, render_ticks)

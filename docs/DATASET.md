@@ -137,6 +137,39 @@ median deviation from an equal-tempered ladder is 0.30 cents for Rare and
 **10.67 cents for Capcom**. Interval-level work is safe for Rare and Square and
 is not safe for Capcom.
 
+## Voice state is seeded from the SPC snapshot
+
+An SPC is a dump of a running system, so its DSP register block already holds
+the voice parameters the driver set up before the dump — and a driver has no
+reason to rewrite a register whose value is already right. Super Mario World's
+"Athletic" writes only KON, KOFF, VOL and PITCH for its entire length, never
+SRCN, ADSR1, ADSR2 or GAIN.
+
+Extraction originally started every voice register at zero and tracked only
+observed *writes*, so anything untouched read as 0. Measured effect of seeding
+from the snapshot instead:
+
+| | before | after |
+|---|---|---|
+| notes reporting `srcn = 0` | 200,515 (10.8%) | 52,093 (2.8%) |
+| distinct samples referenced | 7,887 | 8,168 |
+| high-confidence f0 estimates | 5,303 | 5,447 |
+| implausible PITCH registers | 26,059 | 25,224 |
+| sample estimates needing an octave shift | 44.58% | 42.83% |
+| tracks reporting a silent envelope | 540 | 0 |
+
+**SRCN changed for 148,422 notes (8.0%) across 619 tracks.** Since f0 is
+estimated from the BRR sample at SRCN, each of those was previously pitched
+against the wrong sample and assigned the wrong timbre class — "Athletic" has a
+snapshot SRCN of `[10,10,10,10,11,8,2,8]` and all 1,164 of its notes were
+recorded as sample 0. Worst affected: Super Turrican (100% of its notes),
+Dragon Quest 5 (41%), Breath of Fire 2 (37%), Earthbound (30%), Mega Man X
+(24%).
+
+Pitched-note coverage fell slightly, 78.7% to 78.3%, because some of the
+newly-correct samples fail the f0 plausibility test that the wrong ones passed.
+Fewer and right beats more and wrong.
+
 ## Rows are indexed on the driver's own clock, not on an inferred grid
 
 Every one of the **1,316 tracks** has row scores, because every track has a row
@@ -211,46 +244,59 @@ the rows are indexed on.
 
 `velocity` is derived from the two signed side volumes only:
 `(|VOL_L| + |VOL_R|) / 2`. The DSP's actual output is
-`amp = ((sample * env) >> 11) * VOL >> 7`, so loudness is **env × VOL** and
-the envelope is missing from every velocity in this corpus. Three measured
-facts bound how much that costs, and they point in different directions:
 
-**For 88.7% of notes the envelope is ADSR, and for 85.2% of those the sustain
-level is 7** — the envelope holds at full scale, so VOL alone is the loudness
-and nothing is lost. SL is read as `ADSR2 >> 5`, with the decay ending when
-`(env >> 8) == SL`, so the plateau is `SL × 256` and SL=7 means no decay at
-all.
+    out = (sample * env) >> 11        # env is the 11-bit internal envelope
+    amp = (out * VOL) >> 7            # VOL signed 8-bit, per side
 
-**13% of notes have SL < 7**, where VOL-only velocity overstates sustained
-loudness — worst at SL=0 (3.4% of ADSR notes), which decays to silence. A
-staccato pluck and a held horn with equal VOL currently get equal velocity.
-This part is fixable from data already in the note records.
+so loudness is **env × VOL**, and the envelope is absent from every velocity
+here. An `envelope` block on each manifest row now says what that costs, and
+the answer splits cleanly:
 
-**For the remaining 11.3% the envelope cannot be read from the key-on state at
-all.** These notes have ADSR disabled and GAIN in direct mode, and the drivers
-that do this run their own software envelope by writing GAIN continuously —
-Mega Man X writes GAIN 390 times against 26 SRCN writes in ten seconds. The
-value at key-on is therefore an arbitrary point on a ramp, and it is **zero for
-most of them** (5.74% of all notes). Scaling velocity by it would silence
-expressive notes rather than correct them. Recovering it needs the envelope's
-peak across the note's span, which means retaining the DSP write log — these
-are not stored, so it needs a re-extraction.
+**Velocity is correct as *attack* intensity.** In ADSR mode the attack phase
+drives env to full scale whatever the attack rate, so peak loudness genuinely
+is VOL. 93.73% of the corpus's 1,863,499 notes are in ADSR mode; the remaining
+6.27% are in GAIN *direct* mode, where the level is a plain static number. No
+note in the corpus uses a ramping GAIN mode, so the envelope is **100%
+decidable** — nothing has to be guessed or left out.
 
-Not an inherited-state artifact: the SPC snapshots have ADSR enabled on nearly
-every voice (ADSR1 bit 7 set), so the zeros are written by the driver.
+**What is missing is the sustain plateau.** 80.0% of notes hold at full scale
+and need no correction at all. The other **20.0% (372,538 notes) settle
+below full**, down to silence at SL=0, and for those a staccato pluck and a
+held horn with equal VOL are currently indistinguishable. That is articulation
+rather than velocity, so it is exposed as `env_sustain_fraction` instead of
+being folded into the velocity byte.
 
-**Driver envelope strategies differ enough that one rule will not serve.**
-Measured over ten seconds of one track per game, counting writes:
+Sustain level is `ADSR2 >> 5`, and the hardware leaves decay when
+`(env >> 8) == SL`, so **the plateau is `SL × 256`** — the bottom of a
+256-wide band, not `(SL+1) × 256`, which is that band's top edge. SL=7 is
+special: env is already `0x7FF` when the attack ends and `0x7FF >> 8` is 7, so
+decay never runs.
+
+**Driver envelope strategies differ, which is why one rule would not serve.**
+Measured over ten seconds of one track per game, counting register writes:
 
 | driver behaviour | games | signature |
 |---|---|---|
 | full voice patch per note | DKC, Kirby, Super Metroid, Star Ocean, Tales of Phantasia, Super Mario World | SRCN/ADSR1/ADSR2/GAIN written in lockstep |
 | ADSR per note, no GAIN | Chrono Trigger, Secret of Mana | GAIN never written |
-| software envelope | Mega Man X | GAIN/ADSR1 written far more often than SRCN |
-| set once, VOL does everything | Earthbound (this track: one write of each) | VOL written 274×, patch 1× |
+| software envelope | Mega Man X | GAIN written 390× against 26 SRCN writes |
+| set once, VOL does everything | Earthbound (one track: one write of each) | VOL written 274×, patch 1× |
 
-Phase inversion is also lost: velocity takes the magnitude, and a negative side
-volume inverts that side's phase, which two games do on over half their notes.
+That last row is why voice state must be seeded from the SPC's DSP block —
+see the note on SRCN above. Before it was, 540 tracks reported ADSR disabled
+with GAIN 0, i.e. a silent envelope, purely because their drivers never
+rewrote those registers. That artifact was 5.74% of notes; it is now 0.05%.
+
+**The voice patch is always written before the key-on, never after**, so
+reading the registers at the key-on instant captures the authoritative block.
+Measured: Mega Man X 174/174 key-ons have the patch already in place (median
+400 clocks earlier), Star Ocean 139/139 (4,281), Super Mario World 121/200
+(2,202), and no driver writes a patch register in the 64–128 clocks following
+a KON.
+
+Phase inversion is still lost: velocity takes the magnitude, and a negative
+side volume inverts that side's phase, which two games do on over half their
+notes.
 
 ## The timbre axis is a binary distinction, not a vocabulary
 

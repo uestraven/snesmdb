@@ -1,0 +1,237 @@
+{
+ "source": "sm-s02.spc",
+ "ok": true,
+ "render_source": "id666",
+ "render_seconds": 18.0,
+ "track_id": "sm-s02:72bc819613ae",
+ "sha256": "72bc819613ae3df9172ca2f10fbad5bc5fd288c4a6ab8d0399f9481777f33fbe",
+ "size": 66092,
+ "tag": {
+  "title": "Space Colony",
+  "game": "Super Metroid",
+  "composer": "Kenji Yamamoto",
+  "composers": [
+   "Kenji Yamamoto"
+  ],
+  "composer_truncated": false,
+  "dumper": "Datschge",
+  "comments": "",
+  "date": "",
+  "seconds": 18,
+  "fade_ms": 9000,
+  "layout": "text",
+  "layout_reason": "date field is ASCII digits/separators"
+ },
+ "summary": {
+  "n_writes": 91480,
+  "n_notes": 3,
+  "duration_sec": 17.998845703125,
+  "voices_used": [
+   0
+  ],
+  "n_voices_used": 1,
+  "samples_used": [
+   0
+  ],
+  "n_samples_used": 1,
+  "n_unfinished_notes": 1,
+  "n_kon_writes": 9000,
+  "n_kon_effective": 3,
+  "n_noise_notes": 0,
+  "n_pitch_modulated_notes": 0,
+  "unhandled_writes": {}
+ },
+ "samples": {
+  "0": {
+   "index": 0,
+   "start": 28160,
+   "loop": 29636,
+   "srcn": 0,
+   "f0_hz": 2000.0,
+   "method": "autocorrelation",
+   "confidence": "medium",
+   "detail": "a one-shot sample, so there is no loop length to cross-check against; the spectrum put -1 octave(s) 3.09x ahead of the original",
+   "autocorrelation_hz": 4000.0,
+   "loop_hz": null,
+   "loop_periods": null,
+   "octave_shift": -1,
+   "octave_margin": 3.094
+  }
+ },
+ "pitch": {
+  "n_pitched": 3,
+  "n_unpitched": 0,
+  "n_implausible_register": 0,
+  "n_samples": 1,
+  "n_samples_with_f0": 1
+ },
+ "tick": {
+  "found": false,
+  "reason": "the write cadence has no single period: phase concentration 0.04 at its best candidate, below 0.25",
+  "period_ticks": 16391,
+  "hz": 62.473,
+  "concentration": 0.036,
+  "sharpness": 0.9768,
+  "n_candidates": 93,
+  "n_agreeing": 1096,
+  "n_gaps": 1122,
+  "burst_window": 2048,
+  "n_writes": 91480
+ },
+ "grid": {
+  "found": false,
+  "reason": "only 3 distinct onsets; a period fitted to fewer than 8 describes noise",
+  "period_ticks": 0,
+  "period_sec": 0.0,
+  "rows_per_second": 0.0,
+  "bpm_assuming_4_rows_per_beat": 0.0,
+  "phase_ticks": 0,
+  "n_rows": 0,
+  "fit": 0.0,
+  "median_abs_residual_ticks": 0.0,
+  "median_abs_residual_fraction": 0.0,
+  "row_occupancy": 0.0,
+  "n_onsets": 3,
+  "n_distinct_onsets": 3,
+  "n_candidates": 0,
+  "cluster_ticks": 0,
+  "cluster_ms": 0.0,
+  "snapped_to_tick": false,
+  "tick_multiple": 0,
+  "onset_grid_over_tick": null
+ },
+ "scores": {
+  "n_rows": 0,
+  "n_notes": 3,
+  "n_notes_represented": 0,
+  "n_notes_unpitched": 0,
+  "n_notes_out_of_range": 0,
+  "n_notes_snapped": 0,
+  "n_notes_unplaced": 0,
+  "n_cells_contested": 0,
+  "coverage": 0.0,
+  "n_cells_filled": 0,
+  "separated_density": 0.0,
+  "n_rows_sounding": 0,
+  "rows_sounding_fraction": 0.0,
+  "max_polyphony": 0
+ },
+ "checks": {
+  "ok": true,
+  "failed": [],
+  "checks": [
+   {
+    "name": "notes_present",
+    "passed": true,
+    "value": {
+     "n_notes": 3,
+     "n_kon_writes": 9000,
+     "n_kon_effective": 3
+    },
+    "detail": "no notes were extracted. n_kon_effective tells you which case this is: zero means nothing was ever keyed on in this window (a drone already sounding at the snapshot), non-zero means key-ons were seen and the extractor failed to pair them"
+   },
+   {
+    "name": "no_unhandled_registers",
+    "passed": true,
+    "value": {},
+    "detail": "a DSP register this extractor does not model was written, so something about the track is not represented"
+   },
+   {
+    "name": "some_notes_completed",
+    "passed": true,
+    "value": "1/3",
+    "detail": "every note still sounding at the end means no key-off was ever observed, so no duration in this track is real"
+   },
+   {
+    "name": "durations_positive",
+    "passed": true,
+    "value": 0,
+    "detail": "a note ending at or before it started means key-on and key-off were paired wrongly"
+   },
+   {
+    "name": "notes_within_render",
+    "passed": true,
+    "value": 0,
+    "detail": "a note starting after the render ended means the timestamp base is wrong -- the symptom an earlier chunk-relative clock produced"
+   },
+   {
+    "name": "writes_span_render",
+    "passed": true,
+    "value": 17.999,
+    "detail": "DSP writes stopped well before the end of the render, so the driver halted or looped into silence and most of the window is not music"
+   },
+   {
+    "name": "audio_not_silent",
+    "passed": true,
+    "value": 7243,
+    "detail": "the emulator produced (near-)silence while notes were extracted, so the two disagree about whether anything played"
+   }
+  ]
+ },
+ "raw_path": "raw/sm-s02_72bc819613ae.jsonl.gz",
+ "raw_bytes": 421206,
+ "notes": [
+  {
+   "voice": 0,
+   "start": 4717643,
+   "end": 9400863,
+   "start_sec": 4.6070732421875,
+   "end_sec": 9.1805302734375,
+   "pitch_register": 196,
+   "srcn": 0,
+   "volume_left": 1,
+   "volume_right": 1,
+   "adsr1": 0,
+   "adsr2": 0,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 95.703125,
+   "midi_note": 42.58961298303163,
+   "pitch_confidence": "medium"
+  },
+  {
+   "voice": 0,
+   "start": 9435982,
+   "end": 14119450,
+   "start_sec": 9.214826171875,
+   "end_sec": 13.788525390625,
+   "pitch_register": 196,
+   "srcn": 0,
+   "volume_left": 1,
+   "volume_right": 1,
+   "adsr1": 0,
+   "adsr2": 0,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 95.703125,
+   "midi_note": 42.58961298303163,
+   "pitch_confidence": "medium"
+  },
+  {
+   "voice": 0,
+   "start": 14154577,
+   "end": null,
+   "start_sec": 13.8228291015625,
+   "end_sec": null,
+   "pitch_register": 196,
+   "srcn": 0,
+   "volume_left": 1,
+   "volume_right": 1,
+   "adsr1": 0,
+   "adsr2": 0,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 95.703125,
+   "midi_note": 42.58961298303163,
+   "pitch_confidence": "medium"
+  }
+ ],
+ "track_class": "effect",
+ "track_class_reason": "3 notes is fewer than the 10 needed to carry a phrase, at any duration"
+}

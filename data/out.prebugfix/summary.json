@@ -1,0 +1,568 @@
+{
+ "n_sources": 1316,
+ "n_extracted": 1316,
+ "n_failed": 0,
+ "failures": [],
+ "n_notes": 1863499,
+ "n_notes_pitched": 1466046,
+ "n_notes_implausible_register": 26059,
+ "rendered_seconds_total": 109263.0,
+ "render_sources": {
+  "id666": 1316,
+  "default": 0,
+  "requested": 0
+ },
+ "n_tracks_all_checks_passed": 1292,
+ "check_failures": {
+  "notes_present": 17,
+  "some_notes_completed": 22,
+  "writes_span_render": 2
+ },
+ "grid": {
+  "n_found": 866,
+  "n_not_found": 450,
+  "reasons": {
+   "best fit 0.65 is below 0.80": 18,
+   "only 0 distinct onsets": 17,
+   "best fit 0.73 is below 0.80": 16,
+   "only 3 distinct onsets": 15,
+   "best fit 0.74 is below 0.80": 14,
+   "best fit 0.75 is below 0.80": 13,
+   "best fit 0.60 is below 0.80": 13,
+   "best fit 0.68 is below 0.80": 13,
+   "best fit 0.70 is below 0.80": 13,
+   "best fit 0.59 is below 0.80": 13,
+   "best fit 0.67 is below 0.80": 12,
+   "best fit 0.72 is below 0.80": 12,
+   "best fit 0.58 is below 0.80": 12,
+   "best fit 0.61 is below 0.80": 12,
+   "best fit 0.77 is below 0.80": 11,
+   "best fit 0.79 is below 0.80": 11,
+   "best fit 0.71 is below 0.80": 11,
+   "best fit 0.78 is below 0.80": 11,
+   "only 1 distinct onsets": 9,
+   "best fit 0.76 is below 0.80": 9,
+   "best fit 0.66 is below 0.80": 9,
+   "best fit 0.69 is below 0.80": 9,
+   "only 4 distinct onsets": 9,
+   "best fit 0.45 is below 0.80": 8,
+   "best fit 0.41 is below 0.80": 8,
+   "best fit 0.80 is below 0.80": 8,
+   "best fit 0.52 is below 0.80": 7,
+   "best fit 0.63 is below 0.80": 7,
+   "only 6 distinct onsets": 7,
+   "best fit 0.50 is below 0.80": 7,
+   "only 7 distinct onsets": 7,
+   "best fit 0.57 is below 0.80": 7,
+   "best fit 0.33 is below 0.80": 7,
+   "best fit 0.64 is below 0.80": 7,
+   "best fit 0.43 is below 0.80": 6,
+   "best fit 0.53 is below 0.80": 6,
+   "best fit 0.56 is below 0.80": 6,
+   "best fit 0.55 is below 0.80": 6,
+   "best fit 0.48 is below 0.80": 5,
+   "best fit 0.46 is below 0.80": 5,
+   "best fit 0.40 is below 0.80": 4,
+   "best fit 0.49 is below 0.80": 4,
+   "best fit 0.62 is below 0.80": 4,
+   "only 2 distinct onsets": 4,
+   "best fit 0.51 is below 0.80": 4,
+   "only 5 distinct onsets": 4,
+   "best fit 0.44 is below 0.80": 4,
+   "best fit 0.54 is below 0.80": 3,
+   "best fit 0.42 is below 0.80": 3,
+   "best fit 0.47 is below 0.80": 3,
+   "best fit 0.29 is below 0.80": 3,
+   "best fit 0.37 is below 0.80": 2,
+   "best fit 0.35 is below 0.80": 2,
+   "best fit 0.36 is below 0.80": 2,
+   "best fit 0.31 is below 0.80": 2,
+   "best fit 0.39 is below 0.80": 2,
+   "best fit 0.27 is below 0.80": 1,
+   "best fit 0.28 is below 0.80": 1,
+   "best fit 0.32 is below 0.80": 1,
+   "best fit 0.38 is below 0.80": 1
+  },
+  "median_fit": 0.9606,
+  "median_rows_per_second": 12.695,
+  "median_residual_fraction": 0.0246
+ },
+ "tick": {
+  "n_found": 519,
+  "median_hz": 79.99,
+  "median_sharpness": 0.468,
+  "distinct_hz_per_game": {
+   "Actraiser": {
+    "n_distinct": 1,
+    "hz": [
+     500.0
+    ]
+   },
+   "Axelay": {
+    "n_distinct": 1,
+    "hz": [
+     250.0
+    ]
+   },
+   "Batman Returns": {
+    "n_distinct": 3,
+    "hz": [
+     249.9,
+     250.1,
+     500.0
+    ]
+   },
+   "Breath of Fire 2": {
+    "n_distinct": 2,
+    "hz": [
+     62.4,
+     62.5
+    ]
+   },
+   "Chrono Trigger": {
+    "n_distinct": 3,
+    "hz": [
+     190.4,
+     190.5,
+     381.0
+    ]
+   },
+   "Donkey Kong Country": {
+    "n_distinct": 4,
+    "hz": [
+     10.0,
+     40.0,
+     79.3,
+     80.0
+    ]
+   },
+   "Donkey Kong Country 2": {
+    "n_distinct": 15,
+    "hz": [
+     13.8,
+     19.9,
+     20.0,
+     20.2,
+     26.3,
+     27.5
+    ]
+   },
+   "Dragon Quest 5": {
+    "n_distinct": 2,
+    "hz": [
+     199.8,
+     200.0
+    ]
+   },
+   "Earthbound": {
+    "n_distinct": 2,
+    "hz": [
+     499.8,
+     500.0
+    ]
+   },
+   "Final Fantasy 6": {
+    "n_distinct": 1,
+    "hz": [
+     205.1
+    ]
+   },
+   "Kirby Super Star": {
+    "n_distinct": 2,
+    "hz": [
+     499.8,
+     500.2
+    ]
+   },
+   "Legend of Zelda: A Link to the P": {
+    "n_distinct": 2,
+    "hz": [
+     390.8,
+     500.0
+    ]
+   },
+   "Lufia 2": {
+    "n_distinct": 15,
+    "hz": [
+     64.0,
+     72.1,
+     87.9,
+     89.9,
+     92.0,
+     96.4
+    ]
+   },
+   "Megaman X": {
+    "n_distinct": 1,
+    "hz": [
+     62.5
+    ]
+   },
+   "Plok!": {
+    "n_distinct": 5,
+    "hz": [
+     76.2,
+     78.0,
+     80.0,
+     84.2,
+     88.9
+    ]
+   },
+   "Secret of Mana": {
+    "n_distinct": 3,
+    "hz": [
+     222.1,
+     222.2,
+     222.3
+    ]
+   },
+   "Star Ocean": {
+    "n_distinct": 32,
+    "hz": [
+     12.5,
+     14.7,
+     15.7,
+     16.3,
+     17.9,
+     20.2
+    ]
+   },
+   "Super Castlevania 4": {
+    "n_distinct": 2,
+    "hz": [
+     250.0,
+     250.1
+    ]
+   },
+   "Super Mario World": {
+    "n_distinct": 3,
+    "hz": [
+     130.9,
+     500.0,
+     1391.3
+    ]
+   },
+   "Super Metroid": {
+    "n_distinct": 1,
+    "hz": [
+     500.0
+    ]
+   },
+   "Super Turrican": {
+    "n_distinct": 9,
+    "hz": [
+     45.7,
+     46.5,
+     47.6,
+     48.8,
+     50.0,
+     55.6
+    ]
+   },
+   "Tales of Phantasia": {
+    "n_distinct": 36,
+    "hz": [
+     12.0,
+     12.3,
+     14.1,
+     15.2,
+     16.3,
+     17.3
+    ]
+   }
+  }
+ },
+ "scores": {
+  "n_tracks": 866,
+  "n_rows_total": 1926961,
+  "n_notes_represented": 851467,
+  "n_notes_unpitched": 211375,
+  "n_notes_out_of_range": 78,
+  "n_notes_snapped": 109276,
+  "n_notes_unplaced": 32,
+  "max_polyphony": 8
+ },
+ "splits": {
+  "counts": {
+   "test": 132,
+   "train": 1049,
+   "valid": 135
+  },
+  "achieved_fractions": {
+   "test": 0.1003,
+   "train": 0.7971,
+   "valid": 0.1026
+  },
+  "requested_fractions": {
+   "train": 0.8,
+   "valid": 0.1,
+   "test": 0.1
+  },
+  "fraction_error": {
+   "train": -0.0029,
+   "valid": 0.0026,
+   "test": 0.0003
+  },
+  "n_components": 16,
+  "largest_component_games": [
+   206,
+   174,
+   143,
+   138,
+   116
+  ],
+  "composer_disjoint": true
+ },
+ "composer_leaks": {},
+ "tracks_with_truncated_composer": [
+  "br-01:c8cb5ead0474",
+  "br-02:505894c97847",
+  "br-03:5266fbf9f6e0",
+  "br-04:b7d0ac40ee78",
+  "br-05:5e7a4ae1c1b2",
+  "br-06:306b452a96ee",
+  "br-07:2fdffd072429",
+  "br-08:c1ae539b7e90",
+  "br-09:4349c63c5eff",
+  "br-10:fb6da7b1b837",
+  "br-11:d525d85852dd",
+  "br-12:6a4d3d5593f4",
+  "br-13:0a2dea967f0d",
+  "br-14:85f61564662d",
+  "br-15:fd29f4c7e3a0",
+  "br-16:fad83b58a62a",
+  "br-17:858899b6914d",
+  "br-18:039b5c1786c6",
+  "br-19:43250d253690",
+  "br-20:9a127c3c30e0",
+  "br-21:3febad048831",
+  "br-22:2fc2d9b2045a",
+  "br-23:9a8e348d04a8",
+  "br-24:e1c1e6b6923d",
+  "br-25:c1844ff7c89c",
+  "br-26:9492e96b5933",
+  "br-27:1271775fd098",
+  "br-28:755a4385a229",
+  "br-29:b90c5fed3958",
+  "br-30:6dabcefdb46a",
+  "br-31:74068ec17334",
+  "br-32:ef0531e1e5ab",
+  "br-33:a33c1e6d966d",
+  "br-s01:4f0bd57862b6",
+  "mmx-b01:d39523db69a9",
+  "mo2-001a:3a275a8517fe",
+  "mo2-001b:1f7f35a66e24",
+  "mo2-002:2331c36a4339",
+  "mo2-003:8b40d62ae19d",
+  "mo2-004:ffcf23bbd1e6",
+  "mo2-005a:6bd9df945816",
+  "mo2-005b:3ebbdc4e9ef2",
+  "mo2-006:42e45e8474be",
+  "mo2-007:eb27fe2127fe",
+  "mo2-008a:74416812db5c",
+  "mo2-008b:d42df145b449",
+  "mo2-009a:477f28ea9580",
+  "mo2-009b:f43033b8ec63",
+  "mo2-010a:71190d27d196",
+  "mo2-010b:8652d4ab57ef",
+  "mo2-011:c6666feb78e7",
+  "mo2-012:a516675db06a",
+  "mo2-013:9a7468e86d8a",
+  "mo2-014:46d3e450db66",
+  "mo2-015a:93449184daab",
+  "mo2-015b:a4b41f44b114",
+  "mo2-015c:b627f9ef5b93",
+  "mo2-016a:33269a64e370",
+  "mo2-016b:c6e55847f0ea",
+  "mo2-016c:e6dbc06604f2",
+  "mo2-017:bc6b2f04597c",
+  "mo2-018a:8a5f566be4d5",
+  "mo2-018b:cad77951380c",
+  "mo2-019a:7badb327aae7",
+  "mo2-019b:79aebd062cdd",
+  "mo2-020:5dde449e48cd",
+  "mo2-021:58f538e76302",
+  "mo2-022:69c226f7345e",
+  "mo2-023:c87f780d6020",
+  "mo2-024:a8dd06e96dc4",
+  "mo2-025:7c87e6c4c24c",
+  "mo2-026:e8ee8704f136",
+  "mo2-027:9dfff8212d30",
+  "mo2-028:66c6819ef86c",
+  "mo2-029:8d00a4c3fb0d",
+  "mo2-030:310cd436fd33",
+  "mo2-031:22297aad4bc6",
+  "mo2-032:5f8730f4904e",
+  "mo2-033:cac4d69c77c3",
+  "mo2-034:340862a4b0bb",
+  "mo2-035:5d72650b2e6e",
+  "mo2-036:ba9705c3d89a",
+  "mo2-037:1d4945fb0256",
+  "mo2-038:575f659a084b",
+  "mo2-039:6af22afbb110",
+  "mo2-040:1929580ac7ef",
+  "mo2-041:cf8917743f82",
+  "mo2-042:4cb0654a1d7b",
+  "mo2-043:d5907095dea0",
+  "mo2-044:bbda6f2c4c3b",
+  "mo2-045:467ffb29b8b4",
+  "mo2-046a:561f050122e8",
+  "mo2-046b:3c87353bd398",
+  "mo2-046c:8d18de31f47f",
+  "mo2-046d:fe79f7fa6363",
+  "mo2-046e:72be17fb0933",
+  "mo2-046f:9b7ba228ec0b",
+  "mo2-046g:6132adf8b5cd",
+  "mo2-046h:b864e6c738ce",
+  "mo2-047:c9d6a818e76b",
+  "mo2-048:b16e5ae1a726",
+  "mo2-049:1d335cc675c6",
+  "mo2-050:381ae1711d1b",
+  "mo2-051:c5406a23ad41",
+  "mo2-052a:c43144139b7d",
+  "mo2-052b:3c5c942cecde",
+  "mo2-053:69ddfaaaa2ad",
+  "mo2-054:bd6050b44c4b",
+  "mo2-055:8e4183fe598f",
+  "mo2-056:7cdb01ab6bd6",
+  "mo2-057:d7122b95f962",
+  "mo2-058:bd2870e58ffa",
+  "mo2-059:e3217c43a4a4",
+  "mo2-060:f3466c327116",
+  "mo2-061:fb9dadd91b64",
+  "mo2-062:9d5d1ccfb633",
+  "mo2-063:a8f9080f3e44",
+  "mo2-064:aac1da3b6a3d",
+  "mo2-065:ff16ecdbd209",
+  "mo2-066:6f3f9ac12237",
+  "mo2-067:a64e57acaee0",
+  "mo2-068:9ecbd0dfd239",
+  "mo2-069:62572da52fc1",
+  "mo2-070:1b809234ab75",
+  "mo2-071:f3788053fb14",
+  "mo2-072:68bdb2ff3a14",
+  "mo2-073:ca1f09cc8b93",
+  "mo2-074:726dfdbb722d",
+  "mo2-075:b97af676a1b4",
+  "mo2-076:ce74ddf07a03",
+  "mo2-077:55b0dc59ea03",
+  "mo2-078:42ced94e0905",
+  "mo2-079:59cffd44cb37",
+  "mo2-080:d78784c46581",
+  "mo2-081:bd754077d490",
+  "mo2-082:3e7a16274e16",
+  "mo2-083:ef805adec44e",
+  "mo2-084:bf1be48f354e",
+  "mo2-085:745998c7f5b8",
+  "mo2-086:a3b06ebfc0c4",
+  "mo2-087:a62d5c76be90",
+  "mo2-088:544c20dcf546",
+  "mo2-089:cca47de22984",
+  "mo2-090:7e8a4e4a728e",
+  "mo2-091:7aac9e76c224",
+  "mo2-092:284b31b4c4ae",
+  "mo2-093:c3a7c9c2fcd0",
+  "mo2-094:272759e846cf",
+  "mo2-095:886bda8ceb06",
+  "mo2-096:33819f5c842d",
+  "mo2-097:ec408f47b8fc",
+  "mo2-098a:1ee2d00fd20b",
+  "mo2-098b:22a104a0b824",
+  "mo2-099:539bb38e4039",
+  "mo2-100:ba89a2143dd8",
+  "mo2-101:857201e59135",
+  "mo2-102:64d43da3224b",
+  "mo2-103:a2ff43c2fdac",
+  "mo2-104:6edc95109255",
+  "mo2-105:4c11675da731",
+  "mo2-106:49d4f8c7292c",
+  "mo2-107:9985fc9252c5",
+  "mo2-108:6cf9fde56242",
+  "mo2-109:b65518bf1ea9",
+  "mo2-110:9b60116a495d",
+  "mo2-111:24dfb2c364f9",
+  "mo2-112:a2dc20a29ee6",
+  "mo2-113:e82deda4637e",
+  "mo2-114a:b0a87c44282f",
+  "mo2-114b:0b0dc21c5300",
+  "mo2-114c:aa2d742a8cba",
+  "mo2-114d:943f7262c7f8",
+  "mo2-114e:e3de7c73b112",
+  "mo2-114f:a9dcf0ae0302",
+  "mo2-114g:4dfd98df0754",
+  "mo2-114h:3ea7f7ccacaf",
+  "mo2-114i:9c68c072a751",
+  "mo2-114j:708b9b2e36cf",
+  "mo2-114k:9d92f7b2791d",
+  "mo2-114l:f8dd6b40231b",
+  "mo2-114m:bbd252586093",
+  "mo2-114n:e830d0a3d6b3",
+  "mo2-114o:7fdf6a4544d3",
+  "mo2-114p:f1400af413ee",
+  "mo2-114q:232f8f4c7659",
+  "mo2-114r:44df8443ad23",
+  "mo2-115:fcfb381d6033",
+  "mo2-116:f5bb4364919b",
+  "mo2-117:71fd52b69f6a",
+  "mo2-118:200ead933cdd",
+  "mo2-119:ca75545f982a",
+  "mo2-120:e2c8cb9565cb",
+  "mo2-121:c5949200546e",
+  "mo2-122:a29005ac5557",
+  "mo2-123:a30f364f31ac",
+  "mo2-124a:b1b7dce57f18",
+  "mo2-124b:79f0f327f1ca",
+  "mo2-125:fbdc0a4d18a5",
+  "mo2-126:e467c7383737",
+  "mo2-127:9d255f066d9e",
+  "mo2-128:81388a66371c",
+  "mo2-129:b8004f36c280",
+  "mo2-130:f39d74edec8a",
+  "mo2-131:fbe8f5b7762c",
+  "mo2-132:906fc04ce90d",
+  "mo2-133:dbaac376f5db",
+  "mo2-134:c4ca9bb288b0",
+  "mo2-135:6e25288f92a2",
+  "mo2-136:1f2779be473d",
+  "mo2-137a:e471fff815ae",
+  "mo2-137b:89bb2d8e0c52",
+  "mo2-138:e8e2f0cc5f8a",
+  "mo2-139:2a2e02a11b89",
+  "mo2-140:9327028319d5",
+  "mo2-b001:9e08a1de8e49",
+  "mo2-b002:8ac037ac3cfb",
+  "mo2-b003:3b61e1daca4c",
+  "mo2-b004:5222559c5cce",
+  "mo2-b005:a74a155931c3",
+  "mo2-s001:60e923870816",
+  "mo2-s002:55eb66e0a1d4",
+  "mo2-s003:2d73cd637797",
+  "mo2-s004:047c49642880",
+  "mo2-s005:952142c71869",
+  "mo2-s006:b5669a7db553",
+  "mo2-s007:08c2f33ecde7",
+  "mo2-s008:661ae8ab7e23",
+  "mo2-s009a:e95390b46e66",
+  "mo2-s009b:6bb2e5c22455",
+  "mo2-s009c:1b0b85265c1d",
+  "mo2-s009d:fe6c71deec92",
+  "mo2-s009e:ca7699f61978",
+  "mo2-s009f:f6d5ee55fe14",
+  "mo2-s010a:901f94c92672",
+  "mo2-s010b:7378ff21b338",
+  "mo2-s011:f921cf7f290c",
+  "mo2-s012:7ef88d2dc94a",
+  "mo2-s013:05052209f5cc",
+  "mo2-s014:9dde3e0140b0",
+  "mo2-v001:5bda2a3355ba",
+  "mo2-v002:b7faab0e1777",
+  "top-239:eb25c9b76947"
+ ],
+ "empty_splits": [],
+ "track_classes": {
+  "music": 1006,
+  "jingle": 233,
+  "effect": 60,
+  "drone": 17
+ }
+}

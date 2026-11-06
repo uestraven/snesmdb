@@ -1,0 +1,302 @@
+{
+ "source": "sd2-s18.spc",
+ "ok": true,
+ "render_source": "id666",
+ "render_seconds": 27.0,
+ "track_id": "sd2-s18:f620c1f0de65",
+ "sha256": "f620c1f0de655e2bf618d48bacda8cf8252cc093c72096356e33e9e2f1f6cb88",
+ "size": 66080,
+ "tag": {
+  "title": "New Continent Rises",
+  "game": "Secret of Mana",
+  "composer": "Hiroki Kikuta",
+  "composers": [
+   "Hiroki Kikuta"
+  ],
+  "composer_truncated": false,
+  "dumper": "Datschge",
+  "comments": "",
+  "date": "",
+  "seconds": 27,
+  "fade_ms": 0,
+  "layout": "text",
+  "layout_reason": "date field is ASCII digits/separators"
+ },
+ "summary": {
+  "n_writes": 36069,
+  "n_notes": 6,
+  "duration_sec": 26.999974609375,
+  "voices_used": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5
+  ],
+  "n_voices_used": 6,
+  "samples_used": [
+   32
+  ],
+  "n_samples_used": 1,
+  "n_unfinished_notes": 0,
+  "n_kon_writes": 5998,
+  "n_kon_effective": 3,
+  "n_noise_notes": 0,
+  "n_pitch_modulated_notes": 5,
+  "unhandled_writes": {}
+ },
+ "samples": {
+  "32": {
+   "index": 32,
+   "start": 26667,
+   "loop": 27477,
+   "srcn": 32,
+   "f0_hz": null,
+   "method": "none",
+   "confidence": "none",
+   "detail": "neither autocorrelation nor loop length gave a usable fundamental; the sample is probably percussive or noise",
+   "autocorrelation_hz": null,
+   "loop_hz": null,
+   "loop_periods": null,
+   "octave_shift": 0,
+   "octave_margin": 0.0
+  }
+ },
+ "pitch": {
+  "n_pitched": 0,
+  "n_unpitched": 6,
+  "n_implausible_register": 0,
+  "n_samples": 1,
+  "n_samples_with_f0": 0
+ },
+ "tick": {
+  "found": false,
+  "reason": "the write cadence has no single period: phase concentration 0.20 at its best candidate, below 0.25",
+  "period_ticks": 4607,
+  "hz": 222.27,
+  "concentration": 0.1972,
+  "sharpness": 0.9911,
+  "n_candidates": 36,
+  "n_agreeing": 5992,
+  "n_gaps": 6046,
+  "burst_window": 64,
+  "n_writes": 36069
+ },
+ "grid": {
+  "found": false,
+  "reason": "only 3 distinct onsets; a period fitted to fewer than 8 describes noise",
+  "period_ticks": 0,
+  "period_sec": 0.0,
+  "rows_per_second": 0.0,
+  "bpm_assuming_4_rows_per_beat": 0.0,
+  "phase_ticks": 0,
+  "n_rows": 0,
+  "fit": 0.0,
+  "median_abs_residual_ticks": 0.0,
+  "median_abs_residual_fraction": 0.0,
+  "row_occupancy": 0.0,
+  "n_onsets": 6,
+  "n_distinct_onsets": 3,
+  "n_candidates": 0,
+  "cluster_ticks": 0,
+  "cluster_ms": 0.0,
+  "snapped_to_tick": false,
+  "tick_multiple": 0,
+  "onset_grid_over_tick": null
+ },
+ "scores": {
+  "n_rows": 0,
+  "n_notes": 6,
+  "n_notes_represented": 0,
+  "n_notes_unpitched": 0,
+  "n_notes_out_of_range": 0,
+  "n_notes_snapped": 0,
+  "n_notes_unplaced": 0,
+  "n_cells_contested": 0,
+  "coverage": 0.0,
+  "n_cells_filled": 0,
+  "separated_density": 0.0,
+  "n_rows_sounding": 0,
+  "rows_sounding_fraction": 0.0,
+  "max_polyphony": 0
+ },
+ "checks": {
+  "ok": true,
+  "failed": [],
+  "checks": [
+   {
+    "name": "notes_present",
+    "passed": true,
+    "value": {
+     "n_notes": 6,
+     "n_kon_writes": 5998,
+     "n_kon_effective": 3
+    },
+    "detail": "no notes were extracted. n_kon_effective tells you which case this is: zero means nothing was ever keyed on in this window (a drone already sounding at the snapshot), non-zero means key-ons were seen and the extractor failed to pair them"
+   },
+   {
+    "name": "no_unhandled_registers",
+    "passed": true,
+    "value": {},
+    "detail": "a DSP register this extractor does not model was written, so something about the track is not represented"
+   },
+   {
+    "name": "some_notes_completed",
+    "passed": true,
+    "value": "0/6",
+    "detail": "every note still sounding at the end means no key-off was ever observed, so no duration in this track is real"
+   },
+   {
+    "name": "durations_positive",
+    "passed": true,
+    "value": 0,
+    "detail": "a note ending at or before it started means key-on and key-off were paired wrongly"
+   },
+   {
+    "name": "notes_within_render",
+    "passed": true,
+    "value": 0,
+    "detail": "a note starting after the render ended means the timestamp base is wrong -- the symptom an earlier chunk-relative clock produced"
+   },
+   {
+    "name": "writes_span_render",
+    "passed": true,
+    "value": 27.0,
+    "detail": "DSP writes stopped well before the end of the render, so the driver halted or looped into silence and most of the window is not music"
+   },
+   {
+    "name": "audio_not_silent",
+    "passed": true,
+    "value": 32767,
+    "detail": "the emulator produced (near-)silence while notes were extracted, so the two disagree about whether anything played"
+   }
+  ]
+ },
+ "raw_path": "raw/sd2-s18_f620c1f0de65.jsonl.gz",
+ "raw_bytes": 159495,
+ "notes": [
+  {
+   "voice": 0,
+   "start": 16151,
+   "end": 18869781,
+   "start_sec": 0.0157724609375,
+   "end_sec": 18.4275205078125,
+   "pitch_register": 255,
+   "srcn": 32,
+   "volume_left": 85,
+   "volume_right": 40,
+   "adsr1": 241,
+   "adsr2": 227,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": null,
+   "midi_note": null,
+   "pitch_confidence": "none"
+  },
+  {
+   "voice": 1,
+   "start": 16151,
+   "end": 18869781,
+   "start_sec": 0.0157724609375,
+   "end_sec": 18.4275205078125,
+   "pitch_register": 254,
+   "srcn": 32,
+   "volume_left": 33,
+   "volume_right": 92,
+   "adsr1": 241,
+   "adsr2": 227,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": true,
+   "hz": null,
+   "midi_note": null,
+   "pitch_confidence": "none"
+  },
+  {
+   "voice": 2,
+   "start": 3795215,
+   "end": 26422289,
+   "start_sec": 3.7062646484375,
+   "end_sec": 25.8030166015625,
+   "pitch_register": 481,
+   "srcn": 32,
+   "volume_left": 55,
+   "volume_right": 70,
+   "adsr1": 241,
+   "adsr2": 227,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": true,
+   "hz": null,
+   "midi_note": null,
+   "pitch_confidence": "none"
+  },
+  {
+   "voice": 3,
+   "start": 3795215,
+   "end": 26422289,
+   "start_sec": 3.7062646484375,
+   "end_sec": 25.8030166015625,
+   "pitch_register": 241,
+   "srcn": 32,
+   "volume_left": 102,
+   "volume_right": 23,
+   "adsr1": 241,
+   "adsr2": 227,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": true,
+   "hz": null,
+   "midi_note": null,
+   "pitch_confidence": "none"
+  },
+  {
+   "voice": 4,
+   "start": 7569327,
+   "end": 26422289,
+   "start_sec": 7.3919208984375,
+   "end_sec": 25.8030166015625,
+   "pitch_register": 226,
+   "srcn": 32,
+   "volume_left": 70,
+   "volume_right": 55,
+   "adsr1": 241,
+   "adsr2": 228,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": true,
+   "hz": null,
+   "midi_note": null,
+   "pitch_confidence": "none"
+  },
+  {
+   "voice": 5,
+   "start": 7569327,
+   "end": 26422289,
+   "start_sec": 7.3919208984375,
+   "end_sec": 25.8030166015625,
+   "pitch_register": 227,
+   "srcn": 32,
+   "volume_left": 23,
+   "volume_right": 102,
+   "adsr1": 241,
+   "adsr2": 228,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": true,
+   "hz": null,
+   "midi_note": null,
+   "pitch_confidence": "none"
+  }
+ ],
+ "track_class": "effect",
+ "track_class_reason": "6 notes is fewer than the 10 needed to carry a phrase, at any duration"
+}

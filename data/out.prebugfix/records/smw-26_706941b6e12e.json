@@ -1,0 +1,159 @@
+{
+ "source": "smw-26.spc",
+ "ok": true,
+ "render_source": "id666",
+ "render_seconds": 3.0,
+ "track_id": "smw-26:706941b6e12e",
+ "sha256": "706941b6e12e69541103564e7294f8c07be10b4b61a8176d91fab841482617cd",
+ "size": 66084,
+ "tag": {
+  "title": "Secret Exit!",
+  "game": "Super Mario World",
+  "composer": "Koji Kondo",
+  "composers": [
+   "Koji Kondo"
+  ],
+  "composer_truncated": false,
+  "dumper": "nensondubois",
+  "comments": "Keyhole",
+  "date": "",
+  "seconds": 3,
+  "fade_ms": 0,
+  "layout": "text",
+  "layout_reason": "date field is ASCII digits/separators"
+ },
+ "summary": {
+  "n_writes": 4815,
+  "n_notes": 0,
+  "duration_sec": 2.3265029296875,
+  "voices_used": [],
+  "n_voices_used": 0,
+  "samples_used": [],
+  "n_samples_used": 0,
+  "n_unfinished_notes": 0,
+  "n_kon_writes": 95,
+  "n_kon_effective": 0,
+  "n_noise_notes": 0,
+  "n_pitch_modulated_notes": 0,
+  "unhandled_writes": {}
+ },
+ "samples": {},
+ "pitch": {
+  "n_pitched": 0,
+  "n_unpitched": 0,
+  "n_implausible_register": 0,
+  "n_samples": 0,
+  "n_samples_with_f0": 0
+ },
+ "tick": {
+  "found": false,
+  "reason": "the write cadence has no single period: phase concentration 0.04 at its best candidate, below 0.25",
+  "period_ticks": 1147,
+  "hz": 892.764,
+  "concentration": 0.0356,
+  "sharpness": 0.0463,
+  "n_candidates": 132,
+  "n_agreeing": 57,
+  "n_gaps": 1232,
+  "burst_window": 512,
+  "n_writes": 4815
+ },
+ "grid": {
+  "found": false,
+  "reason": "only 0 distinct onsets; a period fitted to fewer than 8 describes noise",
+  "period_ticks": 0,
+  "period_sec": 0.0,
+  "rows_per_second": 0.0,
+  "bpm_assuming_4_rows_per_beat": 0.0,
+  "phase_ticks": 0,
+  "n_rows": 0,
+  "fit": 0.0,
+  "median_abs_residual_ticks": 0.0,
+  "median_abs_residual_fraction": 0.0,
+  "row_occupancy": 0.0,
+  "n_onsets": 0,
+  "n_distinct_onsets": 0,
+  "n_candidates": 0,
+  "cluster_ticks": 0,
+  "cluster_ms": 0.0,
+  "snapped_to_tick": false,
+  "tick_multiple": 0,
+  "onset_grid_over_tick": null
+ },
+ "scores": {
+  "n_rows": 0,
+  "n_notes": 0,
+  "n_notes_represented": 0,
+  "n_notes_unpitched": 0,
+  "n_notes_out_of_range": 0,
+  "n_notes_snapped": 0,
+  "n_notes_unplaced": 0,
+  "n_cells_contested": 0,
+  "coverage": 0.0,
+  "n_cells_filled": 0,
+  "separated_density": 0.0,
+  "n_rows_sounding": 0,
+  "rows_sounding_fraction": 0.0,
+  "max_polyphony": 0
+ },
+ "checks": {
+  "ok": false,
+  "failed": [
+   "notes_present",
+   "some_notes_completed"
+  ],
+  "checks": [
+   {
+    "name": "notes_present",
+    "passed": false,
+    "value": {
+     "n_notes": 0,
+     "n_kon_writes": 95,
+     "n_kon_effective": 0
+    },
+    "detail": "no notes were extracted. n_kon_effective tells you which case this is: zero means nothing was ever keyed on in this window (a drone already sounding at the snapshot), non-zero means key-ons were seen and the extractor failed to pair them"
+   },
+   {
+    "name": "no_unhandled_registers",
+    "passed": true,
+    "value": {},
+    "detail": "a DSP register this extractor does not model was written, so something about the track is not represented"
+   },
+   {
+    "name": "some_notes_completed",
+    "passed": false,
+    "value": "0/0",
+    "detail": "every note still sounding at the end means no key-off was ever observed, so no duration in this track is real"
+   },
+   {
+    "name": "durations_positive",
+    "passed": true,
+    "value": 0,
+    "detail": "a note ending at or before it started means key-on and key-off were paired wrongly"
+   },
+   {
+    "name": "notes_within_render",
+    "passed": true,
+    "value": 0,
+    "detail": "a note starting after the render ended means the timestamp base is wrong -- the symptom an earlier chunk-relative clock produced"
+   },
+   {
+    "name": "writes_span_render",
+    "passed": true,
+    "value": 2.327,
+    "detail": "DSP writes stopped well before the end of the render, so the driver halted or looped into silence and most of the window is not music"
+   },
+   {
+    "name": "audio_not_silent",
+    "passed": true,
+    "value": 6516,
+    "detail": "the emulator produced (near-)silence while notes were extracted, so the two disagree about whether anything played"
+   }
+  ]
+ },
+ "raw_path": "raw/smw-26_706941b6e12e.jsonl.gz",
+ "raw_bytes": 29093,
+ "notes": [],
+ "track_class": "drone",
+ "track_class_reason": "no key-on took effect in the render window: an SPC is a snapshot of a running system, so this track was already sounding and was never re-keyed. The note model cannot represent it, and that is a property of the track rather than a failure"
+}

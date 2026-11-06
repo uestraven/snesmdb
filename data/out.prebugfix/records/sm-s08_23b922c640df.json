@@ -1,0 +1,277 @@
+{
+ "source": "sm-s08.spc",
+ "ok": true,
+ "render_source": "id666",
+ "render_seconds": 14.0,
+ "track_id": "sm-s08:23b922c640df",
+ "sha256": "23b922c640df532fca6e9f3b2ffe7dbb858bd60b82cad3ae4f0ca09257e2fa69",
+ "size": 66092,
+ "tag": {
+  "title": "Continue",
+  "game": "Super Metroid",
+  "composer": "Kenji Yamamoto",
+  "composers": [
+   "Kenji Yamamoto"
+  ],
+  "composer_truncated": false,
+  "dumper": "Datschge",
+  "comments": "",
+  "date": "",
+  "seconds": 14,
+  "fade_ms": 7000,
+  "layout": "text",
+  "layout_reason": "date field is ASCII digits/separators"
+ },
+ "summary": {
+  "n_writes": 70970,
+  "n_notes": 5,
+  "duration_sec": 13.9986416015625,
+  "voices_used": [
+   0
+  ],
+  "n_voices_used": 1,
+  "samples_used": [
+   11
+  ],
+  "n_samples_used": 1,
+  "n_unfinished_notes": 1,
+  "n_kon_writes": 6991,
+  "n_kon_effective": 5,
+  "n_noise_notes": 0,
+  "n_pitch_modulated_notes": 0,
+  "unhandled_writes": {}
+ },
+ "samples": {
+  "11": {
+   "index": 11,
+   "start": 37610,
+   "loop": 38474,
+   "srcn": 11,
+   "f0_hz": 428.0701754385965,
+   "method": "loop+autocorrelation",
+   "confidence": "high",
+   "detail": "loop spans 61 period(s); the two estimates agree to 6 cents",
+   "autocorrelation_hz": 426.5560784123932,
+   "loop_hz": null,
+   "loop_periods": 61,
+   "octave_shift": 0,
+   "octave_margin": 0.0
+  }
+ },
+ "pitch": {
+  "n_pitched": 5,
+  "n_unpitched": 0,
+  "n_implausible_register": 0,
+  "n_samples": 1,
+  "n_samples_with_f0": 1
+ },
+ "tick": {
+  "found": false,
+  "reason": "the write cadence has no single period: phase concentration 0.01 at its best candidate, below 0.25",
+  "period_ticks": 4100,
+  "hz": 249.756,
+  "concentration": 0.0121,
+  "sharpness": 0.0,
+  "n_candidates": 75,
+  "n_agreeing": 0,
+  "n_gaps": 7989,
+  "burst_window": 64,
+  "n_writes": 70970
+ },
+ "grid": {
+  "found": false,
+  "reason": "only 5 distinct onsets; a period fitted to fewer than 8 describes noise",
+  "period_ticks": 0,
+  "period_sec": 0.0,
+  "rows_per_second": 0.0,
+  "bpm_assuming_4_rows_per_beat": 0.0,
+  "phase_ticks": 0,
+  "n_rows": 0,
+  "fit": 0.0,
+  "median_abs_residual_ticks": 0.0,
+  "median_abs_residual_fraction": 0.0,
+  "row_occupancy": 0.0,
+  "n_onsets": 5,
+  "n_distinct_onsets": 5,
+  "n_candidates": 0,
+  "cluster_ticks": 0,
+  "cluster_ms": 0.0,
+  "snapped_to_tick": false,
+  "tick_multiple": 0,
+  "onset_grid_over_tick": null
+ },
+ "scores": {
+  "n_rows": 0,
+  "n_notes": 5,
+  "n_notes_represented": 0,
+  "n_notes_unpitched": 0,
+  "n_notes_out_of_range": 0,
+  "n_notes_snapped": 0,
+  "n_notes_unplaced": 0,
+  "n_cells_contested": 0,
+  "coverage": 0.0,
+  "n_cells_filled": 0,
+  "separated_density": 0.0,
+  "n_rows_sounding": 0,
+  "rows_sounding_fraction": 0.0,
+  "max_polyphony": 0
+ },
+ "checks": {
+  "ok": true,
+  "failed": [],
+  "checks": [
+   {
+    "name": "notes_present",
+    "passed": true,
+    "value": {
+     "n_notes": 5,
+     "n_kon_writes": 6991,
+     "n_kon_effective": 5
+    },
+    "detail": "no notes were extracted. n_kon_effective tells you which case this is: zero means nothing was ever keyed on in this window (a drone already sounding at the snapshot), non-zero means key-ons were seen and the extractor failed to pair them"
+   },
+   {
+    "name": "no_unhandled_registers",
+    "passed": true,
+    "value": {},
+    "detail": "a DSP register this extractor does not model was written, so something about the track is not represented"
+   },
+   {
+    "name": "some_notes_completed",
+    "passed": true,
+    "value": "1/5",
+    "detail": "every note still sounding at the end means no key-off was ever observed, so no duration in this track is real"
+   },
+   {
+    "name": "durations_positive",
+    "passed": true,
+    "value": 0,
+    "detail": "a note ending at or before it started means key-on and key-off were paired wrongly"
+   },
+   {
+    "name": "notes_within_render",
+    "passed": true,
+    "value": 0,
+    "detail": "a note starting after the render ended means the timestamp base is wrong -- the symptom an earlier chunk-relative clock produced"
+   },
+   {
+    "name": "writes_span_render",
+    "passed": true,
+    "value": 13.999,
+    "detail": "DSP writes stopped well before the end of the render, so the driver halted or looped into silence and most of the window is not music"
+   },
+   {
+    "name": "audio_not_silent",
+    "passed": true,
+    "value": 2657,
+    "detail": "the emulator produced (near-)silence while notes were extracted, so the two disagree about whether anything played"
+   }
+  ]
+ },
+ "raw_path": "raw/sm-s08_23b922c640df.jsonl.gz",
+ "raw_bytes": 318724,
+ "notes": [
+  {
+   "voice": 0,
+   "start": 50269,
+   "end": 3518697,
+   "start_sec": 0.0490908203125,
+   "end_sec": 3.4362275390625,
+   "pitch_register": 305,
+   "srcn": 11,
+   "volume_left": 2,
+   "volume_right": 2,
+   "adsr1": 255,
+   "adsr2": 224,
+   "gain": 184,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 31.87534265350877,
+   "midi_note": 23.556110785181502,
+   "pitch_confidence": "high"
+  },
+  {
+   "voice": 0,
+   "start": 3586235,
+   "end": 7057530,
+   "start_sec": 3.5021826171875,
+   "end_sec": 6.892119140625,
+   "pitch_register": 305,
+   "srcn": 11,
+   "volume_left": 2,
+   "volume_right": 2,
+   "adsr1": 255,
+   "adsr2": 224,
+   "gain": 184,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 31.87534265350877,
+   "midi_note": 23.556110785181502,
+   "pitch_confidence": "high"
+  },
+  {
+   "voice": 0,
+   "start": 7127927,
+   "end": 10596585,
+   "start_sec": 6.9608662109375,
+   "end_sec": 10.3482275390625,
+   "pitch_register": 305,
+   "srcn": 11,
+   "volume_left": 2,
+   "volume_right": 2,
+   "adsr1": 255,
+   "adsr2": 224,
+   "gain": 184,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 31.87534265350877,
+   "midi_note": 23.556110785181502,
+   "pitch_confidence": "high"
+  },
+  {
+   "voice": 0,
+   "start": 10664123,
+   "end": 14135418,
+   "start_sec": 10.4141826171875,
+   "end_sec": 13.804119140625,
+   "pitch_register": 305,
+   "srcn": 11,
+   "volume_left": 2,
+   "volume_right": 2,
+   "adsr1": 255,
+   "adsr2": 224,
+   "gain": 184,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 31.87534265350877,
+   "midi_note": 23.556110785181502,
+   "pitch_confidence": "high"
+  },
+  {
+   "voice": 0,
+   "start": 14205815,
+   "end": null,
+   "start_sec": 13.8728662109375,
+   "end_sec": null,
+   "pitch_register": 305,
+   "srcn": 11,
+   "volume_left": 2,
+   "volume_right": 2,
+   "adsr1": 255,
+   "adsr2": 224,
+   "gain": 184,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 31.87534265350877,
+   "midi_note": 23.556110785181502,
+   "pitch_confidence": "high"
+  }
+ ],
+ "track_class": "effect",
+ "track_class_reason": "5 notes is fewer than the 10 needed to carry a phrase, at any duration"
+}

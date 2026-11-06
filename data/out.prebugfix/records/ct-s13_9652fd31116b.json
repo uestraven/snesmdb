@@ -1,0 +1,257 @@
+{
+ "source": "ct-s13.spc",
+ "ok": true,
+ "render_source": "id666",
+ "render_seconds": 11.0,
+ "track_id": "ct-s13:9652fd31116b",
+ "sha256": "9652fd31116b59814a07d82c5f15056adda6a6f6f1a14454e7a9468a16cf0107",
+ "size": 66088,
+ "tag": {
+  "title": "Blackbird (Inside)",
+  "game": "Chrono Trigger",
+  "composer": "Yasunori Mitsuda",
+  "composers": [
+   "Yasunori Mitsuda"
+  ],
+  "composer_truncated": false,
+  "dumper": "YK",
+  "comments": "",
+  "date": "",
+  "seconds": 11,
+  "fade_ms": 5000,
+  "layout": "text",
+  "layout_reason": "date field is ASCII digits/separators"
+ },
+ "summary": {
+  "n_writes": 55545,
+  "n_notes": 4,
+  "duration_sec": 10.9991259765625,
+  "voices_used": [
+   4
+  ],
+  "n_voices_used": 1,
+  "samples_used": [
+   32
+  ],
+  "n_samples_used": 1,
+  "n_unfinished_notes": 1,
+  "n_kon_writes": 2095,
+  "n_kon_effective": 4,
+  "n_noise_notes": 0,
+  "n_pitch_modulated_notes": 0,
+  "unhandled_writes": {}
+ },
+ "samples": {
+  "32": {
+   "index": 32,
+   "start": 18689,
+   "loop": 18689,
+   "srcn": 32,
+   "f0_hz": 1256.6371681415928,
+   "method": "loop+autocorrelation",
+   "confidence": "high",
+   "detail": "loop spans 284 period(s); the two estimates agree to 3 cents",
+   "autocorrelation_hz": 1254.5279472539096,
+   "loop_hz": null,
+   "loop_periods": 284,
+   "octave_shift": 0,
+   "octave_margin": 0.0
+  }
+ },
+ "pitch": {
+  "n_pitched": 4,
+  "n_unpitched": 0,
+  "n_implausible_register": 0,
+  "n_samples": 1,
+  "n_samples_with_f0": 1
+ },
+ "tick": {
+  "found": true,
+  "reason": "",
+  "period_ticks": 5375,
+  "hz": 190.512,
+  "concentration": 0.3398,
+  "sharpness": 0.3251,
+  "n_candidates": 112,
+  "n_agreeing": 1023,
+  "n_gaps": 3147,
+  "burst_window": 1024,
+  "n_writes": 55545
+ },
+ "grid": {
+  "found": false,
+  "reason": "only 4 distinct onsets; a period fitted to fewer than 8 describes noise",
+  "period_ticks": 0,
+  "period_sec": 0.0,
+  "rows_per_second": 0.0,
+  "bpm_assuming_4_rows_per_beat": 0.0,
+  "phase_ticks": 0,
+  "n_rows": 0,
+  "fit": 0.0,
+  "median_abs_residual_ticks": 0.0,
+  "median_abs_residual_fraction": 0.0,
+  "row_occupancy": 0.0,
+  "n_onsets": 4,
+  "n_distinct_onsets": 4,
+  "n_candidates": 0,
+  "cluster_ticks": 0,
+  "cluster_ms": 0.0,
+  "snapped_to_tick": false,
+  "tick_multiple": 0,
+  "onset_grid_over_tick": 0.0
+ },
+ "scores": {
+  "n_rows": 0,
+  "n_notes": 4,
+  "n_notes_represented": 0,
+  "n_notes_unpitched": 0,
+  "n_notes_out_of_range": 0,
+  "n_notes_snapped": 0,
+  "n_notes_unplaced": 0,
+  "n_cells_contested": 0,
+  "coverage": 0.0,
+  "n_cells_filled": 0,
+  "separated_density": 0.0,
+  "n_rows_sounding": 0,
+  "rows_sounding_fraction": 0.0,
+  "max_polyphony": 0
+ },
+ "checks": {
+  "ok": true,
+  "failed": [],
+  "checks": [
+   {
+    "name": "notes_present",
+    "passed": true,
+    "value": {
+     "n_notes": 4,
+     "n_kon_writes": 2095,
+     "n_kon_effective": 4
+    },
+    "detail": "no notes were extracted. n_kon_effective tells you which case this is: zero means nothing was ever keyed on in this window (a drone already sounding at the snapshot), non-zero means key-ons were seen and the extractor failed to pair them"
+   },
+   {
+    "name": "no_unhandled_registers",
+    "passed": true,
+    "value": {},
+    "detail": "a DSP register this extractor does not model was written, so something about the track is not represented"
+   },
+   {
+    "name": "some_notes_completed",
+    "passed": true,
+    "value": "1/4",
+    "detail": "every note still sounding at the end means no key-off was ever observed, so no duration in this track is real"
+   },
+   {
+    "name": "durations_positive",
+    "passed": true,
+    "value": 0,
+    "detail": "a note ending at or before it started means key-on and key-off were paired wrongly"
+   },
+   {
+    "name": "notes_within_render",
+    "passed": true,
+    "value": 0,
+    "detail": "a note starting after the render ended means the timestamp base is wrong -- the symptom an earlier chunk-relative clock produced"
+   },
+   {
+    "name": "writes_span_render",
+    "passed": true,
+    "value": 10.999,
+    "detail": "DSP writes stopped well before the end of the render, so the driver halted or looped into silence and most of the window is not music"
+   },
+   {
+    "name": "audio_not_silent",
+    "passed": true,
+    "value": 4868,
+    "detail": "the emulator produced (near-)silence while notes were extracted, so the two disagree about whether anything played"
+   }
+  ]
+ },
+ "raw_path": "raw/ct-s13_9652fd31116b.jsonl.gz",
+ "raw_bytes": 295126,
+ "notes": [
+  {
+   "voice": 4,
+   "start": 2736982,
+   "end": 5446156,
+   "start_sec": 2.672833984375,
+   "end_sec": 5.31851171875,
+   "pitch_register": 281,
+   "srcn": 32,
+   "volume_left": 38,
+   "volume_right": 38,
+   "adsr1": 253,
+   "adsr2": 224,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 86.20972759955751,
+   "midi_note": 40.78102858137417,
+   "pitch_confidence": "high"
+  },
+  {
+   "voice": 4,
+   "start": 5467986,
+   "end": 8177177,
+   "start_sec": 5.339830078125,
+   "end_sec": 7.9855244140625,
+   "pitch_register": 281,
+   "srcn": 32,
+   "volume_left": 38,
+   "volume_right": 38,
+   "adsr1": 253,
+   "adsr2": 224,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 86.20972759955751,
+   "midi_note": 40.78102858137417,
+   "pitch_confidence": "high"
+  },
+  {
+   "voice": 4,
+   "start": 8198998,
+   "end": 10908172,
+   "start_sec": 8.006833984375,
+   "end_sec": 10.65251171875,
+   "pitch_register": 281,
+   "srcn": 32,
+   "volume_left": 38,
+   "volume_right": 38,
+   "adsr1": 253,
+   "adsr2": 224,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 86.20972759955751,
+   "midi_note": 40.78102858137417,
+   "pitch_confidence": "high"
+  },
+  {
+   "voice": 4,
+   "start": 10930056,
+   "end": null,
+   "start_sec": 10.6738828125,
+   "end_sec": null,
+   "pitch_register": 281,
+   "srcn": 32,
+   "volume_left": 38,
+   "volume_right": 38,
+   "adsr1": 253,
+   "adsr2": 224,
+   "gain": 0,
+   "ended_by_rekey": false,
+   "noise": false,
+   "pitch_modulated": false,
+   "hz": 86.20972759955751,
+   "midi_note": 40.78102858137417,
+   "pitch_confidence": "high"
+  }
+ ],
+ "track_class": "effect",
+ "track_class_reason": "4 notes is fewer than the 10 needed to carry a phrase, at any duration"
+}

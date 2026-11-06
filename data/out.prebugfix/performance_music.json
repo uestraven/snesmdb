@@ -1,0 +1,998 @@
+{
+ "track_class": "music",
+ "n_tracks": 1006,
+ "corpus": {
+  "voices_mean": {
+   "median_over_games": 5.233,
+   "min": 3.37,
+   "max": 7.785,
+   "iqr": 1.063,
+   "n_games": 22
+  },
+  "voices_mean_when_sounding": {
+   "median_over_games": 5.3357,
+   "min": 3.7345,
+   "max": 7.81,
+   "iqr": 0.98,
+   "n_games": 22
+  },
+  "silent_fraction": {
+   "median_over_games": 0.0149,
+   "min": 0.0012,
+   "max": 0.0884,
+   "iqr": 0.0211,
+   "n_games": 22
+  },
+  "note_median_sec": {
+   "median_over_games": 0.1687,
+   "min": 0.0739,
+   "max": 0.3266,
+   "iqr": 0.0646,
+   "n_games": 22
+  },
+  "note_under_100ms": {
+   "median_over_games": 0.1676,
+   "min": 0.0014,
+   "max": 0.7123,
+   "iqr": 0.2378,
+   "n_games": 22
+  },
+  "note_over_1s": {
+   "median_over_games": 0.0455,
+   "min": 0.0006,
+   "max": 0.1386,
+   "iqr": 0.0398,
+   "n_games": 22
+  },
+  "median_volume": {
+   "median_over_games": 34.5,
+   "min": 14.0,
+   "max": 223.0,
+   "iqr": 23.0,
+   "n_games": 22
+  },
+  "median_abs_pan": {
+   "median_over_games": 0.1653,
+   "min": 0.0,
+   "max": 0.4516,
+   "iqr": 0.1393,
+   "n_games": 22
+  },
+  "hard_panned_fraction": {
+   "median_over_games": 0.0061,
+   "min": 0.0,
+   "max": 0.3971,
+   "iqr": 0.1384,
+   "n_games": 22
+  },
+  "phase_inverted_fraction": {
+   "median_over_games": 0.0,
+   "min": 0.0,
+   "max": 0.5968,
+   "iqr": 0.0,
+   "n_games": 22
+  },
+  "corr_volume_vs_position": {
+   "median_over_games": 0.0058,
+   "min": -0.053,
+   "max": 0.0667,
+   "iqr": 0.051,
+   "n_games": 22
+  },
+  "corr_volume_vs_register": {
+   "median_over_games": -0.0656,
+   "min": -0.5044,
+   "max": 0.2867,
+   "iqr": 0.3623,
+   "n_games": 22
+  },
+  "corr_volume_vs_voice": {
+   "median_over_games": -0.1066,
+   "min": -0.5274,
+   "max": 0.7284,
+   "iqr": 0.414,
+   "n_games": 22
+  },
+  "adsr_fraction": {
+   "median_over_games": 0.9795,
+   "min": 0.0,
+   "max": 1.0,
+   "iqr": 0.1314,
+   "n_games": 22
+  },
+  "distinct_adsr_words": {
+   "median_over_games": 4.0,
+   "min": 0.0,
+   "max": 19.5,
+   "iqr": 3.0,
+   "n_games": 22
+  },
+  "attack_rate_median": {
+   "median_over_games": 15.0,
+   "min": 14.0,
+   "max": 15.0,
+   "iqr": 0.0,
+   "n_games": 20
+  },
+  "sustain_level_median": {
+   "median_over_games": 7.0,
+   "min": 3.0,
+   "max": 7.0,
+   "iqr": 0.0,
+   "n_games": 20
+  },
+  "echo_on_fraction": {
+   "median_over_games": 1.0,
+   "min": 0.0,
+   "max": 1.0,
+   "iqr": 0.0,
+   "n_games": 22
+  },
+  "median_echo_voices": {
+   "median_over_games": 6.0,
+   "min": 0.0,
+   "max": 8.0,
+   "iqr": 3.5,
+   "n_games": 22
+  },
+  "median_feedback": {
+   "median_over_games": 18.0,
+   "min": -80.0,
+   "max": 100.0,
+   "iqr": 54.0,
+   "n_games": 22
+  },
+  "median_noise_voices": {
+   "median_over_games": 0.0,
+   "min": 0.0,
+   "max": 0.0,
+   "iqr": 0.0,
+   "n_games": 22
+  },
+  "median_pitch_mod_voices": {
+   "median_over_games": 0.0,
+   "min": 0.0,
+   "max": 0.0,
+   "iqr": 0.0,
+   "n_games": 22
+  }
+ },
+ "per_game": {
+  "Actraiser": {
+   "n_tracks": 17,
+   "voices": {
+    "mean": 4.507,
+    "mean_when_sounding": 4.746,
+    "silent_fraction": 0.0315,
+    "max": 7
+   },
+   "note_lengths": {
+    "median_sec": 0.1229,
+    "under_100ms": 0.3725,
+    "over_1s": 0.0575
+   },
+   "velocity": {
+    "median_volume": 32.0,
+    "median_abs_pan": 0.0,
+    "hard_panned_fraction": 0.0,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": -0.0282,
+    "corr_volume_vs_register": -0.228,
+    "corr_volume_vs_voice": 0.0287
+   },
+   "envelopes": {
+    "adsr_fraction": 0.8666,
+    "distinct_adsr_words": 4,
+    "attack_rate_median": 15.0,
+    "sustain_level_median": 7.0
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 1.0,
+    "median_echo_voices": 7.0,
+    "median_echo_volume": 48.0,
+    "median_feedback": -80.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Axelay": {
+   "n_tracks": 19,
+   "voices": {
+    "mean": 5.149,
+    "mean_when_sounding": 5.203,
+    "silent_fraction": 0.0081,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.1129,
+    "under_100ms": 0.3663,
+    "over_1s": 0.0424
+   },
+   "velocity": {
+    "median_volume": 60.0,
+    "median_abs_pan": 0.104,
+    "hard_panned_fraction": 0.1439,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": 0.0667,
+    "corr_volume_vs_register": 0.1269,
+    "corr_volume_vs_voice": -0.2862
+   },
+   "envelopes": {
+    "adsr_fraction": 0.9922,
+    "distinct_adsr_words": 2,
+    "attack_rate_median": 15.0,
+    "sustain_level_median": 7.0
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 1.0,
+    "median_echo_voices": 5.5,
+    "median_echo_volume": 67.5,
+    "median_feedback": 55.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Batman Returns": {
+   "n_tracks": 29,
+   "voices": {
+    "mean": 5.322,
+    "mean_when_sounding": 5.477,
+    "silent_fraction": 0.0267,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.1038,
+    "under_100ms": 0.3571,
+    "over_1s": 0.0284
+   },
+   "velocity": {
+    "median_volume": 15.0,
+    "median_abs_pan": 0.25,
+    "hard_panned_fraction": 0.0033,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": 0.0055,
+    "corr_volume_vs_register": -0.2849,
+    "corr_volume_vs_voice": -0.1775
+   },
+   "envelopes": {
+    "adsr_fraction": 0.9668,
+    "distinct_adsr_words": 6,
+    "attack_rate_median": 15,
+    "sustain_level_median": 7
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 1.0,
+    "median_echo_voices": 5.5,
+    "median_echo_volume": 80.0,
+    "median_feedback": 70.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Breath of Fire 2": {
+   "n_tracks": 47,
+   "voices": {
+    "mean": 7.785,
+    "mean_when_sounding": 7.81,
+    "silent_fraction": 0.0022,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.2551,
+    "under_100ms": 0.0082,
+    "over_1s": 0.0962
+   },
+   "velocity": {
+    "median_volume": 40,
+    "median_abs_pan": 0.3913,
+    "hard_panned_fraction": 0.3055,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": -0.0129,
+    "corr_volume_vs_register": 0.131,
+    "corr_volume_vs_voice": 0.7284
+   },
+   "envelopes": {
+    "adsr_fraction": 1.0,
+    "distinct_adsr_words": 3,
+    "attack_rate_median": 15.0,
+    "sustain_level_median": 7.0
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 1.0,
+    "median_echo_voices": 7.0,
+    "median_echo_volume": 48.0,
+    "median_feedback": 0.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Chrono Trigger": {
+   "n_tracks": 66,
+   "voices": {
+    "mean": 5.317,
+    "mean_when_sounding": 5.4685,
+    "silent_fraction": 0.0138,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.1737,
+    "under_100ms": 0.175,
+    "over_1s": 0.0675
+   },
+   "velocity": {
+    "median_volume": 44,
+    "median_abs_pan": 0.2,
+    "hard_panned_fraction": 0.1237,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": 0.0074,
+    "corr_volume_vs_register": 0.0261,
+    "corr_volume_vs_voice": -0.0632
+   },
+   "envelopes": {
+    "adsr_fraction": 1.0,
+    "distinct_adsr_words": 5.0,
+    "attack_rate_median": 15.0,
+    "sustain_level_median": 7.0
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 1.0,
+    "median_echo_voices": 8.0,
+    "median_echo_volume": 20.0,
+    "median_feedback": 85.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Donkey Kong Country": {
+   "n_tracks": 22,
+   "voices": {
+    "mean": 5.018,
+    "mean_when_sounding": 5.1045,
+    "silent_fraction": 0.0088,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.1307,
+    "under_100ms": 0.3801,
+    "over_1s": 0.0224
+   },
+   "velocity": {
+    "median_volume": 35.5,
+    "median_abs_pan": 0.2302,
+    "hard_panned_fraction": 0.016,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": -0.0163,
+    "corr_volume_vs_register": -0.1977,
+    "corr_volume_vs_voice": -0.4727
+   },
+   "envelopes": {
+    "adsr_fraction": 1.0,
+    "distinct_adsr_words": 19.5,
+    "attack_rate_median": 15.0,
+    "sustain_level_median": 7.0
+   },
+   "echo": {
+    "n_sampled": 5,
+    "echo_on_fraction": 1.0,
+    "median_echo_voices": 4,
+    "median_echo_volume": 0.0,
+    "median_feedback": 0,
+    "median_noise_voices": 0,
+    "median_pitch_mod_voices": 0
+   }
+  },
+  "Donkey Kong Country 2": {
+   "n_tracks": 71,
+   "voices": {
+    "mean": 5.395,
+    "mean_when_sounding": 5.496,
+    "silent_fraction": 0.016,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.1366,
+    "under_100ms": 0.1663,
+    "over_1s": 0.0006
+   },
+   "velocity": {
+    "median_volume": 58.0,
+    "median_abs_pan": 0.0856,
+    "hard_panned_fraction": 0.0,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": 0.0529,
+    "corr_volume_vs_register": -0.5044,
+    "corr_volume_vs_voice": -0.5274
+   },
+   "envelopes": {
+    "adsr_fraction": 1.0,
+    "distinct_adsr_words": 9,
+    "attack_rate_median": 15.0,
+    "sustain_level_median": 6.0
+   },
+   "echo": {
+    "n_sampled": 5,
+    "echo_on_fraction": 1.0,
+    "median_echo_voices": 6,
+    "median_echo_volume": 0.0,
+    "median_feedback": 0,
+    "median_noise_voices": 0,
+    "median_pitch_mod_voices": 0
+   }
+  },
+  "Dragon Quest 5": {
+   "n_tracks": 32,
+   "voices": {
+    "mean": 5.7245,
+    "mean_when_sounding": 5.744,
+    "silent_fraction": 0.0032,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.3266,
+    "under_100ms": 0.0014,
+    "over_1s": 0.1386
+   },
+   "velocity": {
+    "median_volume": 30.0,
+    "median_abs_pan": 0.2,
+    "hard_panned_fraction": 0.0,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": 0.0468,
+    "corr_volume_vs_register": -0.0029,
+    "corr_volume_vs_voice": -0.1412
+   },
+   "envelopes": {
+    "adsr_fraction": 0.8686,
+    "distinct_adsr_words": 2.0,
+    "attack_rate_median": 15,
+    "sustain_level_median": 7.0
+   },
+   "echo": {
+    "n_sampled": 4,
+    "echo_on_fraction": 0.25,
+    "median_echo_voices": 0.0,
+    "median_echo_volume": 20.0,
+    "median_feedback": 6.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Earthbound": {
+   "n_tracks": 139,
+   "voices": {
+    "mean": 4.636,
+    "mean_when_sounding": 4.764,
+    "silent_fraction": 0.0272,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.191,
+    "under_100ms": 0.2194,
+    "over_1s": 0.0476
+   },
+   "velocity": {
+    "median_volume": 14,
+    "median_abs_pan": 0.4516,
+    "hard_panned_fraction": 0.3971,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": -0.0042,
+    "corr_volume_vs_register": -0.1284,
+    "corr_volume_vs_voice": -0.2461
+   },
+   "envelopes": {
+    "adsr_fraction": 0.7406,
+    "distinct_adsr_words": 2,
+    "attack_rate_median": 15.0,
+    "sustain_level_median": 7.0
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 1.0,
+    "median_echo_voices": 7.0,
+    "median_echo_volume": 65.0,
+    "median_feedback": 30.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Final Fantasy 6": {
+   "n_tracks": 77,
+   "voices": {
+    "mean": 5.052,
+    "mean_when_sounding": 5.16,
+    "silent_fraction": 0.0283,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.1688,
+    "under_100ms": 0.235,
+    "over_1s": 0.0682
+   },
+   "velocity": {
+    "median_volume": 44.0,
+    "median_abs_pan": 0.1845,
+    "hard_panned_fraction": 0.0,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": 0.0414,
+    "corr_volume_vs_register": -0.1593,
+    "corr_volume_vs_voice": 0.0698
+   },
+   "envelopes": {
+    "adsr_fraction": 1.0,
+    "distinct_adsr_words": 3,
+    "attack_rate_median": 15.0,
+    "sustain_level_median": 7.0
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 1.0,
+    "median_echo_voices": 7.0,
+    "median_echo_volume": 25.0,
+    "median_feedback": 85.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Kirby Super Star": {
+   "n_tracks": 52,
+   "voices": {
+    "mean": 3.37,
+    "mean_when_sounding": 3.7345,
+    "silent_fraction": 0.0884,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.0739,
+    "under_100ms": 0.7123,
+    "over_1s": 0.0047
+   },
+   "velocity": {
+    "median_volume": 21.0,
+    "median_abs_pan": 0.2984,
+    "hard_panned_fraction": 0.009,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": -0.0042,
+    "corr_volume_vs_register": 0.0706,
+    "corr_volume_vs_voice": -0.4085
+   },
+   "envelopes": {
+    "adsr_fraction": 0.9585,
+    "distinct_adsr_words": 5.0,
+    "attack_rate_median": 15.0,
+    "sustain_level_median": 7.0
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 1.0,
+    "median_echo_voices": 4.5,
+    "median_echo_volume": 40.0,
+    "median_feedback": 52.5,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Legend of Zelda: A Link to the P": {
+   "n_tracks": 34,
+   "voices": {
+    "mean": 4.4255,
+    "mean_when_sounding": 4.6305,
+    "silent_fraction": 0.0176,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.1339,
+    "under_100ms": 0.3393,
+    "over_1s": 0.0747
+   },
+   "velocity": {
+    "median_volume": 33.5,
+    "median_abs_pan": 0.1666,
+    "hard_panned_fraction": 0.1984,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": -0.0282,
+    "corr_volume_vs_register": -0.4369,
+    "corr_volume_vs_voice": -0.229
+   },
+   "envelopes": {
+    "adsr_fraction": 0.8857,
+    "distinct_adsr_words": 3.0,
+    "attack_rate_median": 15.0,
+    "sustain_level_median": 7.0
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 1.0,
+    "median_echo_voices": 8.0,
+    "median_echo_volume": 40.0,
+    "median_feedback": 30.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Lufia 2": {
+   "n_tracks": 51,
+   "voices": {
+    "mean": 5.523,
+    "mean_when_sounding": 5.619,
+    "silent_fraction": 0.0101,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.2165,
+    "under_100ms": 0.073,
+    "over_1s": 0.0887
+   },
+   "velocity": {
+    "median_volume": 62.0,
+    "median_abs_pan": 0.1111,
+    "hard_panned_fraction": 0.0,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": 0.0098,
+    "corr_volume_vs_register": 0.2654,
+    "corr_volume_vs_voice": 0.2089
+   },
+   "envelopes": {
+    "adsr_fraction": 1.0,
+    "distinct_adsr_words": 4,
+    "attack_rate_median": 15.0,
+    "sustain_level_median": 7.0
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 1.0,
+    "median_echo_voices": 7.5,
+    "median_echo_volume": 23.0,
+    "median_feedback": 100.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Megaman X": {
+   "n_tracks": 30,
+   "voices": {
+    "mean": 7.7515,
+    "mean_when_sounding": 7.7695,
+    "silent_fraction": 0.0012,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.191,
+    "under_100ms": 0.0854,
+    "over_1s": 0.0353
+   },
+   "velocity": {
+    "median_volume": 20.5,
+    "median_abs_pan": 0.164,
+    "hard_panned_fraction": 0.1384,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": 0.0062,
+    "corr_volume_vs_register": 0.2867,
+    "corr_volume_vs_voice": 0.2949
+   },
+   "envelopes": {
+    "adsr_fraction": 1.0,
+    "distinct_adsr_words": 4.0,
+    "attack_rate_median": 15.0,
+    "sustain_level_median": 7.0
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 1.0,
+    "median_echo_voices": 6.0,
+    "median_echo_volume": 72.0,
+    "median_feedback": 0.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Plok!": {
+   "n_tracks": 18,
+   "voices": {
+    "mean": 4.818,
+    "mean_when_sounding": 4.848,
+    "silent_fraction": 0.0033,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.1264,
+    "under_100ms": 0.1688,
+    "over_1s": 0.0136
+   },
+   "velocity": {
+    "median_volume": 54.0,
+    "median_abs_pan": 0.1483,
+    "hard_panned_fraction": 0.0014,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": -0.053,
+    "corr_volume_vs_register": 0.0774,
+    "corr_volume_vs_voice": 0.1429
+   },
+   "envelopes": {
+    "adsr_fraction": 0.0,
+    "distinct_adsr_words": 0.0,
+    "attack_rate_median": null,
+    "sustain_level_median": null
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 0.0,
+    "median_echo_voices": 0.0,
+    "median_echo_volume": 0.0,
+    "median_feedback": 0.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Secret of Mana": {
+   "n_tracks": 49,
+   "voices": {
+    "mean": 5.699,
+    "mean_when_sounding": 5.961,
+    "silent_fraction": 0.0254,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.189,
+    "under_100ms": 0.0293,
+    "over_1s": 0.0465
+   },
+   "velocity": {
+    "median_volume": 31.0,
+    "median_abs_pan": 0.2381,
+    "hard_panned_fraction": 0.0365,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": 0.0181,
+    "corr_volume_vs_register": 0.0383,
+    "corr_volume_vs_voice": -0.3479
+   },
+   "envelopes": {
+    "adsr_fraction": 1.0,
+    "distinct_adsr_words": 5,
+    "attack_rate_median": 15.0,
+    "sustain_level_median": 7.0
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 1.0,
+    "median_echo_voices": 7.5,
+    "median_echo_volume": 0.0,
+    "median_feedback": 0.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Star Ocean": {
+   "n_tracks": 62,
+   "voices": {
+    "mean": 5.459,
+    "mean_when_sounding": 5.5705,
+    "silent_fraction": 0.0221,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.1815,
+    "under_100ms": 0.129,
+    "over_1s": 0.0401
+   },
+   "velocity": {
+    "median_volume": 37.0,
+    "median_abs_pan": 0.0217,
+    "hard_panned_fraction": 0.0,
+    "phase_inverted_fraction": 0.5126,
+    "corr_volume_vs_position": 0.0163,
+    "corr_volume_vs_register": 0.0476,
+    "corr_volume_vs_voice": 0.1177
+   },
+   "envelopes": {
+    "adsr_fraction": 1.0,
+    "distinct_adsr_words": 4.0,
+    "attack_rate_median": 15.0,
+    "sustain_level_median": 7.0
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 1.0,
+    "median_echo_voices": 8.0,
+    "median_echo_volume": 32.0,
+    "median_feedback": 54.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Super Castlevania 4": {
+   "n_tracks": 31,
+   "voices": {
+    "mean": 5.026,
+    "mean_when_sounding": 5.143,
+    "silent_fraction": 0.0111,
+    "max": 6
+   },
+   "note_lengths": {
+    "median_sec": 0.16,
+    "under_100ms": 0.1607,
+    "over_1s": 0.0444
+   },
+   "velocity": {
+    "median_volume": 21.0,
+    "median_abs_pan": 0.1667,
+    "hard_panned_fraction": 0.0011,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": 0.0376,
+    "corr_volume_vs_register": 0.1229,
+    "corr_volume_vs_voice": -0.4224
+   },
+   "envelopes": {
+    "adsr_fraction": 0.9544,
+    "distinct_adsr_words": 7,
+    "attack_rate_median": 15.0,
+    "sustain_level_median": 7.0
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 0.0,
+    "median_echo_voices": 0.0,
+    "median_echo_volume": 0.0,
+    "median_feedback": 0.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Super Mario World": {
+   "n_tracks": 44,
+   "voices": {
+    "mean": 3.8085,
+    "mean_when_sounding": 4.087,
+    "silent_fraction": 0.0625,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.1133,
+    "under_100ms": 0.2348,
+    "over_1s": 0.006
+   },
+   "velocity": {
+    "median_volume": 19.5,
+    "median_abs_pan": 0.0,
+    "hard_panned_fraction": 0.3518,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": -0.0153,
+    "corr_volume_vs_register": -0.3092,
+    "corr_volume_vs_voice": -0.2963
+   },
+   "envelopes": {
+    "adsr_fraction": 0.7209,
+    "distinct_adsr_words": 3.0,
+    "attack_rate_median": 14.0,
+    "sustain_level_median": 3.0
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 0.0,
+    "median_echo_voices": 0.0,
+    "median_echo_volume": 0.0,
+    "median_feedback": 0.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Super Metroid": {
+   "n_tracks": 26,
+   "voices": {
+    "mean": 3.8695,
+    "mean_when_sounding": 4.009,
+    "silent_fraction": 0.0209,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.2021,
+    "under_100ms": 0.1181,
+    "over_1s": 0.1323
+   },
+   "velocity": {
+    "median_volume": 42.5,
+    "median_abs_pan": 0.0,
+    "hard_panned_fraction": 0.095,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": 0.053,
+    "corr_volume_vs_register": -0.4322,
+    "corr_volume_vs_voice": -0.072
+   },
+   "envelopes": {
+    "adsr_fraction": 0.9636,
+    "distinct_adsr_words": 2.0,
+    "attack_rate_median": 15.0,
+    "sustain_level_median": 7.0
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 1.0,
+    "median_echo_voices": 2.0,
+    "median_echo_volume": 45.0,
+    "median_feedback": 45.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Super Turrican": {
+   "n_tracks": 19,
+   "voices": {
+    "mean": 6.349,
+    "mean_when_sounding": 6.358,
+    "silent_fraction": 0.0033,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.1686,
+    "under_100ms": 0.1353,
+    "over_1s": 0.0389
+   },
+   "velocity": {
+    "median_volume": 223,
+    "median_abs_pan": 0.139,
+    "hard_panned_fraction": 0.0,
+    "phase_inverted_fraction": 0.0,
+    "corr_volume_vs_position": -0.0134,
+    "corr_volume_vs_register": -0.4716,
+    "corr_volume_vs_voice": 0.4866
+   },
+   "envelopes": {
+    "adsr_fraction": 0.0,
+    "distinct_adsr_words": 0,
+    "attack_rate_median": null,
+    "sustain_level_median": null
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 1.0,
+    "median_echo_voices": 6.0,
+    "median_echo_volume": 55.0,
+    "median_feedback": 48.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  },
+  "Tales of Phantasia": {
+   "n_tracks": 71,
+   "voices": {
+    "mean": 6.041,
+    "mean_when_sounding": 6.118,
+    "silent_fraction": 0.0056,
+    "max": 8
+   },
+   "note_lengths": {
+    "median_sec": 0.1725,
+    "under_100ms": 0.1015,
+    "over_1s": 0.0471
+   },
+   "velocity": {
+    "median_volume": 22,
+    "median_abs_pan": 0.0909,
+    "hard_panned_fraction": 0.0026,
+    "phase_inverted_fraction": 0.5968,
+    "corr_volume_vs_position": 0.0049,
+    "corr_volume_vs_register": -0.1511,
+    "corr_volume_vs_voice": -0.0454
+   },
+   "envelopes": {
+    "adsr_fraction": 1.0,
+    "distinct_adsr_words": 5,
+    "attack_rate_median": 15,
+    "sustain_level_median": 7
+   },
+   "echo": {
+    "n_sampled": 6,
+    "echo_on_fraction": 1.0,
+    "median_echo_voices": 8.0,
+    "median_echo_volume": 16.0,
+    "median_feedback": 0.0,
+    "median_noise_voices": 0.0,
+    "median_pitch_mod_voices": 0.0
+   }
+  }
+ }
+}
