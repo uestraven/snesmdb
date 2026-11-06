@@ -669,6 +669,76 @@ unanswerable. Each step carries `semitones`, `run_length` and
 `observed_ticks` so a consumer can re-decide rather than inherit these
 thresholds.
 
+### The timer is stored in the SPC file, and reading it beats inferring it
+
+The 220 fixed-clock tracks -- 178 of them music, 17.7% of the music corpus,
+concentrated in Super Mario World (64) and Zelda (49) -- were assumed to be an
+estimator weakness. Three hypotheses were tested against write logs from 12 of
+the failing tracks, and **all three were refused by the data**:
+
+| hypothesis | signature looked for | result |
+|---|---|---|
+| staggered processing | multi-modal gaps hiding a consistent spacing | gaps are 36-50 clocks, which is intra-block instruction spacing, not a tick |
+| clock-doubling | a clean period at 2x or 1/2x | no bounded period beat its null |
+| conditional streaming | period present with skipped slots | **no** -- see below |
+
+Conditional streaming was the strongest prior and it is wrong. Grouping writes
+into blocks and fitting a periodic grid that allows missing slots, over 30-800
+Hz with an ABSOLUTE tolerance of 192 clocks and an occupancy floor, gives fits
+of 0.21-0.34 against nulls of 0.19-0.31. At or below chance, for the music
+registers and the global registers separately. **N-SPC does not expose a
+periodic tick in its DSP write stream.** The estimator is not weak here; the
+information is absent, which makes the 100 Hz fallback correct behaviour rather
+than a gap.
+
+A warning about the probe, because the first two versions manufactured a
+result. Using a RELATIVE tolerance of 10% and preferring the largest period
+produced fits of 1.00 at 9.4 Hz -- which is the coarsest-wins artifact already
+documented for `grid.py`, since +/-10% of a 108,446-tick period accepts
+anything within 10 ms. Any period search needs an absolute tolerance and a
+bounded range or it will find whatever it is pointed at.
+
+**THE INFORMATION IS IN THE SPC FILE, NOT THE WRITE LOG.** The SPC700's timer
+registers are part of the dump: `$F1` holds the enable bits and `$FA`, `$FB`,
+`$FC` hold the T0, T1 and T2 targets. Read directly, `8000/$FA` reproduces
+every clock the write-cadence estimator found, and supplies one for every game
+it could not:
+
+| game | from `$F1`/`$FA`-`$FC` | write-cadence measurement | |
+|---|---|---|---|
+| Chrono Trigger | T0 190.48 Hz | 190.48 Hz | agrees |
+| Super Metroid | T0 500.00 Hz | 500.00 Hz | agrees |
+| Final Fantasy 6 | T0 205.13 Hz | 205.13 Hz | agrees |
+| Secret of Mana | T0 222.22 Hz | 222.22 Hz | agrees |
+| Donkey Kong Country 1/2 | T0 80.00 Hz | 80.00 Hz | agrees |
+| Earthbound, Kirby | T0 500.00 Hz | 500.00 Hz | agrees |
+| Dragon Quest 5, Castlevania 4 | T0 200 / 250 Hz | same | agrees |
+| **Super Mario World** | **T0 500.00 Hz** | *failed* | **supplies** |
+| **Zelda** | **T0 500.00 Hz** | *failed* | **supplies** |
+| Actraiser, Axelay | T0 500 / 250 Hz | *failed* | supplies |
+| Lufia 2, Star Ocean, Tales of Phantasia | T1 64.00 Hz | *failed* | supplies |
+| Batman Returns | T0 250 Hz | 500 Hz | **2x** |
+| Breath of Fire 2, Mega Man X | T0 125 Hz | 62.5 Hz | **1/2** |
+| Plok! | T2 320 Hz | 80 Hz | **1/4** |
+
+Ten agree exactly and the four disagreements are all exact power-of-two
+factors, which is the software divisor M already established for this corpus:
+the register gives the HARDWARE timer rate, write cadence gives the EFFECTIVE
+sequencer rate, and they differ by however many timer ticks the driver counts
+per row. The two measurements corroborate rather than conflict.
+
+T0 is enabled on **1,295 of 1,316 tracks**, so this is a per-track hardware
+read with near-total coverage -- and because it is per-track it needs no
+per-game consensus at all, which also handles the drivers that reprogram their
+divider (Lufia 2, Star Ocean, Tales of Phantasia, Super Turrican all show a
+per-track value at 33-50% modal share).
+
+**Not yet implemented.** Switching the row clock to this source would change
+the row unit for most of the corpus and needs a decision about whether rows
+should sit on the hardware timer or on the effective sequencer rate -- they
+differ by M, and only the second is musical. That is a design choice, not a
+patch.
+
 ### Resolution: the scores are indexed on the driver's clock, and the grid is not the row unit
 
 Everything below this heading was an attempt to make an *inferred* row grid
