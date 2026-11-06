@@ -413,8 +413,7 @@ load-bearing. The steps, if you need them individually:
 
 ```sh
 make                 # build/spc_dump
-make extract         # ~50 min  SPCs -> manifest, records, raw logs
-make reclock         # ~10 min  row clock from the timer registers  REQUIRED
+make extract         # ~50 min  SPCs -> manifest, records, scores, clock
 make performance     #          the §7 analysis, all tracks and music-only
 make publish         # ~18 min  -> DIST_DIR
 make verify          #          13 checks; exits non-zero on any failure
@@ -422,24 +421,26 @@ make verify          #          13 checks; exits non-zero on any failure
 
 Override with `SPC_DIR=`, `OUT_DIR=`, `DIST_DIR=`, `JOBS=`.
 
-**`reclock` is not optional.** `extract` records the SPC700 timer registers but
-does not derive the row clock from them, and `publish` reads `row["clock"]`.
-Omitting the step produces a corpus with **zero** scored tracks, silently --
-publish finds no clock and writes nothing without erroring.
+**This used to need a second whole-corpus pass, and it was easy to forget.**
+A `reclock` step derived the row clock after extraction, and the recipe
+documented here omitted it -- which produced a corpus with **zero** scored
+tracks, silently, because publish found no clock and wrote nothing without
+erroring. Anyone reproducing the corpus from these instructions would have
+gotten an empty tree and no explanation.
 
-This used to be documented here as a list of commands to type, and that list
-omitted `reclock`, so **these instructions did not work**. The ordering now
-lives in the Makefile, where it executes, because a recipe that runs cannot
-drift from the recipe that is written down. `make verify` exists for the same
-reason: every one of its checks corresponds to a defect that really shipped
-from this pipeline, and not one of them announced itself.
+The step is now **gone rather than documented more loudly.** It existed
+because the row clock came from a per-game consensus over write-cadence
+ticks, and no track's clock could be settled until every track of its game
+had been seen -- a genuine reason for a second pass. The clock is now read
+from each SPC's own timer register, so it is a pure function of one track and
+is decided inside the extraction loop. One pass, nothing to forget.
 
-The `reclock` split is an accident of history rather than a design. It exists
-because the row clock changed three times and re-extracting cost an hour a
-round, so it rebuilds the clock, the envelope census and the scores from note
-records already on disk. Folding it into `extract` is outstanding work --
-two code paths that have to agree is the main debt in this pipeline, and the
-broken recipe above is what it cost.
+Two things follow from that, and they are the reason it was worth doing rather
+than just fixing the prose. `make corpus` is the ordering instead of a list of
+commands, so a recipe that executes cannot drift from the recipe that is
+written down. And `make verify` gates it: every one of its checks corresponds
+to a defect that really shipped from this pipeline, and **not one of them
+announced itself** -- each was found by reading output that looked fine.
 
 `tools/timbre_features.py` and `tools/timbre_codebook.py` are deliberately
 absent from this sequence. They still run, and the analysis is in

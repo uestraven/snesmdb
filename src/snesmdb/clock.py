@@ -176,19 +176,6 @@ SEQUENCER_K_MAX = 1024
 #: testing it -- see the note at the end of the module docstring.
 DIVIDER_TOLERANCE = 0.0011
 
-#: Below this share of a game's ticks resolving to a divider, the measurements
-#: are treated as unreliable rather than as a varying timer. No game in the
-#: 22-game corpus falls here with enough ticks to trigger it; it exists so a
-#: future driver that defeats `tick.py` is reported rather than averaged.
-MIN_DIVIDER_SHARE = 0.5
-
-#: A consensus needs this many tracks whose tick resolves to a divider. Two
-#: tracks agreeing is not evidence of a hardware constant.
-MIN_CONFIDENT_TRACKS = 3
-
-#: ...and this share of them must land on the same divider.
-MIN_AGREEMENT = 0.5
-
 #: The last-resort clock, for a track with neither a per-game clock nor a tick
 #: that passes the divider test. 100 Hz is itself achievable (8000/80) and
 #: divides the SPC700 clock exactly at 10,240 ticks. It costs 2.5 ms median
@@ -201,10 +188,9 @@ FALLBACK_HZ = 100.0
 #: covers 1,316 of 1,316 tracks, and it reproduces every clock the
 #: write-cadence estimator found. See `timers.py`.
 SOURCE_TIMER = "timer_register"
-SOURCE_GAME = "game_tick"
 SOURCE_TRACK = "track_tick"
 SOURCE_FIXED = "fixed"
-SOURCES = (SOURCE_TIMER, SOURCE_GAME, SOURCE_TRACK, SOURCE_FIXED)
+SOURCES = (SOURCE_TIMER, SOURCE_TRACK, SOURCE_FIXED)
 
 
 @dataclass(frozen=True)
@@ -299,10 +285,6 @@ class Clock:
     period_ticks: int
     source: str
     reason: str = ""
-    #: How many tracks of the game had a tick on a divider, and what share of
-    #: those agreed on one. Zero for the fixed fallback.
-    n_confident: int = 0
-    agreement: float = 0.0
     #: The tick as measured, before snapping to an achievable rate.
     measured_hz: float = 0.0
     #: Which timer divider this clock resolves to, when it resolves to one.
@@ -320,7 +302,7 @@ class Clock:
     @property
     def is_hardware(self) -> bool:
         """True when the clock was read or measured, not chosen."""
-        return self.source in (SOURCE_TIMER, SOURCE_GAME, SOURCE_TRACK)
+        return self.source in (SOURCE_TIMER, SOURCE_TRACK)
 
     @property
     def is_register_read(self) -> bool:
@@ -372,37 +354,12 @@ class Clock:
             "timer_software_divided": (
                 self.divider.software_divided if self.divider else None
             ),
-            "n_confident_tracks": self.n_confident,
-            "agreement": round(self.agreement, 4),
             "reason": self.reason,
         }
 
 
-def consensus(
-    hz_values: Sequence[float],
-) -> tuple[Divider | None, int, float]:
-    """The modal achievable timer rate across a game's measured ticks.
-
-    Values that do not resolve to a divider are dropped before counting, not
-    rounded into the nearest bin: a measurement that cannot be a timer read is
-    evidence about the extractor, not about the driver.
-
-    Returns `(None, n, agreement)` when the bar is not met, so the caller can
-    report why a game has no clock rather than silently falling back.
-    """
-    resolved = [d for d in (nearest_divider(h) for h in hz_values) if d]
-    if not resolved:
-        return None, 0, 0.0
-    counts = collections.Counter(d.label for d in resolved)
-    label, count = counts.most_common(1)[0]
-    agreement = count / len(resolved)
-    if len(resolved) < MIN_CONFIDENT_TRACKS or agreement < MIN_AGREEMENT:
-        return None, len(resolved), agreement
-    winner = next(d for d in resolved if d.label == label)
-    return winner, len(resolved), agreement
-
-
 def _confident_hz(row: dict[str, Any]) -> float | None:
+    """This track's own write-cadence tick, if `tick.py` was confident."""
     tick = row.get("tick") or {}
     if not tick.get("found"):
         return None
@@ -410,98 +367,23 @@ def _confident_hz(row: dict[str, Any]) -> float | None:
     return float(hz) if hz else None
 
 
-def _game_of(row: dict[str, Any]) -> str:
-    return ((row.get("tag") or {}).get("game") or "").strip()
+def clock_for(row: dict[str, Any]) -> Clock:
+    """The row clock for one track. A PURE FUNCTION OF THAT ROW.
 
+    Taking no corpus argument is the point. The per-game tick consensus used
+    to sit between the register and the per-track fallbacks, and it needed
+    every row of a game before it could decide any one of them -- which is
+    why the pipeline had a second whole-corpus pass at all. The register read
+    is per track and covers 1,316 of 1,316, so the consensus never fired, and
+    dropping it means the clock can be decided inside the extraction loop.
 
-def game_clocks(rows: Iterable[dict[str, Any]]) -> dict[str, Clock]:
-    """Derive one clock per game from the manifest rows that carry a tick.
-
-    Every game appears in the result, including those with no consensus: they
-    carry a `period_ticks` of zero and a reason, which is how `clock_for` knows
-    to fall back and what to say about it.
+    The chain is now: the SPC's own timer register, then this track's own
+    write-cadence estimate if it resolves to an achievable timer rate, then a
+    fixed convention. Only the first two are measurements.
     """
-    measured: dict[str, list[float]] = collections.defaultdict(list)
-    on_divider: dict[str, int] = collections.defaultdict(int)
-    games: set[str] = set()
-    for row in rows:
-        if not row.get("ok"):
-            continue
-        game = _game_of(row)
-        games.add(game)
-        hz = _confident_hz(row)
-        if hz is not None:
-            measured[game].append(hz)
-            if nearest_divider(hz):
-                on_divider[game] += 1
-
-    clocks: dict[str, Clock] = {}
-    for game in sorted(games):
-        seen = measured.get(game, [])
-        divider, n, agreement = consensus(seen)
-        if divider is None:
-            share = (on_divider[game] / len(seen)) if seen else 0.0
-            # Order matters: a low divider share is a statement about the
-            # EXTRACTOR and is the more informative diagnosis, so it is
-            # tested before the count. Checking the count first would report
-            # a game whose ticks are all nonsense as merely having too few.
-            if len(seen) >= MIN_CONFIDENT_TRACKS and share < MIN_DIVIDER_SHARE:
-                why = (
-                    f"only {share:.0%} of the {len(seen)} measured ticks "
-                    f"resolve to an SPC700 timer divider, below "
-                    f"{MIN_DIVIDER_SHARE:.0%} and near the 20.4% expected by "
-                    f"chance: the tick extractor looks unreliable on this "
-                    f"driver, so no clock is built from it"
-                )
-            elif n < MIN_CONFIDENT_TRACKS:
-                why = (
-                    f"only {n} tick(s) in this game resolve to an SPC700 timer "
-                    f"divider, below the {MIN_CONFIDENT_TRACKS} needed to call "
-                    f"a rate a hardware constant"
-                )
-            else:
-                why = (
-                    f"{share:.0%} of {len(seen)} ticks resolve to a divider -- "
-                    f"these are real timer reads -- but only {agreement:.0%} "
-                    f"agree on one, below {MIN_AGREEMENT:.0%}: this driver sets "
-                    f"tempo by reprogramming its divider rather than counting a "
-                    f"fixed tick, so no per-game constant exists and each "
-                    f"track is indexed on its own rate"
-                )
-            clocks[game] = Clock(0, SOURCE_GAME, why, n, agreement)
-            continue
-        clocks[game] = Clock(
-            period_ticks=period_for_hz(divider.hz),
-            source=SOURCE_GAME,
-            reason=(
-                f"{agreement:.0%} of {n} verified ticks in this game read "
-                f"{divider.hz:.2f} Hz = {divider.label}, an achievable SPC700 "
-                f"timer rate, so the driver's sequencer clock is taken as a "
-                f"constant and every track of the game is indexed on it"
-            ),
-            n_confident=n,
-            agreement=agreement,
-            measured_hz=divider.hz,
-            divider=divider,
-        )
-    return clocks
-
-
-def clock_for(row: dict[str, Any], clocks: dict[str, Clock]) -> Clock:
-    """The clock to index one track on, preferring the strongest evidence.
-
-    Order is deliberate. A game constant beats the track's own tick even when
-    the track has one, because the shared quantum is the whole point and a
-    single track's measurement is the noisier of the two.
-    """
-    # The SPC's own timer registers outrank every inference. Recorded per
-    # track, so the drivers that reprogram their divider -- Star Ocean with 26
-    # distinct values, Tales of Phantasia 31, Lufia 2 21 -- get their real
-    # per-track rate instead of a per-game average or a fallback.
     timers = row.get("timers") or {}
     hz = timers.get("sequencer_hz")
     if hz:
-        divider = nearest_divider(float(hz))
         return Clock(
             period_ticks=period_for_hz(float(hz)),
             source=SOURCE_TIMER,
@@ -513,12 +395,8 @@ def clock_for(row: dict[str, Any], clocks: dict[str, Clock]) -> Clock:
                 f"inference, so one row is one physical timer tick"
             ),
             measured_hz=float(hz),
-            divider=divider,
+            divider=nearest_divider(float(hz)),
         )
-
-    game = clocks.get(_game_of(row))
-    if game is not None and game.period_ticks:
-        return game
 
     own = _confident_hz(row)
     divider = nearest_divider(own) if own else None
@@ -527,35 +405,32 @@ def clock_for(row: dict[str, Any], clocks: dict[str, Clock]) -> Clock:
             period_ticks=period_for_hz(divider.hz),
             source=SOURCE_TRACK,
             reason=(
-                f"this game has no per-game clock, so this track is indexed on "
-                f"its own tick of {divider.hz:.2f} Hz = {divider.label}, which "
-                f"is an achievable SPC700 timer rate and so is trusted as a "
-                f"measurement despite standing alone"
+                f"no readable timer register, so this track falls back to its "
+                f"own write-cadence tick of {divider.hz:.2f} Hz = "
+                f"{divider.label}, which is an achievable SPC700 timer rate "
+                f"and so is trusted as a measurement despite standing alone"
             ),
-            n_confident=game.n_confident if game else 0,
-            agreement=game.agreement if game else 0.0,
             measured_hz=own or 0.0,
             divider=divider,
         )
 
     if own:
         why = (
-            f"the measured tick of {own:.2f} Hz does not resolve to any SPC700 "
-            f"timer divider, so it is not a timer read and is discarded; rows "
-            f"fall on a fixed {FALLBACK_HZ:g} Hz convention instead"
+            f"no readable timer register, and the measured tick of {own:.2f} Hz "
+            f"does not resolve to any SPC700 timer divider, so it is not a "
+            f"timer read and is discarded; rows fall on a fixed "
+            f"{FALLBACK_HZ:g} Hz convention instead"
         )
     else:
         why = (
-            f"no per-game clock and no confident tick for this track, so rows "
-            f"fall on a fixed {FALLBACK_HZ:g} Hz convention rather than a "
-            f"measurement -- a time quantum, not this driver's row rate"
+            f"no readable timer register and no confident tick for this track, "
+            f"so rows fall on a fixed {FALLBACK_HZ:g} Hz convention rather "
+            f"than a measurement -- a time quantum, not this driver's row rate"
         )
     return Clock(
         period_ticks=period_for_hz(FALLBACK_HZ),
         source=SOURCE_FIXED,
         reason=why,
-        n_confident=game.n_confident if game else 0,
-        agreement=game.agreement if game else 0.0,
         measured_hz=own or 0.0,
     )
 

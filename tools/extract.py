@@ -33,6 +33,8 @@ from snesmdb.spcfile import SpcError, load  # noqa: E402
 from snesmdb import brr, pitch  # noqa: E402
 from snesmdb.checks import audio_peak, run as run_checks  # noqa: E402
 from snesmdb import (  # noqa: E402
+    clock as clock_mod,
+    envelope as envelope_mod,
     grid as grid_mod,
     provenance as provenance_mod,
     scores as scores_mod,
@@ -242,8 +244,27 @@ def process(args: tuple[str, float, bool, str]) -> dict[str, Any]:
             if driver_tick.found and driver_tick.period_ticks else None
         )
 
+        # THE ROW CLOCK, decided here rather than in a second pass. It used to
+        # need one: the per-game tick consensus could not settle any track's
+        # clock until it had seen every track of that game, so a second
+        # whole-corpus pass existed to do it. The clock now comes from this
+        # SPC's own timer register, which is per track, so `clock_for` is a
+        # pure function of this row and the pipeline is single-pass again.
+        track_clock = clock_mod.clock_for(row)
+        row["clock"] = track_clock.to_dict()
+        track_grid = track_clock.to_grid(render_ticks)
+
+        # The envelope is the factor missing from `velocity`, which carries
+        # VOL alone while the DSP computes env x VOL.
+        row["envelope"] = envelope_mod.census(notes_out)
+        row["expressive_channels"] = list(scores_mod.CHANNELS)
+
         track_scores = scores_mod.build(notes_out, track_grid, render_ticks)
         row["scores"] = track_scores.stats()
+        # `timbre_of` is None deliberately: the milestone 5 codebook failed
+        # its own cross-game validation, so every class is written as -1
+        # rather than a number a consumer might trust.
+        expressive = scores_mod.expressive(notes_out, track_grid, None, render_ticks)
         if track_grid.found and track_scores.n_rows:
             scores_dir = out_dir / "scores"
             scores_dir.mkdir(parents=True, exist_ok=True)
@@ -253,8 +274,15 @@ def process(args: tuple[str, float, bool, str]) -> dict[str, Any]:
                 json.dump(
                     {
                         "track_id": row["track_id"],
-                        "grid": row["grid"],
+                        # The clock the rows are on, so a score is
+                        # self-describing and a consumer never has to consult
+                        # the manifest to learn what one row means.
+                        "clock": row["clock"],
+                        # Provenance only: the inferred ONSET period, a
+                        # separate musical measurement that indexes nothing.
+                        "onset_grid": row["grid"],
                         **track_scores.to_dict(),
+                        "expressive": expressive,
                     },
                     handle,
                     separators=(",", ":"),
@@ -294,6 +322,33 @@ def process(args: tuple[str, float, bool, str]) -> dict[str, Any]:
 
     row["ok"] = True
     return row
+
+
+def _clock_summary(good: list[dict[str, Any]]) -> dict[str, Any]:
+    """The row-clock census.
+
+    Lived in a second whole-corpus pass until the clock became a per-track
+    register read, at which point there was nothing for that pass to do.
+    """
+    rates = sorted(
+        r["clock"]["hz"] for r in good if (r.get("clock") or {}).get("hz")
+    )
+    return {
+        "sources": clock_mod.census(good),
+        "n_clocked": sum(
+            1 for r in good if (r.get("clock") or {}).get("period_ticks")
+        ),
+        "n_tracks": len(good),
+        "distinct_rates": len({round(x, 2) for x in rates}),
+        "hz_min": round(rates[0], 4) if rates else None,
+        "hz_median": round(rates[len(rates) // 2], 4) if rates else None,
+        "hz_max": round(rates[-1], 4) if rates else None,
+        "note": (
+            "One row is one SPC700 timer tick. A row is a uniform DEFINITION "
+            "but not a uniform DURATION -- the rate differs per track, so "
+            "divide by clock.hz before comparing anything per-row across games."
+        ),
+    }
 
 
 def main() -> None:
@@ -477,11 +532,12 @@ def main() -> None:
         ),
         "check_failures": dict(sorted(failures_by_check.items())),
         "track_classes": trackclass.census(good),
+        "clock": _clock_summary(good),
         # The inferred ONSET period. This is NOT the row clock -- rows are
         # indexed on the SPC700 timer register, which every track has. Kept
         # because the onset period is a real and separate musical measurement,
         # and named so that `n_found: 866` can never be read as the corpus
-        # covering 866 of 1,316 tracks. See reclock.py for the clock block.
+        # covering 866 of 1,316 tracks.
         "onset_grid": {
             "n_found": sum(1 for r in good if r.get("grid", {}).get("found")),
             "n_not_found": sum(

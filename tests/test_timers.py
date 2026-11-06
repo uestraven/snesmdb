@@ -110,8 +110,7 @@ def _row(game, timer_hz=None, tick_hz=None):
 
 def test_the_register_outranks_a_measured_tick():
     """A stored configuration beats an inference from write cadence."""
-    clocks = clock_mod.game_clocks([_row("G", tick_hz=62.5) for _ in range(5)])
-    got = clock_mod.clock_for(_row("G", timer_hz=500.0, tick_hz=62.5), clocks)
+    got = clock_mod.clock_for(_row("G", timer_hz=500.0, tick_hz=62.5))
     assert got.source == clock_mod.SOURCE_TIMER
     assert got.is_register_read and got.is_hardware
     assert got.hz == pytest.approx(500.0, rel=1e-3)
@@ -119,16 +118,15 @@ def test_the_register_outranks_a_measured_tick():
 
 def test_the_register_replaces_the_fabricated_fallback():
     """The 220 fixed-clock tracks: 178 music, now all on a real timer."""
-    got = clock_mod.clock_for(_row("Super Mario World", timer_hz=500.0), {})
+    got = clock_mod.clock_for(_row("Super Mario World", timer_hz=500.0))
     assert got.source == clock_mod.SOURCE_TIMER
     assert got.hz == pytest.approx(500.0, rel=1e-3)
     assert "not an\ninference" in got.reason or "not an inference" in got.reason
 
 
 def test_without_a_register_the_old_chain_still_applies():
-    clocks = clock_mod.game_clocks([_row("G", tick_hz=62.5) for _ in range(5)])
-    got = clock_mod.clock_for(_row("G", tick_hz=62.5), clocks)
-    assert got.source == clock_mod.SOURCE_GAME
+    got = clock_mod.clock_for(_row("G", tick_hz=62.5))
+    assert got.source == clock_mod.SOURCE_TRACK
     assert not got.is_register_read
 
 
@@ -137,14 +135,14 @@ def test_per_track_registers_need_no_per_game_consensus():
     track now gets its own instead of a per-game average or a fallback."""
     rates = [48.78, 64.0, 89.89, 125.0, 250.0]
     got = [
-        clock_mod.clock_for(_row("Star Ocean", timer_hz=hz), {}) for hz in rates
+        clock_mod.clock_for(_row("Star Ocean", timer_hz=hz)) for hz in rates
     ]
     assert all(c.source == clock_mod.SOURCE_TIMER for c in got)
     assert len({c.period_ticks for c in got}) == len(rates)
 
 
 def test_a_register_clock_still_reports_its_divider():
-    got = clock_mod.clock_for(_row("G", timer_hz=500.0), {})
+    got = clock_mod.clock_for(_row("G", timer_hz=500.0))
     assert got.divider is not None
     assert got.divider.label == "T0/T1/16"
 

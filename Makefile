@@ -6,13 +6,13 @@
 # wherever the macro expands.
 #
 # THE CORPUS TARGETS EXIST BECAUSE THE PROSE RECIPE WAS WRONG. docs/DATASET.md
-# listed the rebuild as a sequence of commands and omitted `reclock.py`, which
-# is the step that derives the row clock -- `extract.py` records the SPC700
-# timer registers but never writes `row["clock"]`, and `publish.py` reads it.
-# Following the documented sequence produced a corpus with ZERO scored tracks,
-# silently, because publish found no clock and wrote nothing without erroring.
-# A recipe that executes cannot drift from the recipe that is documented, so
-# the ordering now lives here and the docs point at it.
+# listed the rebuild as commands to type and omitted the step that derived the
+# row clock, so following it produced a corpus with ZERO scored tracks,
+# silently. A recipe that executes cannot drift from the recipe that is
+# documented, so the ordering lives here and the docs point at it.
+#
+# That step is now gone: the clock is decided inside extraction, so there is
+# one pass over the corpus and nothing to forget.
 
 VENDOR  := vendor/snes_spc/snes_spc
 BUILD   := build
@@ -32,7 +32,7 @@ OUT_DIR ?= data/out
 DIST_DIR ?= $(HOME)/snesmdb-corpus/dist
 JOBS    ?= 8
 
-.PHONY: all clean test corpus extract reclock performance publish verify help
+.PHONY: all clean test corpus extract performance publish verify help
 
 all: $(BUILD)/spc_dump
 
@@ -54,23 +54,23 @@ test:
 # it. Roughly 80 minutes end to end on 8 jobs.
 # ---------------------------------------------------------------------------
 
-corpus: extract reclock performance publish verify
+corpus: extract performance publish verify
 	@echo
 	@echo "corpus rebuilt: $(DIST_DIR)"
 	@echo "provenance:     $(DIST_DIR)/provenance.json"
 
-# ~50 min. Emulates every SPC, logs DSP writes, recovers notes and pitch,
-# writes the manifest and per-track records.
+# ~50 min, and now the only step that touches the corpus. Emulates every SPC,
+# logs DSP writes, recovers notes and pitch, decides the row clock from the
+# SPC's own timer register, and writes the manifest, records and scores.
+#
+# A second pass used to run after this and was easy to forget -- the shipped
+# rebuild recipe omitted it, which produced a corpus with zero scored tracks,
+# silently. It existed because the per-game tick consensus needed every row of
+# a game before it could settle any one of them. The register read is per
+# track, so there is nothing left for a second pass to do.
 extract: $(BUILD)/spc_dump
 	@echo "== extract ($(SPC_DIR) -> $(OUT_DIR)) =="
 	$(PYTHON) -I tools/extract.py $(SPC_DIR) $(OUT_DIR) --jobs $(JOBS)
-
-# ~10 min, REQUIRED. Derives the row clock from the timer registers, rebuilds
-# the scores on it, and adds the envelope census and the expressive score.
-# Skipping this leaves no `clock` block, and publish then writes no scores.
-reclock:
-	@echo "== reclock (row clock from the SPC700 timer registers) =="
-	$(PYTHON) -I tools/reclock.py $(OUT_DIR) --spc-dir $(SPC_DIR)
 
 # The §7 analysis, reported twice: over everything, and over music only, so
 # the figures say how much the jingles and effects were moving them.
@@ -96,7 +96,7 @@ verify:
 help:
 	@echo "make                 build build/spc_dump"
 	@echo "make test            run the test suite"
-	@echo "make corpus          full rebuild: extract -> reclock -> performance -> publish -> verify"
+	@echo "make corpus          full rebuild: extract -> performance -> publish -> verify"
 	@echo "make verify          check an existing corpus and dist tree"
 	@echo
 	@echo "variables: SPC_DIR=$(SPC_DIR) OUT_DIR=$(OUT_DIR) DIST_DIR=$(DIST_DIR) JOBS=$(JOBS)"

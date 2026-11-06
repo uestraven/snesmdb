@@ -8,8 +8,8 @@ caught by hand, late, or by accident. The point is that none of them can ship
 again silently -- which is the shared property of all of them. Not one
 announced itself; each was found by reading output that looked fine.
 
-    the rebuild recipe omitted reclock.py, so publish found no clock and
-    wrote no scores, without erroring              -> clock_on_every_track
+    the rebuild recipe omitted the clock-deriving pass, so publish found
+    no clock and wrote no scores, without erroring -> clock_on_every_track
     publish keyed on row["grid"] and would have
     shipped 866 of 1,316 tracks                    -> scores_cover_corpus
     summary.json headlined the onset grid's 866
@@ -76,7 +76,8 @@ def check_out_dir(out_dir: Path, report: Report) -> None:
         "clock_on_every_track",
         len(clocked) == len(good) and bool(good),
         f"{len(clocked)}/{len(good)} tracks carry a row clock"
-        + ("" if len(clocked) == len(good) else " -- did reclock.py run?"),
+        + ("" if len(clocked) == len(good) else
+           " -- extraction did not decide a clock for every track"),
     )
 
     scored = [r for r in good if (r.get("scores") or {}).get("n_rows")]
