@@ -36,7 +36,8 @@ the tag gives one per *track*.
 SPC ─► emulate SPC700, log every DSP write ─► per-voice note events
          (blargg's snes_spc, unpatched; hook via its own macro)
      ─► decode each BRR sample from ARAM, estimate f0 ─► note numbers
-     ─► infer the row grid from key-on spacing      ─► rows
+     ─► measure the driver's timer from write cadence ─► the row clock
+     ─► (also: fit a period to onsets, reported but not used for rows)
      ─► cluster sample features                     ─► timbre classes
      ─► emit
 ```
@@ -56,7 +57,7 @@ fixed window. A flat 60 s captured 8.8% of Final Fantasy VI's 683-second
 | path | contents |
 |---|---|
 | `index.json` | one row per track: ids, game, composers, split, source hash, what was emitted |
-| `scores/*.json.gz` | the three score formats, plus the grid and driver tick |
+| `scores/*.json.gz` | the three score formats, plus the row clock and the onset grid |
 | `midi/*.mid` | 8-track type-1 MIDI, one track per DSP voice |
 | `intake/*.json.gz` | per-voice note trees with absolute times |
 | `splits.json` | composer-disjoint train/valid/test assignment |
@@ -136,31 +137,75 @@ median deviation from an equal-tempered ladder is 0.30 cents for Rare and
 **10.67 cents for Capcom**. Interval-level work is safe for Rare and Square and
 is not safe for Capcom.
 
-## The row grid exists for two thirds of tracks, and is not the driver tick
+## Rows are indexed on the driver's own clock, not on an inferred grid
 
-**866 of 1,316 tracks (65.8%)** have a row grid, median fit 0.96. The rest are
-either too sparse (58 tracks) or have onsets that do not lie on one period.
+Every one of the **1,316 tracks** has row scores, because every track has a row
+clock. What varies is the strength of the evidence behind it, and the `clock`
+block says which of three rules produced it:
 
-**The grid is the music's onset grid, not the hardware's clock.** The design
-assumption — that the driver tick falls out as the dominant key-on spacing, as
-it does on the NES where music advances on a universal 60.0988 Hz frame — is
-false here. Measured: Zelda's onset grid is 5.4 rows/s against a real 62.5 Hz
-tick (11.6× out); Final Fantasy VI 11.0 against 205.4 (18.7× out). Only Donkey
-Kong Country agrees, because its driver keys on densely enough to exercise
-every tick.
+| `clock.source` | tracks | what it means |
+|---|---|---|
+| `game_tick` | 926 (70.4%) | an SPC700 timer rate corroborated across the game |
+| `track_tick` | 140 (10.6%) | this track's own rate, verified against the hardware |
+| `fixed` | 250 (19.0%) | a 100 Hz convention, not a measurement |
 
-A separate `tick` field reports the driver timer, recovered from the write
-cadence. It is present on **519 tracks (39.4%)** and is believable for four or
-five of twenty-two drivers — judge it by whether every track in a game agrees:
-Final Fantasy VI and Mega Man X give one distinct value, **Tales of Phantasia
-gives 36 over 52 tracks**. One known artifact: 20 tracks across six unrelated
-games report exactly 2,048 ticks, which is intra-burst write spacing and not a
-timer.
+**81.0% of tracks are indexed on a measured hardware clock** (798 of 1,006
+music tracks). Treat `fixed` rows as having an arbitrary time unit.
 
-**11.3% of placed notes are shorter than one row** and were snapped onto the
-nearest one, moving their onset. Per game: 2.2% for Plok!, **32.4% for Kirby
-Super Star**. The games where this is worst are the ones whose onset grid sits
-furthest from their tick.
+**Why not the onset grid.** The first design fitted a period to note onsets,
+reasoning by analogy with the NES, where every game inherits one row clock. The
+analogy is false twice over. On the NES the shared rate is the **PPU** frame
+rate of 60.0988 Hz, which music engines pick up because they run off the vblank
+NMI — not the APU frame counter, which is a separate ~240 Hz divider driving
+envelopes. And the SNES has no equivalent signal at all: the SPC700 and DSP sit
+on their own crystal, isolated from the CPU and PPU, and each driver programs
+its own timer. There is no universal SNES row rate to borrow.
+
+Fitting onsets instead produced **346 distinct row rates across 664 tracks,
+75% of them unique within a single game** — Final Fantasy VI alone got twenty,
+including 2.2 and 2.3 as separate values. One row meant 4 ms in one track and
+847 ms in another, so the row arrays were not comparable across the corpus,
+which is the one property that makes row arrays worth having.
+
+**The clock is not the tempo.** Timer 0 and Timer 1 count at a base 8 kHz and
+Timer 2 at 64 kHz, each scaled by an 8-bit divider, so the clock is the quantum
+the sequence is measured in. Tempo is how many ticks a note consumes and varies
+freely: Final Fantasy VI holds 205.13 Hz across all 55 music tracks while its
+median inter-onset spacing runs from 13.8 driver ticks to 183.0, a 13× spread,
+clustering near 24/36/48/72 — tracker row durations.
+
+**The hardware constrains the measurement, which is how it is checked.** A real
+timer read must land on base/N. Across the corpus range a random frequency does
+so 20.4% of the time; **89% of the 519 measured ticks do**, and all fourteen
+per-game clocks resolve to a plain Timer 0/1 divider — Final Fantasy VI
+8000/39, Chrono Trigger 8000/42, Secret of Mana 8000/36, Mega Man X 8000/128,
+Super Metroid 8000/16. Clocks are snapped to the nearest achievable divider,
+and a track's own tick is trusted only if it passes.
+
+**Eight games have no per-game clock, and for five the driver is the reason.**
+Star Ocean, Tales of Phantasia, Lufia 2, Super Turrican and Plok! put 63–100%
+of their ticks on real dividers but spread them over 4–23 distinct rates: these
+drivers set tempo by reprogramming the divider rather than counting a fixed
+tick, so no constant exists and each track is indexed on its own verified rate.
+The other three (Actraiser, Axelay, Zelda, Super Mario World) simply have too
+few confident ticks. **A game does not have one tempo, and this is where that
+shows up** — it is a property of the drivers, not a failure of the clock.
+
+**0.03% of placed notes are shorter than one row** (410 of 1,465,861) and were
+snapped onto the nearest, moving their onset. On the inferred grid this was
+**11.3%**, up to 32.4% for Kirby Super Star: the fitted period was coarser than
+the music it described and was displacing one note in nine. The driver clock is
+a fine subdivision, so almost nothing is lost. Contested cells — two notes of
+one voice falling in one row — number 16 across 1,863,499 notes.
+
+One known artifact survives in the underlying `tick` field: 20 tracks across
+six unrelated games report exactly 2,048 ticks, which is intra-burst write
+spacing rather than a timer.
+
+The `grid` block is still present on every row. It remains a real measurement
+of the **onset** period, which is a musical question rather than a hardware one,
+and the scores record it as `onset_grid` for provenance. It is no longer what
+the rows are indexed on.
 
 ## The timbre axis is a binary distinction, not a vocabulary
 

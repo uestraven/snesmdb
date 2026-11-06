@@ -580,6 +580,90 @@ Bounded, but not a small change, and the corpus is usable without it: both
 timbre-free scores and the MIDI exist for every track that has a single grid,
 and MIDI exists for every track with a pitched note regardless.
 
+### Resolution: the scores are indexed on the driver's clock, and the grid is not the row unit
+
+Everything below this heading was an attempt to make an *inferred* row grid
+good enough to index scores on. The attempt was answering the wrong question,
+and one query settled it: across 664 tracks the grid produced **346 distinct
+row rates, 75% of them unique within a single game**, Final Fantasy VI alone
+getting twenty including 2.2 and 2.3 as separate values, a 92× spread. One row
+meant 4 ms in one track and 847 ms in another. Row arrays whose unit changes
+per track are not a comparable corpus, which is the only reason to have row
+arrays at all.
+
+**The analogy to NES-MDB that motivated the grid was wrong in its mechanism.**
+The NES's shared 60.0988 Hz is the **PPU** frame rate — a consequence of the
+PPU dropping one dot on the pre-render scanline of odd frames — and music
+engines inherit it by running off the vblank NMI. It is not the APU frame
+counter, which is a separate divider off the CPU clock resetting every 29,830
+cycles for a 240 Hz quarter-frame step, driving envelopes and sweeps rather
+than sequencing. Even on the NES the gift is regional: PAL runs a different CPU
+clock at 50.007 Hz and forces a retime.
+
+**The SNES has no such shared signal, which is the whole point.** The SPC700
+and DSP sit on their own crystal, isolated from CPU and PPU, so SNES music
+timing has no relation to the video frame rate. Drivers sequence off the
+SPC700's own timers: Timer 0 and Timer 1 at a base 8 kHz, Timer 2 at 64 kHz,
+each scaled by an 8-bit divider. There is no universal rate to borrow, so the
+clock has to be *established per game* rather than assumed or fitted.
+
+`src/snesmdb/clock.py` does that, and the hardware supplies a test the grid
+could never submit to: a real timer read must land on base/N. Across the
+corpus's range a random frequency does so 20.4% of the time; **89% of the 519
+measured ticks do**, and all fourteen per-game clocks resolve to a plain
+Timer 0/1 divider (FF6 8000/39, Chrono Trigger 8000/42, Secret of Mana 8000/36,
+Mega Man X 8000/128, Super Metroid 8000/16).
+
+| | inferred onset grid | per-game driver clock |
+|---|---|---|
+| tracks with row scores | 866 (65.8%) | **1,316 (100%)** |
+| hardware-grounded | none | **1,066 (81.0%)** |
+| distinct row rates | 346 | **60** |
+| notes snapped (onset moved) | **11.3%**, to 32.4% worst game | **0.03%** |
+| contested cells | — | 16 of 1,863,499 |
+
+The snap rate is the result that matters: the fitted period was *coarser than
+the music it described* and was displacing one note in nine. A driver tick is a
+fine subdivision, so almost nothing moves. Rows per track rise from ~1,020 to
+~9,001, which is NES-MDB-comparable (a three-minute NES track at 60 Hz is
+~10,800 rows) because one row is now one driver tick, exactly as NES-MDB's row
+is one frame.
+
+**A clock is not a tempo, and the objection that it must be was the right
+objection.** A game's songs do not share a tempo and nothing here claims they
+do: the clock is the quantum, tempo is how many ticks a note consumes. FF6
+holds 205.13 Hz across all 55 music tracks while its median inter-onset spacing
+runs 13.8 to 183.0 driver ticks — a 13× tempo spread, clustering near 24, 36,
+48 and 72, which are tracker row durations.
+
+Where the objection bites is the eight games with no per-game clock, and for
+five of them the driver is the reason: Star Ocean, Tales of Phantasia, Lufia 2,
+Super Turrican and Plok! put 63–100% of their ticks on real dividers but spread
+them across 4–23 distinct rates. Those drivers set tempo by reprogramming the
+divider instead of counting a fixed tick. They fall back to the track's own
+verified rate, which for such a driver is not a degradation but the correct
+answer.
+
+**A correction worth recording.** Those five games were briefly diagnosed as
+*extractor failures* — "not timer reads at all, at the chance rate" — on a
+measurement that rounded each tick to 0.5 Hz before testing it against the
+divider set. Rounding knocks a genuine rate off its divider: 222.22 becomes
+222.0, a 0.1% error against a 0.11% tolerance. The quantisation destroyed the
+thing being tested and turned 78–100% into 25–37%. Nothing is rounded before
+the divider test now, and a test asserts that rounding breaks it.
+
+**What this supersedes.** The threshold question below, the 450 gridless
+tracks, the piecewise grid, the FFT periodogram and the cheaper `infer` were
+all work on inferring a row unit that the hardware states directly. None of it
+is needed for the scores. The grid is kept and still reported, because the
+*onset* period is a real and separate measurement — a musical question, which
+is what the listening set actually tests — but it is no longer the row unit,
+and milestone 4's exit no longer depends on any of it.
+
+The analysis below is left as written, including the threshold argument that
+the clock makes moot. It is the record of how the wrong question got asked for
+as long as it did.
+
 ### The driver tick is an independent witness, and it puts the bar at 0.70
 
 Everything above argues about the threshold using fit, which is circular. The
