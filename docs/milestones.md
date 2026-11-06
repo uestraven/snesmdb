@@ -14,7 +14,7 @@ why the scores arrive progressively rather than all at once.
 | 1 | Voice event log | ✅ done | low |
 | 2 | Real SPCs and corpus plumbing | ✅ done — **1,316 tracks, 22 games, splits within 0.3 points** | medium |
 | 3 | Absolute pitch | ✅ done — 78.7% pitched, **1.78% octave-suspect** (was 9.1%) | medium |
-| 4 | Grid inference | ⚠️ partial — rows + both scores on 866 tracks; the driver tick is **not** in the key-ons | low → medium |
+| 4 | Grid inference | ⚠️ partial — 866 tracks gridded; the other third have **several** grids, not none | low → medium |
 | 5 | Timbre vocabulary | ❌ **exit criterion not met** — a transferable 2-class split, not an instrument vocabulary | **high — and it was the risk named** |
 | 6 | Publish | ✅ done — **[DATASET.md](DATASET.md)**, three scores, MIDI, intake, splits | low |
 
@@ -457,6 +457,61 @@ statistic scored it 1.0 and read a 4,993-tick timer as 4,393. Replaced with the
 circular concentration of write phases over all write times, which no choice of
 window can flatter: a period wrong by one per cent makes the phase precess and
 the statistic collapse.
+
+### Why a third of tracks have no grid: they have more than one
+
+The 450 tracks without a grid are not a threshold problem, and that was worth
+establishing before touching the threshold. 58 are legitimately too sparse. For
+the other 378 a dense sweep over 701 log-spaced periods finds **median best fit
+0.449 — worse than the 0.655 the pipeline already achieves**, and only 2 of 60
+sampled tracks clear 0.80 even then. No single period fits their onsets, so
+lowering the bar would emit grids that do not describe the music.
+
+**They are multi-section pieces.** The listener's description of Final Fantasy
+VI's "Dancing Mad (Full)" — a classical work whose sections are completely
+different from one another — is directly testable, and recursive splitting
+finds exactly that:
+
+| section | onsets | fit |
+|---|---|---|
+| whole track | 4,480 | **0.39** |
+| 0–245 s | 896 | 0.68 |
+| 245–446 s | 806 | 0.77 |
+| 446–683 s | 1,077 | **0.82 — clears the bar, 17.0 rows/s** |
+
+Boundaries at 245 s and 446 s of a 683-second piece, with the fit rising toward
+each section rather than the whole. The other tracks in this population are the
+same shape: the longest gridless tracks are "Ending Theme (part 1)" and
+"(part 2)", "Thank You, Everyone", "Vows of Marriage" — endings, medleys and
+multi-movement set pieces. A single tempo was never going to describe them.
+
+So the honest statement of the milestone's shortfall changes. It is not "the
+grid fails on a third of tracks"; it is **"a third of tracks have no single
+grid, because they have several, and only one grid per track is emitted."**
+
+### What closing this properly needs, and why it is not done here
+
+A piecewise grid — a period per section, with the row sequence continuing
+across section boundaries exactly as a tracker handles a tempo change. The
+segmentation itself works. What blocks it is cost: `infer` is
+O(candidates × onsets) with a hill-climb per candidate, so one call on
+"Dancing Mad" takes about ten seconds and segmentation needs tens of calls per
+track.
+
+Two attempts to make it cheap were reverted because both changed answers.
+Ranking candidates on a regular onset subsample took "Dancing Mad" from fit
+0.394 to 0.193, because a coarse period fits a sparse subsample better and the
+coarsest-wins guard then selects it. Shortlisting on the subsample and deciding
+on the full data still moved 2 of 11 spot-checked tracks, including
+"Gang-Plank Galleon" from 0.9992 to 0.915 — a regression on a track that was
+already correct, which is worse than being slow.
+
+So the remaining work is a genuinely cheaper fit, not a sampling trick:
+computing the residual distribution by histogram rather than per-onset, or an
+FFT-based periodicity estimate. Bounded, but not a small change, and the
+corpus is usable without it: both timbre-free scores and the MIDI exist for
+every track that has a single grid, and MIDI exists for every track with a
+pitched note regardless.
 
 ### Two limits that are properties of the problem, not of the code
 
