@@ -1,28 +1,43 @@
-build/
-
-# SPC files are copyrighted game rips: "educational and personal non-profit
-# use only". They never enter this repository. Keep them here locally.
-data/spc/*
+# DENY BY DEFAULT UNDER data/. Everything below data/ is ignored, and the few
+# tracked files are allow-listed by exact path.
+#
+# This replaces a list of specific directories, which failed twice and put
+# 3,955 derived files totalling 2.4 GB into public git history:
+#
+#   * `data/out/` and `data/out/*` were ignored, but a sibling directory named
+#     `data/out.prebugfix/` -- created while moving a corpus aside during a fix
+#     -- matched no rule at all;
+#   * `*.jsonl` was ignored, and does NOT match the compressed `*.jsonl.gz`
+#     form the DSP write logs actually use.
+#
+# Enumerating what to exclude requires predicting every name a future change
+# will invent. Denying the whole subtree does not. Add an allow-list line when
+# a file genuinely belongs in the repository.
+data/**
+!data/spc/
 !data/spc/.gitkeep
 !data/spc/README.md
-
-# Extraction output: derived from research-only data, and regenerable.
-data/out/*
+!data/out/
 !data/out/.gitkeep
 
-# Proof-of-concept scratch corpora (regenerable; derived data).
-data/poc_spc/
-data/poc_out/
+# Derived and source audio formats wherever they appear. A second line of
+# defence, not the primary one -- the rule above is primary.
+*.spc
+*.rsn
+*.wav
+*.flac
+*.mp3
+*.ogg
+*.aram
+*.mid
+*.midi
+*.jsonl
+*.jsonl.gz
+*.json.gz
 
+# Build and tooling.
+build/
 .venv/
 __pycache__/
 *.pyc
 .pytest_cache/
-*.wav
-*.jsonl
-*.aram
-
-# Extraction output and logs (derived, regenerable).
-data/out/
-data/extract.log
-data/fixture/

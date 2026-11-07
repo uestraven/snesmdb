@@ -41,7 +41,8 @@ OUT_DIR ?= data/out
 DIST_DIR ?= $(HOME)/snesmdb-corpus/dist
 JOBS    ?= 8
 
-.PHONY: all clean test venv corpus extract performance publish verify help
+.PHONY: all clean test venv corpus extract performance publish verify \
+        check-data check-history hooks help
 
 all: $(BUILD)/spc_dump
 
@@ -54,8 +55,23 @@ $(BUILD):
 clean:
 	rm -rf $(BUILD)
 
-test: | $(PYTEST)
+test: check-data | $(PYTEST)
 	$(PYTEST) -q
+
+# Refuse source or derived corpus data in the tracked tree. Runs before the
+# suite, because a leak is worse than a failing test.
+check-data:
+	@$(PYTHON) -I tools/check_no_derived_data.py
+
+# The only check that sees data already committed. A clean working tree says
+# nothing about what the repository still carries in its history.
+check-history:
+	@$(PYTHON) -I tools/check_no_derived_data.py --history
+
+# Install the pre-commit hook. .gitignore is a default, not enforcement.
+hooks:
+	git config core.hooksPath .githooks
+	@echo "pre-commit hook active: .githooks/pre-commit"
 
 venv: $(PYTEST)
 
@@ -116,5 +132,8 @@ help:
 	@echo "make venv            just create $(VENV) with pytest"
 	@echo "make corpus          full rebuild: extract -> performance -> publish -> verify"
 	@echo "make verify          check an existing corpus and dist tree"
+	@echo "make check-data      refuse derived corpus data in the tracked tree"
+	@echo "make check-history   same, across all git history (slow)"
+	@echo "make hooks           install the pre-commit data guard"
 	@echo
 	@echo "variables: SPC_DIR=$(SPC_DIR) OUT_DIR=$(OUT_DIR) DIST_DIR=$(DIST_DIR) JOBS=$(JOBS)"

@@ -1,0 +1,8 @@
+#!/bin/sh
+# Refuse to commit source or derived corpus data.
+#
+# .gitignore is a default, not enforcement, and a directory named
+# data/out.prebugfix/ once slipped past it into public history -- 3,955 files,
+# 2.4 GB, including the note records for all 1,316 commercial tracks. This
+# checks the staged change itself.
+exec python3 -I "$(git rev-parse --show-toplevel)/tools/check_no_derived_data.py" --staged
