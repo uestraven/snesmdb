@@ -23,6 +23,8 @@ announced itself; each was found by reading output that looked fine.
     note_id was never published, so the parent
     link was unresolvable on disk                  -> legato_parents_resolve
     nothing recorded what produced a tree          -> provenance_recorded
+    a coarse uniform rate would silently rewrite
+    tremolos as sustained notes                    -> uniform_grid_preserves_events
 
 Exit code is the number of failed checks, so `make` stops on any of them.
 """
@@ -35,11 +37,22 @@ import gzip
 import json
 import sys
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
+from snesmdb import scores as scores_mod  # noqa: E402
 
 #: The S-DSP has eight voices. Anything above this is arithmetically impossible
 #: and means the note model is double-counting.
 N_VOICES = 8
+
+#: The uniform score's event-preservation claim, re-checked on real data every
+#: rebuild so it cannot rot into a figure that was true once. Measured at 100
+#: Hz over the whole corpus: 1 lost repeated attack in 1,458,211 pitched notes.
+#: The bound is deliberately loose enough to survive a corpus change and tight
+#: enough that a rate change or a merge-behaviour regression trips it.
+MAX_UNIFORM_EVENTS_LOST = 50
 
 #: Above this share of notes reporting sample 0, the voice state is probably
 #: not being seeded from the SPC's DSP block. The real figure is 2.8%; it was
@@ -157,6 +170,42 @@ def check_records(out_dir: Path, report: Report, limit: int) -> None:
     )
 
 
+def check_uniform_preservation(out_dir: Path, report: Report, limit: int) -> None:
+    """Does the uniform grid still lose almost no note events?
+
+    The rate was chosen on this measurement, so it is checked rather than
+    trusted. A coarser rate, or a change to how `scores.build` merges onsets,
+    would show up here as lost repeated attacks -- a tremolo rewritten as one
+    sustained note, which nothing downstream would notice.
+    """
+    rows = [r for r in _rows(out_dir) if r.get("ok") and r.get("record_path")]
+    if not rows:
+        return
+    step = max(1, len(rows) // limit)
+    period = 1_024_000 / scores_mod.UNIFORM_HZ
+    notes = lost = 0
+    for row in rows[::step]:
+        record = json.loads((out_dir / row["record_path"]).read_text())
+        seen: dict[tuple[int, int], int] = {}
+        for note in record.get("notes") or []:
+            if note.get("midi_note") is None:
+                continue
+            notes += 1
+            key = (int(note["voice"]), round(note["start"] / period))
+            if key in seen:
+                lost += 1
+            else:
+                seen[key] = note["midi_note"]
+    if not notes:
+        return
+    report.check(
+        "uniform_grid_preserves_events",
+        lost <= MAX_UNIFORM_EVENTS_LOST,
+        f"{lost} of {notes:,} sampled pitched notes lost at "
+        f"{scores_mod.UNIFORM_HZ:g} Hz (limit {MAX_UNIFORM_EVENTS_LOST})",
+    )
+
+
 def check_dist(dist_dir: Path, report: Report) -> None:
     index_path = dist_dir / "index.json"
     if not index_path.is_file():
@@ -228,6 +277,7 @@ def main() -> None:
     report = Report()
     check_out_dir(args.out_dir, report)
     check_records(args.out_dir, report, args.sample)
+    check_uniform_preservation(args.out_dir, report, args.sample * 4)
     if args.dist_dir and args.dist_dir.exists():
         check_dist(args.dist_dir, report)
     elif args.dist_dir:

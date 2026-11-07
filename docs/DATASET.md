@@ -179,6 +179,69 @@ Pitched-note coverage fell slightly, 78.7% to 78.3%, because some of the
 newly-correct samples fail the f0 plausibility test that the wrong ones passed.
 Fewer and right beats more and wrong.
 
+## The row-rate decision, recorded
+
+**snesmdb uses a 100 Hz uniform score grid as a deliberate analytical
+convention.** The rate was selected by empirical evaluation of event
+preservation, timing accuracy and storage cost on SNES music. **It does not
+represent a universal SNES sequencer frequency** — no such frequency exists;
+every driver programs its own timer.
+
+The primary timer-derived grid and the original timestamped event records
+remain available for hardware-oriented analysis and higher-resolution
+reconstruction.
+
+**100 Hz is not claimed to be optimal for all future SNES recordings.** It is
+the best-supported choice among the candidates measured, on the corpus as it
+stands. `tools/rate_benchmark.py` reruns the comparison, and
+`make verify` re-checks the preservation claim on every rebuild, so the figure
+cannot quietly rot as the corpus grows.
+
+### What the benchmark measured
+
+Full corpus: **1,458,211 pitched notes across all 1,243 tracks that contain
+one**, of 1,316. The 405,288 unpitched notes are excluded, and that is the
+exact coverage of the claim — an unpitched note carries no note number and so
+never enters a piano roll in any format, at any rate.
+
+| rate | exact divisor | events lost | repeat attacks | collisions | notes < 1 row | onset median / p95 |
+|---|---|---|---|---|---|---|
+| 50 Hz | yes | **94** | 67 | 27 | 0.74% | 4.94 / 9.5 ms |
+| **100 Hz** | **yes** | **1** | **1** | **0** | 0.14% | 2.49 / 4.7 ms |
+| 200 Hz | yes | 1 | 1 | 0 | 0.03% | 1.26 / 2.4 ms |
+
+**100 Hz loses one event in 1,458,211** — a single repeated attack. 200 Hz
+loses the same one and buys only timing precision, at twice the rows. That is
+the whole argument for the rate: it is the cheapest grid that loses nothing
+measurable.
+
+A note on the earlier figure: a 296-track sample reported "100.000% preserved",
+which was rounding. The full corpus shows one lost event. The claim is now
+stated as a count rather than a percentage for that reason.
+
+**Repeated attacks are counted separately from collisions** because the losses
+differ in kind. A collision drops a note. A lost repeated attack silently
+rewrites rhythm as duration — a tremolo or drum roll becomes one sustained
+note — which nothing downstream would detect by counting notes. At 24 Hz, the
+rate first considered for NES-MDB comparability, that loss is 174 events.
+
+### For microtiming, do not use the score
+
+Even at 100 Hz a row is 10 ms, and onsets move by 2.49 ms at the median and
+4.7 ms at p95. Durations under 10 ms cannot be represented at all (0.14% of
+notes). **Anyone studying expressive microtiming should use the original
+timestamps, not reconstructed score rows.** Those are preserved and published:
+
+- `records/*.json` — every note with `start` and `end` in **raw SPC700
+  clocks**, one tick being 0.00098 ms, unquantised
+- `raw/*.jsonl.gz` — the full timestamped DSP register write log, which is
+  what everything else is derived from
+- `intake/*.json.gz` — absolute times in seconds, in the published tree
+
+The event log is the authoritative representation. Both score grids are
+derived, lossy views of it, and the uniform grid is additionally a convention
+rather than a measurement.
+
 ## Two row grids: the driver's, and a uniform one for comparability
 
 Each score file carries **two** sets of the three formats.

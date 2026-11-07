@@ -126,14 +126,22 @@ def main() -> None:
     parser.add_argument("--tracks", type=int, default=300)
     parser.add_argument("--size-tracks", type=int, default=40)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--track-class", default="music",
+        help="restrict to one track_class, or 'all' for every track. The "
+             "headline claim should be published with its exact coverage.",
+    )
     args = parser.parse_args()
 
     rows = [
         r for r in (json.loads(line) for line in (args.out_dir / "manifest.jsonl").open())
-        if r.get("ok") and r.get("record_path") and r.get("track_class") == "music"
+        if r.get("ok") and r.get("record_path")
+        and (args.track_class == "all" or r.get("track_class") == args.track_class)
     ]
+    population = len(rows)
     random.Random(args.seed).shuffle(rows)
-    rows = rows[: args.tracks]
+    if args.tracks:
+        rows = rows[: args.tracks]
 
     tracks: list[tuple[float, list[dict[str, Any]]]] = []
     for row in rows:
@@ -147,9 +155,15 @@ def main() -> None:
     rates = [float(x) for x in args.rates.split(",")]
     results = [measure(tracks, hz) for hz in rates]
     notes = results[0]["notes"]
+    unpitched = sum(
+        int((r.get("summary") or {}).get("n_notes") or 0) for r in rows
+    ) - notes
     print(
-        f"{notes:,} pitched notes across {len(tracks)} music tracks; "
-        f"sizes over {args.size_tracks} tracks\n"
+        f"COVERAGE: {notes:,} PITCHED notes across {len(tracks)} of "
+        f"{population} '{args.track_class}' tracks. "
+        f"{unpitched:,} unpitched notes are excluded -- they carry no note "
+        f"number and so never enter a piano roll, in any format.\n"
+        f"Sizes measured over {args.size_tracks} tracks.\n"
     )
     print(f"{'rate':>6s}{'row ms':>8s}{'exact':>7s}{'preserved':>11s}"
           f"{'repeat att':>12s}{'collide':>9s}{'<1 row':>8s}"
