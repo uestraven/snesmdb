@@ -217,3 +217,45 @@ def test_a_pre_v1_bare_list_index_still_freezes(tmp_path):
     pin = freeze.build(dist, "rc1")
     assert pin["index_schema"] is None
     assert pin["n_tracks_in_index"] == 1
+
+
+def test_a_corpus_published_from_a_dirty_tree_is_refused(tmp_path, monkeypatch):
+    """The clean-checkout check must cover the BUILD, not only the freeze.
+
+    A tree published from uncommitted changes and frozen after committing
+    them passes a freeze-time check and is still unreproducible. That is not
+    hypothetical: gate5-rc3 was first published from 15 modified files and
+    only the pin's own `built_from` record revealed it.
+    """
+    dist = _tree(tmp_path)
+    (dist / "provenance.json").write_text(json.dumps({
+        "git_commit": "aaaaaaa", "built_utc": "2026-11-07T08:04:14Z",
+        "dirty": True,
+    }))
+    # Present the LIVE checkout as clean so only the build-time condition can
+    # trigger. Otherwise this passes for the wrong reason whenever whoever
+    # runs it happens to have uncommitted work.
+    monkeypatch.setattr(
+        freeze.provenance_mod, "record",
+        lambda **_: {"git_commit": "bbbbbbb", "dirty": False},
+    )
+    with pytest.raises(SystemExit) as caught:
+        _freeze_cli(dist, "--label", "rc1", monkeypatch=monkeypatch)
+    assert "PUBLISHED from a dirty working tree" in str(caught.value)
+    assert not (dist / freeze.RELEASE_FILE).is_file()
+
+
+def test_a_dirty_build_can_be_pinned_deliberately(tmp_path, monkeypatch):
+    """Throwaway pins are legitimate; they just must be asked for."""
+    dist = _tree(tmp_path)
+    (dist / "provenance.json").write_text(json.dumps({
+        "git_commit": "aaaaaaa", "dirty": True,
+    }))
+    monkeypatch.setattr(
+        freeze.provenance_mod, "record",
+        lambda **_: {"git_commit": "bbbbbbb", "dirty": False},
+    )
+    _freeze_cli(dist, "--label", "rc1", "--allow-dirty",
+                monkeypatch=monkeypatch)
+    pin = json.loads((dist / freeze.RELEASE_FILE).read_text())
+    assert pin["built_from"]["dirty"] is True

@@ -217,6 +217,23 @@ def main() -> None:
             f"  dirty: {', '.join(built.get('dirty_paths') or [])[:300]}\n"
             f"Commit first, or pass --allow-dirty for a throwaway pin."
         )
+    # AND THE TREE'S OWN BUILD MUST HAVE BEEN CLEAN. The check above looks at
+    # the checkout as it is NOW, which says nothing about the checkout the
+    # corpus was published from. A tree built from uncommitted changes and
+    # frozen after committing them passes the first check and is still not
+    # reproducible from any commit -- which happened: gate5-rc3 was first
+    # published from 15 modified files, and only the pin's own `built_from`
+    # record showed it.
+    origin = pin.get("built_from") or {}
+    if origin.get("dirty") and not args.allow_dirty:
+        raise SystemExit(
+            f"refusing to freeze: this corpus was PUBLISHED from a dirty "
+            f"working tree (commit {str(origin.get('git_commit'))[:12]}, "
+            f"built {origin.get('built_utc')}), so its bytes cannot be "
+            f"reproduced from any commit.\n"
+            f"Re-publish from a clean checkout, or pass --allow-dirty for a "
+            f"throwaway pin."
+        )
     archive = dist / RELEASE_DIR
     archive.mkdir(exist_ok=True)
 
