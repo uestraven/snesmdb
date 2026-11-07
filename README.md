@@ -106,11 +106,18 @@ loudness: the DSP computes `env × VOL`, and 20% of notes settle below full
 envelope scale. Channel 3 is the sustained amplitude on velocity's own 0..127
 scale, so equal means the note holds and lower means it decays to that level.
 
-**One row is one SPC700 timer tick**, read from the `$F1`/`$FA`–`$FC` registers
-the SPC file carries. That is a uniform *definition* but not a uniform
-*duration* — the rate differs per game, 2.00 ms in Super Mario World against
-12.50 ms in Donkey Kong Country — so divide by `clock.hz` before comparing
-anything per-row across games. An earlier design inferred the row period from
+**Each score file carries two row grids.** The primary one is one SPC700 timer
+tick, read from the `$F1`/`$FA`–`$FC` registers the SPC file carries — a
+uniform *definition* but not a uniform *duration*, since the rate differs per
+game (2.00 ms in Super Mario World against 12.50 ms in Donkey Kong Country,
+78 rates corpus-wide).
+
+The `uniform` block re-indexes the same notes at **60.0988 Hz, the NES-MDB
+row rate**, so a row means 16.639 ms in every track and in both corpora. That
+rate has no physical meaning on the SNES and the grid says so itself; the
+point is a shared time unit. It is also *cheaper*: 4.03× fewer rows than the
+timer tick, at 0.002% of notes unplaced. **Use `uniform` for anything that
+compares games.** An earlier design inferred the row period from
 note onsets instead; it produced 346 distinct rates across 664 tracks and was
 abandoned. The onset period is still computed and published as `onset_grid`,
 because it is a real musical measurement, but it indexes nothing.

@@ -179,6 +179,44 @@ Pitched-note coverage fell slightly, 78.7% to 78.3%, because some of the
 newly-correct samples fail the f0 plausibility test that the wrong ones passed.
 Fewer and right beats more and wrong.
 
+## Two row grids: the driver's, and a uniform one for comparability
+
+Each score file carries **two** sets of the three formats.
+
+| | primary | `uniform` |
+|---|---|---|
+| row rate | this SPC's timer tick | **60.0988 Hz, every track** |
+| row duration | 2.00–12.50 ms, 78 distinct rates | **16.639 ms, always** |
+| rows per music track (median) | 12,690 | **4,658** |
+| what it is | a hardware measurement | a convention, stated as one |
+| use it for | anything about this driver | comparing games, or NES-MDB |
+
+The primary grid is the honest hardware answer and it **cannot be compared
+across games**: the rate differs per track, so "notes per row" means something
+different in every one. NES-MDB has no such problem — every row there is
+16.64 ms because every NTSC engine inherits one video frame rate — and that
+uniformity is what makes a corpus of row arrays comparable at all.
+
+So the `uniform` block re-indexes the same notes at the NES-MDB rate.
+**Matching 60.0988 Hz is not physically meaningful on the SNES** — it is an
+NTSC video artifact and the SPC700 has no relationship to it — and the grid
+says so in its own `reason` field. The point is a shared time unit, not
+physics: a model can train across both corpora without rescaling.
+
+It also costs less than the primary grid rather than more. Measured over 120
+music tracks:
+
+- **4.03× fewer rows** (677,194 against 2,731,994), because a 500 Hz driver
+  clock produces eight times the rows of a 60 Hz grid
+- **3 notes unplaced of 155,633** (0.002%)
+- max polyphony 8, within the hardware
+
+The quantisation error is 4.15 ms median against the primary grid's exact
+placement. That error *is* the 16.64 ms grid, and it is the same one NES-MDB
+carries, so a consumer comparing the two corpora is comparing like with like.
+If you want finer, 100 Hz divides the SPC700 clock exactly and costs 2.49 ms —
+the rate is `scores.UNIFORM_HZ` and a rebuild can change it.
+
 ## Rows are indexed on the SPC700's own timer register
 
 Every one of the **1,316 tracks** is clocked from a hardware register read out

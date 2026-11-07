@@ -265,6 +265,17 @@ def process(args: tuple[str, float, bool, str]) -> dict[str, Any]:
         # its own cross-game validation, so every class is written as -1
         # rather than a number a consumer might trust.
         expressive = scores_mod.expressive(notes_out, track_grid, None, render_ticks)
+
+        # A SECOND score set on a uniform rate. The primary one is indexed on
+        # this SPC's own timer tick, which is the honest hardware answer and
+        # cannot be compared across games -- 78 distinct rates corpus-wide. The
+        # uniform set uses the NES-MDB row rate so the two corpora share a time
+        # unit. See scores.UNIFORM_HZ.
+        uniform_grid = scores_mod.uniform_grid(render_ticks)
+        uniform_scores = scores_mod.build(notes_out, uniform_grid, render_ticks)
+        row["uniform_scores"] = uniform_scores.stats()
+        row["uniform_hz"] = scores_mod.UNIFORM_HZ
+
         if track_grid.found and track_scores.n_rows:
             scores_dir = out_dir / "scores"
             scores_dir.mkdir(parents=True, exist_ok=True)
@@ -283,6 +294,20 @@ def process(args: tuple[str, float, bool, str]) -> dict[str, Any]:
                         "onset_grid": row["grid"],
                         **track_scores.to_dict(),
                         "expressive": expressive,
+                        # The comparable score. Same three formats on a
+                        # fixed 60.0988 Hz grid, so a row means the same
+                        # thing here as it does in NES-MDB.
+                        "uniform": {
+                            "hz": scores_mod.UNIFORM_HZ,
+                            "period_ticks": uniform_grid.period_ticks,
+                            "n_rows": uniform_scores.n_rows,
+                            "separated": uniform_scores.separated,
+                            "blended": uniform_scores.blended,
+                            "expressive": scores_mod.expressive(
+                                notes_out, uniform_grid, None, render_ticks
+                            ),
+                            "stats": uniform_scores.stats(),
+                        },
                     },
                     handle,
                     separators=(",", ":"),

@@ -277,3 +277,68 @@ def test_expressive_agrees_with_separated_on_where_notes_are() -> None:
             assert (built.separated[voice][row] != 0) == (
                 expr["voices"][voice][row][0] != 0
             )
+
+
+# --------------------------------------------------------------------------
+# The uniform-rate score: comparability, not physics
+# --------------------------------------------------------------------------
+
+def test_the_uniform_grid_is_the_nesmdb_rate() -> None:
+    """Matching 60.0988 Hz is not physically meaningful on the SNES -- it is an
+    NTSC video artifact. The point is that a row means the same thing in both
+    corpora, so a model can train across them with one time unit."""
+    assert scores.UNIFORM_HZ == pytest.approx(60.0988)
+    g = scores.uniform_grid(10 * 1_024_000)
+    assert g.rows_per_second == pytest.approx(60.0988, rel=1e-6)
+
+
+def test_the_uniform_period_stays_a_float() -> None:
+    """1,024,000/60.0988 is 17,038.6 ticks. Rounding it would accumulate about
+    2.2 ms of drift over five minutes -- half the quantisation error, for
+    nothing."""
+    g = scores.uniform_grid(1_024_000)
+    assert not float(g.period_ticks).is_integer()
+    for row in (0, 1, 100, g.n_rows - 1):
+        assert g.row_of(g.tick_of(row)) == row, "a float period must not drift"
+
+
+def test_the_uniform_grid_is_identical_for_every_track() -> None:
+    """The whole point. The primary scores carry 78 distinct rates across the
+    corpus, so per-row quantities are not comparable between games."""
+    a = scores.uniform_grid(10 * 1_024_000)
+    b = scores.uniform_grid(300 * 1_024_000)
+    assert a.period_ticks == b.period_ticks
+    assert a.n_rows != b.n_rows, "only the length may differ"
+
+
+def test_the_uniform_grid_says_it_is_not_the_drivers_clock() -> None:
+    """A consumer must not mistake it for a measurement."""
+    reason = scores.uniform_grid(1_024_000).reason.lower()
+    assert "not this driver's clock" in reason
+    assert "nes-mdb" in reason
+
+
+def test_a_uniform_score_builds_and_respects_the_hardware() -> None:
+    render = 10 * 1_024_000
+    g = scores.uniform_grid(render)
+    step = int(g.period_ticks * 3)
+    notes = [_note(i % 8, i * step, i * step + step, 60 + i % 12)
+             for i in range(60)]
+    built = scores.build(notes, g, render)
+    assert built.n_rows == g.n_rows
+    assert built.stats()["max_polyphony"] <= scores.N_VOICES
+    assert built.stats()["n_notes_represented"] > 0
+
+
+def test_a_uniform_score_is_shorter_than_a_fast_timer_tick() -> None:
+    """Measured: 5,619 rows a track against 16,001 on the timer tick, because
+    a 500 Hz driver clock gives eight times the rows of a 60 Hz grid."""
+    render = 60 * 1_024_000
+    uniform = scores.uniform_grid(render)
+    fast = Grid(found=True, period_ticks=2048, phase_ticks=0,
+                n_rows=render // 2048 + 1)
+    assert uniform.n_rows < fast.n_rows / 5
+
+
+def test_zero_render_gives_no_uniform_rows() -> None:
+    assert scores.uniform_grid(0).n_rows == 0
