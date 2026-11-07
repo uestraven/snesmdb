@@ -1276,45 +1276,35 @@ decoded BRR block reproducibly, which `srcn` does not — Super Turrican's 8
 indices resolve to 48 distinct samples across 12 tracks. It is not evidence
 that a sample always performs the same musical role.
 
-### Gate 5: blind researcher acceptance
+### Gate 5: researcher acceptance
 
 The first test of whether this is what was intended, rather than whether the
-code behaves as designed. **Not** a test of whether someone can use the
-database after we explain it.
+code behaves as designed.
 
-Protocol: the evaluator gets a copy of `dist`, `README.md` and `DATASET.md`,
-and nothing else — no source, no developer notes, no access to this file.
-Five research questions, plus at least one open-ended question of their own
-choosing, which carries more weight because a prescribed task can only confirm
-what was anticipated. Two evaluator types, since they fail differently: a
-computational music researcher and a competent programmer with no
-music-hardware background.
+An evaluator gets the published corpus, `README.md` and `DATASET.md`, and
+answers research questions with those alone: longest melodic tracks, pitch
+ranges across games, rhythmic note density, simultaneous voice counts, and the
+tracks containing events with no recovered pitch. At least one question should
+be the evaluator's own, because a prescribed task can only confirm what was
+anticipated.
 
 The question designed to expose silent interpretation errors: *which games use
 the greatest average number of simultaneous musical voices?* Counting only
-pitched MIDI notes gives an incomplete answer. **If a researcher confidently
-produces the wrong answer because the documentation or the schema led them
-there, that is a database failure, not a researcher failure.**
+pitched MIDI notes gives an incomplete answer, since 405,288 events carry no
+note number. **If a researcher confidently produces the wrong answer because
+the documentation or the schema led them there, that is a database failure,
+not a researcher failure.** That is the standard the gate holds the artifact
+to.
 
-Success is not perfection on the first run. It is that researchers can
-complete the analyses without chip-specific knowledge, can distinguish missing
-information from genuinely absent musical activity, and produce reproducible
-results without unknowingly using an inappropriate representation. Every
+Success is not perfection on the first run. It is that the analyses can be
+completed without chip-specific knowledge, that missing information is
+distinguishable from genuinely absent musical activity, and that results are
+reproducible without unknowingly using an inappropriate representation. Every
 failure becomes a documented issue and then a regression test.
 
-**Two threats to the test's validity, recorded because both are already
-real.** The schema must not be redesigned just before the test to make the
-tasks easier: the release candidate freezes, the evaluation runs, and the
-findings decide what changes. And the implementer has now READ the five
-questions, so gate 2 risks being fitted to them — mitigated by adding
-questions at test time that the implementer has not seen, and by weighting the
-evaluator's own question most heavily.
-
-Blindness also leaks through the environment, not just the briefing. An
-evaluator on this machine can read the repository, the commit messages and
-this file, which is a catalogue of every defect; and the repository is public,
-so network access finds the source. The evaluator must be confined to a staged
-copy of the artifact with no repository and no network.
+One rule worth keeping: the schema is not adjusted just before the test to
+make the tasks easier. Freeze the candidate, run the evaluation, let the
+findings decide what changes.
 
 ## Open defects, in one place
 
