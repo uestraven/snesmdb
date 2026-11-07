@@ -133,6 +133,22 @@ audit:
 	@echo "== exhaustive release audit =="
 	@$(PYTHON) -I tools/verify_corpus.py $(OUT_DIR) $(DIST_DIR) --exhaustive
 
+# RELEASE FREEZE. Pin the tree so an evaluation names one exact artifact.
+# Refuses a dirty working tree: a pin whose commit does not contain the code
+# that built the corpus cannot be reproduced.
+LABEL ?= rc1
+freeze:
+	@$(PYTHON) -I tools/freeze_release.py $(DIST_DIR) --label $(LABEL)
+
+check-freeze:
+	@$(PYTHON) -I tools/freeze_release.py $(DIST_DIR) --verify
+
+# The three dist-only research workflows, over the published tree.
+workflows:
+	@$(PYTHON) -I examples/workflows.py $(DIST_DIR) discover --game Actraiser
+	@$(PYTHON) -I examples/workflows.py $(DIST_DIR) pitch --game Actraiser
+	@$(PYTHON) -I examples/workflows.py $(DIST_DIR) samples --game Actraiser
+
 help:
 	@echo "make                 build build/spc_dump"
 	@echo "make test            run the test suite (creates $(VENV) if needed)"
@@ -140,6 +156,9 @@ help:
 	@echo "make corpus          full rebuild: extract -> performance -> publish -> verify"
 	@echo "make verify          check an existing corpus and dist tree (sampled)"
 	@echo "make audit           release audit: opens EVERY published score"
+	@echo "make freeze          pin the published tree (LABEL=rc1)"
+	@echo "make check-freeze    re-hash the tree against its pin"
+	@echo "make workflows       run the three dist-only research workflows"
 	@echo "make check-data      refuse derived corpus data in the tracked tree"
 	@echo "make check-history   same, across all git history (slow)"
 	@echo "make hooks           install the pre-commit data guard"

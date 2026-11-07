@@ -1335,6 +1335,70 @@ Closed on 34 dist contract tests with no skips, 8 new library tests for the
 index document, and a 27-check exhaustive audit over all 1,316 published
 tracks.
 
+### Gate 4: the published corpus supports research — closed
+
+Gate 4 asks an **engineering** question: can the distributed artifact be read
+correctly, and do the numbers it yields match the extraction it came from?
+Gate 5 asks whether a researcher can use it. These are not interchangeable,
+and Gate 4 is deliberately scoped so it cannot stand in for Gate 5.
+
+Three workflows in [`examples/workflows.py`](../examples/workflows.py), run
+against `dist` with the standard library alone:
+
+1. **Corpus discovery** — filter the index by game, `track_class` and
+   extraction status, then load the named event tables. Loading verifies each
+   table against the index row that named it, because the index carries the
+   counts so a census needs no pass over the corpus, and that is only safe if
+   the two agree.
+2. **Pitch distribution and range** — reported separately for pitched attacks
+   and for all sounded pitches, with every excluded event attributed to one of
+   the three reasons it has no pitch.
+3. **Sample recurrence** — which sample content recurs across tracks and
+   games, with the pitch span of each recurring sample.
+
+**The workflows import nothing from this project, and a test enforces it** by
+reading their import statements. A researcher who downloads the corpus does
+not have `src/snesmdb`; a workflow that needed it would demonstrate only that
+our code can read our own output, which is not the claim Gate 4 makes.
+
+Every reference figure is recomputed from `data/out` by a different route —
+pitched attacks come from the `notes` records, which never touch the
+legato-step handling they are used to check — so an agreement is two paths
+meeting rather than one path checking itself. Confirmed by mutation: forcing
+the workflow to accept every `pitch_status` as a pitch fails three tests.
+
+Workflow 3 produced the evidence for a claim the documentation had only
+asserted. One Actraiser sample recurs across 14 tracks spanning **65
+semitones**, over five octaves. A recurring `sample_id` means two tracks
+played the same sound; it is not an instrument, and the corpus now shows that
+rather than saying it. `test_a_recurring_sample_is_not_evidence_of_one_instrument`
+fails if no recurring sample spans more than two octaves — if that ever
+happens, the documented reading is the thing to change.
+
+**Explicitly out of scope: polyphony and simultaneous voices.** Reserved for
+Gate 5. Constructing that analysis here would convert the independent
+evaluation into a confirmation of our own assumptions. General invariants that
+touch it — valid durations, resolvable event identities, polyphony within
+eight voices — are still checked, in the audit.
+
+Closed on 13 Gate 4 tests, 367 in the suite, and a 27-check exhaustive audit.
+
+### Release freeze
+
+`tools/freeze_release.py` writes `RELEASE.json` into the published tree: the
+commit, the corpus counts, and a SHA-256 for every file. `--verify` re-hashes
+and reports anything changed, missing or added.
+
+Without it a corpus is whatever the last `make corpus` produced, so a
+disagreement between an evaluator's number and ours could not be separated
+into "they read it differently" and "they read something else" — which is the
+whole value of an independent evaluation. `provenance.json` records the commit
+but cannot detect a tree touched or rebuilt afterwards.
+
+It **refuses to freeze a dirty working tree** unless forced: a pin naming a
+commit that does not contain the code which built the corpus cannot be
+reproduced, which is the one thing a release candidate has to offer.
+
 ### Gate 5: researcher acceptance
 
 The first test of whether this is what was intended, rather than whether the

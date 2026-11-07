@@ -45,7 +45,9 @@ measured and reproducible.
 - [Attribution](#attribution)
 
 Docs: [DATASET.md](docs/DATASET.md) is the deliverable — what the corpus
-contains and what it gets wrong. [milestones.md](docs/milestones.md) is the
+contains and what it gets wrong. [CHANGELOG.md](docs/CHANGELOG.md) records
+changes to the published formats, including the one breaking change so far.
+[milestones.md](docs/milestones.md) is the
 build log, including the open-defect list and the things that were tried and
 reverted. [design.md](docs/design.md) is the original plan.
 [performance-conventions.md](docs/performance-conventions.md) is the analysis

@@ -67,6 +67,22 @@ fixed window. A flat 60 s captured 8.8% of Final Fantasy VI's 683-second
 | `performance.json` | per-game performance conventions, over all tracks |
 | `performance_music.json` | the same, restricted to `track_class == music` |
 
+### Worked examples
+
+[`examples/workflows.py`](../examples/workflows.py) runs three research
+workflows against a downloaded tree using the standard library alone — corpus
+discovery, pitch distribution, and sample recurrence:
+
+```
+python3 examples/workflows.py <dist-dir> discover --game Actraiser
+python3 examples/workflows.py <dist-dir> pitch    --game Actraiser
+python3 examples/workflows.py <dist-dir> samples  --game Actraiser
+```
+
+It imports nothing from this project, which a test enforces: a workflow that
+needed the extraction library would say nothing about whether the *published*
+artifact can be read. Each one documents the mistake it avoids.
+
 ### `index.json`
 
 ```json
