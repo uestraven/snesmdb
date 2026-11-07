@@ -10,6 +10,8 @@ announced itself; each was found by reading output that looked fine.
 
     the rebuild recipe omitted the clock-deriving pass, so publish found
     no clock and wrote no scores, without erroring -> clock_on_every_track
+    the 100 Hz grid was benchmarked at length and
+    publish.py never learned about it             -> dist_uniform_present
     publish keyed on row["grid"] and would have
     shipped 866 of 1,316 tracks                    -> scores_cover_corpus
     summary.json headlined the onset grid's 866
@@ -237,10 +239,14 @@ def check_dist(dist_dir: Path, report: Report) -> None:
         "none" if not leaked else f"{len(leaked)} leaked: {leaked[:3]}",
     )
 
-    # A published score must be clocked and must carry all four expressive
-    # channels, checked on a sample rather than all 1,316.
+    # THE UNIFORM SCORE MUST BE PRESENT IN THE PUBLISHED TREE, with contents
+    # matching the extraction output. `uniform_grid_preserves_events` above
+    # recomputes 100 Hz positions from the note records, so it passes whether
+    # or not a uniform score was ever written -- which it was not, for the
+    # whole period the rate was being benchmarked. A gate that cannot detect
+    # the absence of the thing it is about is decoration.
     sampled = index[:: max(1, len(index) // 25)]
-    bad_clock = bad_channels = 0
+    bad_clock = bad_channels = no_uniform = bad_uniform = 0
     for entry in sampled:
         if not entry.get("scores"):
             continue
@@ -255,10 +261,38 @@ def check_dist(dist_dir: Path, report: Report) -> None:
         channels = (payload.get("expressive") or {}).get("channels")
         if channels != ["note", "velocity", "timbre_class", "sustain"]:
             bad_channels += 1
+        uniform = payload.get("uniform")
+        if not uniform or not uniform.get("n_rows"):
+            no_uniform += 1
+            continue
+        # Shape and rate, so a present-but-wrong block cannot pass.
+        expected_rows = int(
+            float(entry.get("render_seconds") or 0.0) * scores_mod.UNIFORM_HZ
+        ) + 1
+        if (
+            abs(float(uniform.get("hz") or 0) - scores_mod.UNIFORM_HZ) > 0.01
+            or round(float(uniform.get("period_ticks") or 0)) != 10_240
+            or abs(int(uniform["n_rows"]) - expected_rows) > 1
+            or len(uniform.get("separated") or []) != 8
+            or len(uniform.get("blended") or []) != int(uniform["n_rows"])
+        ):
+            bad_uniform += 1
     report.check(
         "dist_scores_clocked",
         bad_clock == 0,
         f"{len(sampled)} sampled, {bad_clock} without a usable clock",
+    )
+    report.check(
+        "dist_uniform_present",
+        no_uniform == 0,
+        f"{len(sampled)} sampled, {no_uniform} with no uniform score"
+        + ("" if no_uniform == 0 else " -- the 100 Hz grid did not reach dist"),
+    )
+    report.check(
+        "dist_uniform_wellformed",
+        bad_uniform == 0,
+        f"{len(sampled)} sampled, {bad_uniform} whose uniform block has the "
+        f"wrong rate, period, row count or shape",
     )
     report.check(
         "dist_expressive_channels",

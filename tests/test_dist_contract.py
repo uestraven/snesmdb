@@ -155,12 +155,37 @@ def test_the_published_uniform_contents_match_the_extraction_output():
 
 
 def test_the_published_uniform_score_is_not_the_primary_score():
-    """Two grids, and they must not be the same array under two names."""
+    """Two grids, and they must not be the same array under two names.
+
+    The primary row count lives in `stats.n_rows`, not at the top level --
+    this test asserted `score["n_rows"]` and raised KeyError, which looked
+    like a data defect and was a test defect. Cross-checked against the
+    length of `separated[0]` so it cannot silently read the wrong field again.
+    """
     for entry in _sample(_need_dist()):
         score = _published_score(entry)
-        if score["clock"]["hz"] == EXPECTED_UNIFORM_HZ:
-            continue        # a track whose timer really runs at 100 Hz
-        assert score["uniform"]["n_rows"] != score["n_rows"], (
-            f"{entry['track_id']}: uniform and primary row counts are equal, "
-            f"so one of them is not on the grid it claims"
+        primary_rows = score["stats"]["n_rows"]
+        assert primary_rows == len(score["separated"][0]), (
+            "stats.n_rows disagrees with the published separated score"
         )
+        if abs(score["clock"]["hz"] - EXPECTED_UNIFORM_HZ) < 0.01:
+            continue        # a track whose timer really runs at 100 Hz
+        assert score["uniform"]["n_rows"] != primary_rows, (
+            f"{entry['track_id']}: uniform and primary row counts are both "
+            f"{primary_rows}, so one grid is not the one it claims"
+        )
+
+
+def test_the_uniform_score_is_shorter_than_a_fast_primary_grid():
+    """A 500 Hz driver clock gives five times the rows of a 100 Hz grid, so
+    the published uniform score should be materially smaller for those."""
+    checked = 0
+    for entry in _sample(_need_dist(), 12):
+        score = _published_score(entry)
+        if score["clock"]["hz"] < 300.0:
+            continue
+        ratio = score["stats"]["n_rows"] / score["uniform"]["n_rows"]
+        assert ratio > 2.5, f"{entry['track_id']}: ratio only {ratio:.2f}"
+        checked += 1
+    if not checked:
+        pytest.skip("no sampled track has a primary clock above 300 Hz")
