@@ -208,16 +208,38 @@ never enters a piano roll in any format, at any rate.
 |---|---|---|---|---|---|---|
 | 50 Hz | yes | **94** | 67 | 27 | 0.74% | 4.94 / 9.5 ms |
 | **100 Hz** | **yes** | **1** | **1** | **0** | 0.14% | 2.49 / 4.7 ms |
-| 200 Hz | yes | 1 | 1 | 0 | 0.03% | 1.26 / 2.4 ms |
+| 200 Hz | yes | **0** | 0 | 0 | 0.03% | 1.26 / 2.4 ms |
 
-**100 Hz loses one event in 1,458,211** — a single repeated attack. 200 Hz
-loses the same one and buys only timing precision, at twice the rows. That is
-the whole argument for the rate: it is the cheapest grid that loses nothing
-measurable.
+**100 Hz loses exactly one event in 1,458,211, and 200 Hz loses none.** So the
+price of the rate is one note: doubling to 200 Hz recovers a single attack, at
+twice the rows and storage. That is the whole argument, and it is now a known
+quantity rather than a bound.
 
-A note on the earlier figure: a 296-track sample reported "100.000% preserved",
-which was rounding. The full corpus shows one lost event. The claim is now
-stated as a count rather than a percentage for that reason.
+### The one lost event
+
+Worth naming precisely, because a loss that more resolution *cannot* fix would
+mean something different — a representation limit rather than quantisation.
+This one is plain quantisation.
+
+| | |
+|---|---|
+| track | `axe-03` — Axelay, "Unkai" |
+| notes | voice 5, both MIDI 98.998, `srcn` 1, note ids 940 and 941 |
+| gap | 5,228 ticks = **5.1055 ms** |
+
+Two consecutive same-pitch attacks 5.1 ms apart, a retrigger around 196 Hz. At
+100 Hz a row is 10 ms, so both land on one row and the second attack is
+rewritten as duration. At 200 Hz the rows are 5 ms and they separate, which is
+why the loss disappears there and nowhere beyond.
+
+Both notes are present with exact timestamps in `records/` and `raw/`. Only
+the 100 Hz score drops the second attack.
+
+Two figures in this section were wrong before being measured directly, and the
+corrections are kept because the pattern is instructive. A 296-track sample
+reported "100.000% preserved" — rounding — so the claim is now a count. And
+"200 Hz loses the same one" was inferred from a table rounding to 0.000%,
+never measured; it loses none.
 
 **Repeated attacks are counted separately from collisions** because the losses
 differ in kind. A collision drops a note. A lost repeated attack silently

@@ -85,10 +85,12 @@ CHANNELS = ("note", "velocity", "timbre_class", "sustain")
 #:    200    yes  100.000%      0.000%    0.000%   0.00%    1.25/ 2.4     0.7
 #:    400    yes  100.000%      0.000%    0.000%   0.00%    0.65/ 1.2     1.1
 #:
-#: 100 Hz is the CHEAPEST RATE THAT LOSES NOTHING. It preserves 100.000% of
-#: note events with zero collisions and zero repeated-attack losses -- the same
-#: as 200 and 400 Hz -- at half the rows and 70% of the storage of 200 Hz.
-#: Going finer buys timing precision only, not a single preserved event.
+#: 100 HZ LOSES EXACTLY ONE EVENT IN 1,458,211, and 200 Hz loses none. The
+#: price of the rate is therefore one note, identified: two same-pitch attacks
+#: 5.1 ms apart on voice 5 of Axelay's "Unkai", a ~196 Hz retrigger that a
+#: 10 ms row cannot separate. Doubling the rate recovers that one attack at
+#: twice the rows and storage. Both notes keep exact timestamps in `records/`
+#: and `raw/`; only the 100 Hz score merges them.
 #:
 #: 50 Hz was considered seriously and rejected on two counts rather than
 #: preservation, which is near-identical at 99.996%: it puts 0.52% of notes
