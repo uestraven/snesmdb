@@ -121,6 +121,67 @@ def test_the_pin_archive_is_not_part_of_the_pinned_tree(tmp_path):
     assert freeze.verify(dist) == 0
 
 
+def _freeze_cli(dist: Path, *args: str, monkeypatch) -> None:
+    monkeypatch.setattr(
+        sys, "argv", ["freeze_release.py", str(dist), *args],
+    )
+    freeze.main()
+
+
+def test_superseding_a_candidate_is_refused_and_archives_the_old_pin(
+    tmp_path, monkeypatch
+):
+    """The refusal message promises the outgoing pin is kept. An earlier
+    version archived only the INCOMING pin while printing that promise, so
+    --replace would have destroyed exactly the record it claimed to preserve.
+    """
+    dist = _tree(tmp_path)
+    (dist / freeze.RELEASE_FILE).write_text(
+        json.dumps(dict(freeze.build(dist, "rc1"), label="rc1"))
+    )
+    with pytest.raises(SystemExit) as caught:
+        _freeze_cli(dist, "--label", "rc2", "--allow-dirty",
+                    monkeypatch=monkeypatch)
+    assert "already pinned as 'rc1'" in str(caught.value)
+    kept = dist / freeze.RELEASE_DIR / "rc1.json"
+    assert kept.is_file(), "the message promised an archive that is absent"
+    assert json.loads(kept.read_text())["label"] == "rc1"
+    # And the live pin is untouched by the refusal.
+    assert json.loads(
+        (dist / freeze.RELEASE_FILE).read_text()
+    )["label"] == "rc1"
+
+
+def test_replace_supersedes_and_both_pins_survive(tmp_path, monkeypatch):
+    dist = _tree(tmp_path)
+    (dist / freeze.RELEASE_FILE).write_text(
+        json.dumps(dict(freeze.build(dist, "rc1"), label="rc1"))
+    )
+    _freeze_cli(dist, "--label", "rc2", "--replace", "--allow-dirty",
+                monkeypatch=monkeypatch)
+    assert json.loads(
+        (dist / freeze.RELEASE_FILE).read_text()
+    )["label"] == "rc2"
+    for label in ("rc1", "rc2"):
+        path = dist / freeze.RELEASE_DIR / f"{label}.json"
+        assert path.is_file(), f"{label} pin lost"
+        assert json.loads(path.read_text())["label"] == label
+
+
+def test_refreezing_the_same_label_needs_no_replace(tmp_path, monkeypatch):
+    """Re-pinning the same candidate after a rebuild is routine and must not
+    require a flag that exists to protect a different candidate."""
+    dist = _tree(tmp_path)
+    (dist / freeze.RELEASE_FILE).write_text(
+        json.dumps(dict(freeze.build(dist, "rc1"), label="rc1"))
+    )
+    _freeze_cli(dist, "--label", "rc1", "--allow-dirty",
+                monkeypatch=monkeypatch)
+    assert json.loads(
+        (dist / freeze.RELEASE_FILE).read_text()
+    )["label"] == "rc1"
+
+
 def test_a_pre_v1_bare_list_index_still_freezes(tmp_path):
     """A corpus published before the index became a document can still be
     pinned for evaluation; its `index_schema` is simply absent."""

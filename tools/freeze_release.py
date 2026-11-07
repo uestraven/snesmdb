@@ -187,22 +187,33 @@ def main() -> None:
             f"  dirty: {', '.join(built.get('dirty_paths') or [])[:300]}\n"
             f"Commit first, or pass --allow-dirty for a throwaway pin."
         )
+    archive = dist / RELEASE_DIR
+    archive.mkdir(exist_ok=True)
+
     # Superseding a candidate must be deliberate. An evaluation in progress
     # names a label, and silently repointing that label at a different tree
     # would invalidate the evaluation without leaving a trace.
+    #
+    # The outgoing pin is archived BEFORE the refusal is raised, so the
+    # promise in that message is already true when it is printed. An earlier
+    # version archived only the incoming pin while telling the operator the
+    # old one was kept, so `--replace` would have destroyed exactly the record
+    # the message said it preserved.
     existing = dist / RELEASE_FILE
     if existing.is_file():
-        previous = json.loads(existing.read_text()).get("label")
+        outgoing = json.loads(existing.read_text())
+        previous = outgoing.get("label")
+        if previous:
+            kept = archive / f"{previous}.json"
+            if not kept.is_file():
+                kept.write_text(json.dumps(outgoing, indent=1))
         if previous != args.label and not args.replace:
             raise SystemExit(
                 f"this tree is already pinned as {previous!r}. Writing "
-                f"{args.label!r} over it would leave no record of what "
-                f"{previous!r} contained.\nPass --replace to supersede it; the "
-                f"old pin is kept in {RELEASE_DIR}/{previous}.json either way."
+                f"{args.label!r} over it would supersede the candidate an "
+                f"evaluation may be using.\nPass --replace to proceed; the old "
+                f"pin has been archived to {RELEASE_DIR}/{previous}.json."
             )
-
-    archive = dist / RELEASE_DIR
-    archive.mkdir(exist_ok=True)
     (archive / f"{args.label}.json").write_text(json.dumps(pin, indent=1))
     (dist / RELEASE_FILE).write_text(json.dumps(pin, indent=1))
     print(f"froze {pin['n_files']} files, {pin['total_bytes'] / 1e9:.2f} GB")
