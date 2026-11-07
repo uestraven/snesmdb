@@ -49,7 +49,7 @@ Ranges below are **measured over the published corpus**, not declared limits.
 | `duration_sec` | float or null | seconds | **null means the note was still sounding when the render window ended** (159,584 events), *not* zero length. All 154,910 legato steps are null: a step has no duration of its own |
 | `voice` | int | — | `0..7`, the S-DSP hardware voice. **Not a fixed musical part** — assignment can change mid-track |
 | `pitch_status` | string | — | `estimated`, `noise`, `pitch_modulated`, `unrecoverable`. **Only `estimated` is a pitch** |
-| `midi_note` | float or null | semitones | null unless `pitch_status == "estimated"`. Fractional and **not clamped to MIDI's domain**: measured −34.16 to +131.09 |
+| `midi_note` | float or null | semitones | null unless `pitch_status == "estimated"`. Fractional and **not clamped to MIDI's domain**: measured −36.74 to +131.09 |
 | `pitch_confidence` | string or null | — | `high`, `medium`, `low`, `none` — about the *estimate*, not the note |
 | `sample_id` | string | — | 16 hex chars, or **empty when no directory entry resolved** (13,680 events). Content identity of the decoded BRR audio — **not an instrument label** |
 | `attack_level` | int | — | `0..127`. `VOL` rescaled. **A register value, not perceived loudness** |
@@ -65,7 +65,12 @@ Ranges below are **measured over the published corpus**, not declared limits.
   time, not rows. Include unpitched notes — percussion is a sounding voice.
 - **Reassembling a phrase** groups steps on `parent_event_id`.
 - `midi_note` outside `0..127` is real and must be filtered for MIDI work:
-  776 events, 58 of them negative.
+  **184 events, 114 of them negative.**
+- **2,926 of the 154,910 legato steps do write their parent's exact pitch**
+  (1.9%) — a driver rewriting the same PITCH value, typically alongside a
+  volume change. That is real data. Before `v3` *all* 154,910 did, which was
+  a defect; a step matching its parent is now the exception rather than the
+  rule.
 
 ---
 

@@ -431,11 +431,61 @@ def test_a_legato_step_names_the_attack_it_continues():
     pytest.skip("no legato steps in the sample")
 
 
-def test_a_key_on_event_is_its_own_parent():
+def test_event_ids_are_row_keys_and_attacks_have_no_parent():
+    """REPLACES `test_a_key_on_event_is_its_own_parent`, which asserted the
+    defect as a requirement.
+
+    That test demanded `parent_event_id == event_id` on every key-on, which
+    was the behaviour the code happened to have, and it passed for three
+    releases. The documentation said something different throughout -- a step
+    names its parent -- and the consequence of the code's version was that
+    `parent_event_id == event_id` held for all 2,018,409 rows, so the id
+    fields could not distinguish a step from an attack, and ids were
+    duplicated in 517 of 1,316 tracks.
+
+    Writing a test from the implementation rather than from the contract is
+    how a defect acquires a guard. The lesson is in the name: this asserts the
+    documented semantics.
+    """
     for entry in _sample(_need_dist()):
-        for event in _events(entry)["events"]:
+        table = _events(entry)
+        ids = [event["event_id"] for event in table["events"]]
+        assert len(ids) == len(set(ids)), f"{entry['track_id']}: duplicate ids"
+        known = set(ids)
+        for event in table["events"]:
+            parent = event["parent_event_id"]
             if event["origin"] == "key_on":
-                assert event["parent_event_id"] == event["event_id"]
+                assert parent is None
+            else:
+                assert parent in known and parent != event["event_id"]
+
+
+def test_legato_steps_carry_their_own_pitch():
+    """The other defect the evaluation found: all 154,910 steps published
+    their parent's pitch, so the field defined as a pitch change contained
+    none. A step may legitimately rewrite the same pitch -- 1.9% do -- but it
+    must not be true of nearly all of them."""
+    identical = total = 0
+    for entry in _sample(_need_dist(), n=40):
+        table = _events(entry)
+        by_id = {e["event_id"]: e for e in table["events"]}
+        for event in table["events"]:
+            if event["origin"] != "legato_step":
+                continue
+            parent = by_id.get(event["parent_event_id"])
+            if not parent or event["midi_note"] is None:
+                continue
+            if parent["midi_note"] is None:
+                continue
+            total += 1
+            if abs(event["midi_note"] - parent["midi_note"]) < 1e-9:
+                identical += 1
+    if total < 50:
+        pytest.skip("too few comparable steps in the sample")
+    assert identical / total < 0.25, (
+        f"{identical}/{total} legato steps repeat their parent's pitch; the "
+        f"published pitch is probably the parent's again"
+    )
 
 
 def test_event_totals_reconcile_with_notes_plus_legato_steps():
