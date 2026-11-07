@@ -14,6 +14,7 @@ data/out/*
 data/poc_spc/
 data/poc_out/
 
+.venv/
 __pycache__/
 *.pyc
 .pytest_cache/

@@ -138,10 +138,17 @@ Python extractor works on an existing log.
 
 ```sh
 make                        # builds build/spc_dump
-make test                   # 287 tests, no skips
+make test                   # 287 tests, no skips (bootstraps .venv for pytest)
 make corpus                 # full rebuild: ~80 min on 8 jobs
 make verify                 # 13 checks on an existing corpus and dist tree
 ```
+
+**pytest is the only Python dependency**, and `make test` creates a `.venv`
+for it on first run rather than assuming it is installed. That is not
+hypothetical tidiness: the suite was being run through a venv in `/tmp` while
+`make test` itself was broken, so the command documented here failed for
+anyone who typed it even as the tests were reported passing. Everything else
+is the standard library plus one C++ build of vendored unpatched `snes_spc`.
 
 `make corpus` is the only entry point that guarantees the ordering, and the
 ordering used to be documented as prose that was **wrong** — it omitted the

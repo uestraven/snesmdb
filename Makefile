@@ -26,13 +26,22 @@ SRCS := $(VENDOR)/SNES_SPC.cpp $(VENDOR)/SNES_SPC_misc.cpp \
 
 # Overridable, so a rebuild can be pointed at a different corpus or a scratch
 # tree without editing this file.
+# The suite needs pytest, which is the project's ONLY Python dependency. It
+# lives in a venv here rather than being assumed present: the system python3
+# on this machine has no pytest, so a bare `python3 -m pytest` fails -- which
+# meant `make test` did not work while the tests were being reported as
+# passing, because they were being run through a venv in /tmp that no longer
+# exists after a reboot. `make venv` creates it; `make test` says so if it is
+# missing instead of failing with ModuleNotFoundError.
+VENV    ?= .venv
+PYTEST  := $(VENV)/bin/pytest
 PYTHON  ?= python3
 SPC_DIR ?= data/spc
 OUT_DIR ?= data/out
 DIST_DIR ?= $(HOME)/snesmdb-corpus/dist
 JOBS    ?= 8
 
-.PHONY: all clean test corpus extract performance publish verify help
+.PHONY: all clean test venv corpus extract performance publish verify help
 
 all: $(BUILD)/spc_dump
 
@@ -45,8 +54,16 @@ $(BUILD):
 clean:
 	rm -rf $(BUILD)
 
-test:
-	$(PYTHON) -m pytest -q
+test: | $(PYTEST)
+	$(PYTEST) -q
+
+venv: $(PYTEST)
+
+$(PYTEST):
+	$(PYTHON) -m venv $(VENV)
+	$(VENV)/bin/python -m pip install -q --upgrade pip
+	$(VENV)/bin/python -m pip install -q pytest
+	@echo "created $(VENV) with pytest"
 
 # ---------------------------------------------------------------------------
 # Corpus rebuild. Each step is separately invokable for iteration, but the
@@ -95,7 +112,8 @@ verify:
 
 help:
 	@echo "make                 build build/spc_dump"
-	@echo "make test            run the test suite"
+	@echo "make test            run the test suite (creates $(VENV) if needed)"
+	@echo "make venv            just create $(VENV) with pytest"
 	@echo "make corpus          full rebuild: extract -> performance -> publish -> verify"
 	@echo "make verify          check an existing corpus and dist tree"
 	@echo
