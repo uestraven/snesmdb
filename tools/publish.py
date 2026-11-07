@@ -33,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from snesmdb import (  # noqa: E402
     brr,
     clock as clock_mod,
+    corpus as corpus_mod,
     envelope as envelope_mod,
     events as events_mod,
     provenance as provenance_mod,
@@ -44,6 +45,10 @@ from snesmdb import (  # noqa: E402
 )
 
 TICKS = grid_mod.TICKS_PER_SECOND
+
+#: The published-tree schema names and the index document live in the library,
+#: so the verifier checks the same definition this writes rather than a copy.
+INTAKE_SCHEMA = corpus_mod.INTAKE_SCHEMA
 
 
 def _clock_from_dict(info: dict[str, Any]) -> clock_mod.Clock:
@@ -215,6 +220,12 @@ def main() -> None:
             "render_seconds": row["render_seconds"],
             "n_notes": len(notes),
             "checks_passed": bool(row.get("checks", {}).get("ok")),
+            # The MUSICAL classification, computed since milestone 1 and never
+            # published, so a researcher could not exclude sound effects from a
+            # melodic study without re-deriving it. It is independent of
+            # `extraction_status`: 42 effects contain recoverable pitch and 11
+            # music tracks contain none, so neither field implies the other.
+            "track_class": row.get("track_class"),
         }
 
         # MIDI: available for every track with any pitched note.
@@ -298,7 +309,7 @@ def main() -> None:
             # which lives in a sibling project not present here; that is
             # recorded as a limitation rather than assumed compatible.
             intake = {
-                "schema": "snesmdb.intake.v1",
+                "schema": INTAKE_SCHEMA,
                 "source": {"track_id": row["track_id"], "sha256": row["sha256"]},
                 "timing": {
                     "ticks_per_second": TICKS,
@@ -348,42 +359,56 @@ def main() -> None:
             with gzip.open(args.dist_dir / "intake" / f"{stem}.json.gz", "wt") as handle:
                 json.dump(intake, handle, separators=(",", ":"))
             counts["intake_written"] += 1
-
-            # events.v1 -- the researcher-facing table. Flat, in seconds,
-            # pitched AND unpitched, with every absence explained.
-            sample_ids = _sample_ids(spc_index, row)
-            counts["sample_ids_resolved"] += len(sample_ids)
-            table = events_mod.build(
-                track_id=row["track_id"],
-                ok=bool(row.get("ok")),
-                duration_sec=float(row.get("render_seconds") or 0.0),
-                notes=notes,
-                sample_ids=sample_ids,
-                legato_steps=record.get("legato_steps") or [],
-                attack_level=scores_mod._velocity,
-                sustain_level=scores_mod._sustain,
-            )
-            with gzip.open(
-                args.dist_dir / "events" / f"{stem}.json.gz", "wt"
-            ) as handle:
-                json.dump(table, handle, separators=(",", ":"))
-            counts["events_written"] += 1
-            counts["events_total"] += table["event_count"]
-            counts["events_unpitched"] += table["unpitched_event_count"]
-            if table["extraction_status"] == events_mod.STATUS_UNPITCHED_ONLY:
-                counts["tracks_unpitched_only"] += 1
-            entry["events"] = f"events/{stem}.json.gz"
-            entry["event_count"] = table["event_count"]
-            entry["pitched_event_count"] = table["pitched_event_count"]
-            entry["unpitched_event_count"] = table["unpitched_event_count"]
-            entry["extraction_status"] = table["extraction_status"]
             if _software_divisor(row, track_clock.hz):
                 counts["with_software_divisor"] += 1
             entry["intake"] = f"intake/{stem}.json.gz"
 
+        # events.v1 -- the researcher-facing table. Flat, in seconds, pitched
+        # AND unpitched, with every absence explained.
+        #
+        # OUTSIDE the clock conditional, deliberately. This block used to sit
+        # inside it, which made the event table depend on a row clock it never
+        # reads: every onset here is in seconds. Every track in the corpus
+        # happens to have a clock, so the coupling cost nothing and was
+        # invisible -- but the published contract says every track has an event
+        # table, and that claim must not rest on a coincidence in the current
+        # corpus.
+        sample_ids = _sample_ids(spc_index, row)
+        counts["sample_ids_resolved"] += len(sample_ids)
+        table = events_mod.build(
+            track_id=row["track_id"],
+            ok=bool(row.get("ok")),
+            duration_sec=float(row.get("render_seconds") or 0.0),
+            notes=notes,
+            sample_ids=sample_ids,
+            legato_steps=record.get("legato_steps") or [],
+            attack_level=scores_mod._velocity,
+            sustain_level=scores_mod._sustain,
+        )
+        with gzip.open(
+            args.dist_dir / "events" / f"{stem}.json.gz", "wt"
+        ) as handle:
+            json.dump(table, handle, separators=(",", ":"))
+        counts["events_written"] += 1
+        counts["events_total"] += table["event_count"]
+        counts["events_unpitched"] += table["unpitched_event_count"]
+        if table["extraction_status"] == events_mod.STATUS_UNPITCHED_ONLY:
+            counts["tracks_unpitched_only"] += 1
+        entry["events"] = f"events/{stem}.json.gz"
+        entry["event_count"] = table["event_count"]
+        entry["pitched_event_count"] = table["pitched_event_count"]
+        entry["unpitched_event_count"] = table["unpitched_event_count"]
+        # An event is not an attack. Published alongside the event total so a
+        # rhythmic study gets the right number without filtering by `origin`.
+        entry["attack_count"] = table["attack_count"]
+        entry["legato_step_count"] = table["legato_step_count"]
+        entry["extraction_status"] = table["extraction_status"]
+
         index.append(entry)
 
-    (args.dist_dir / "index.json").write_text(json.dumps(index, indent=1))
+    (args.dist_dir / "index.json").write_text(
+        json.dumps(corpus_mod.index_document(index), indent=1)
+    )
     # Stands alone so the artifact is traceable without opening summary.json.
     (args.dist_dir / "provenance.json").write_text(json.dumps(
         provenance_mod.record(

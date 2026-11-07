@@ -47,13 +47,16 @@ EXPECTED_UNIFORM_PERIOD = 10_240
 
 
 def _need_dist() -> list[dict]:
+    """The per-track entries. Gate 3 made the index a document, so this reads
+    `tracks` where it is one and the whole list where it is still a list."""
     index = DIST / "index.json"
     if not index.is_file():
         pytest.skip(
             f"no published corpus at {DIST} -- run `make corpus`. "
             f"verify_corpus.py enforces this on every build."
         )
-    return json.loads(index.read_text())
+    raw = json.loads(index.read_text())
+    return raw if isinstance(raw, list) else raw["tracks"]
 
 
 def _published_score(entry: dict) -> dict:

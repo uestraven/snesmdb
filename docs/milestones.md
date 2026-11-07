@@ -1241,9 +1241,9 @@ reported success. `tests/test_dist_contract.py` is where they live.
 | gate | what it establishes | state |
 |---|---|---|
 | 0 | repository carries no licensed or derived material | ✅ closed |
-| 1 | the 100 Hz uniform scores are present in `dist`, with contents checked against `data/out` | in progress |
-| 2 | `events.v1`: flat event list in seconds, pitch uncertainty, sample content identity, amplitude semantics | |
-| 3 | `track_class`, extraction status, event counts, schema versions; legacy contracts preserved | |
+| 1 | the 100 Hz uniform scores are present in `dist`, with contents checked against `data/out` | ✅ closed |
+| 2 | `events.v1`: flat event list in seconds, pitch uncertainty, sample content identity, amplitude semantics | ✅ closed |
+| 3 | `track_class`, extraction status, event counts, schema versions; legacy contracts preserved | ✅ closed |
 | 4 | end-to-end researcher workflows using only `dist` | |
 | 5 | **blind researcher acceptance** | |
 
@@ -1275,6 +1275,65 @@ intensity, or standardized MIDI velocity.*
 decoded BRR block reproducibly, which `srcn` does not — Super Turrican's 8
 indices resolve to 48 distinct samples across 12 tracks. It is not evidence
 that a sample always performs the same musical role.
+
+### Gate 3: the index describes itself — closed
+
+`index.json` was a bare JSON list. That is enough to find a file and not
+enough to be a published artifact: it could not state which contract it
+followed, so two downloads were distinguishable only by diffing them, and
+"how big is this corpus" needed a pass over 1,316 gzipped files. It is now
+`{schema, formats, corpus, tracks}`, where `tracks` is the old list unchanged.
+
+**This is a published-shape change.** A consumer doing `json.load(...)` and
+iterating must now read `["tracks"]`. Nothing inside a track row was renamed
+or removed — `test_legacy_index_fields_survive` and
+`test_legacy_score_payload_keys_survive` assert that per row, and the verifier
+still reads a bare list so that a corpus published before this change can
+still be checked.
+
+**Each format is versioned separately** — `events`, `intake`, `sample_id`,
+`uniform_hz` — because they move separately: `events.v1` landed while the
+score payload was untouched. A single corpus version would force a choice
+between a false bump for consumers that were unaffected and a silent one for a
+change that mattered. The versions are read from the modules that own them, so
+a future `events.v2` reaches the index without anyone remembering to edit it;
+`test_a_schema_bump_in_a_format_module_reaches_the_index` pins that.
+
+`track_class` had been computed since milestone 1 and never published, so a
+researcher could not exclude sound effects from a melodic study without
+re-deriving it. Published now alongside `extraction_status`, and the two are
+**demonstrably independent** rather than merely declared so:
+
+| | pitched events | unpitched only | no events |
+|---|---|---|---|
+| music | 995 | 11 | — |
+| jingle | 206 | 27 | — |
+| effect | 42 | 18 | — |
+| drone | — | — | 17 |
+
+42 sound effects contain recoverable pitch and 11 music tracks contain none,
+so neither field can serve as a proxy for the other. `drone` maps to a single
+status because a voice that never re-keys produces no events at all — that is
+the class meaning, not a redundancy. Both the contract test and the audit
+check `dist_class_and_status_independent` fail if every class collapses to one
+status.
+
+Corpus-level counts are published: 1,316 tracks, 22 games, 2,018,409 events,
+1,560,002 pitched, 1,863,499 attacks. The attack total is separate from the
+event total because **an event is not an attack** — the remaining 154,910 are
+legato steps, pitch changes on voices that never re-keyed.
+
+**A coupling removed in passing.** The event table was being built inside
+`if track_clock.period_ticks:`, so a format whose every timestamp is in
+seconds depended on a row clock it never reads. Every track in this corpus has
+a clock, so the coupling cost nothing and was invisible — but the published
+contract says every track has an event table, and that claim must not rest on
+a coincidence in the current corpus. Hoisting it left all counts identical
+(2,018,409 events, 1,316 tables), which is the evidence that it was inert.
+
+Closed on 34 dist contract tests with no skips, 8 new library tests for the
+index document, and a 27-check exhaustive audit over all 1,316 published
+tracks.
 
 ### Gate 5: researcher acceptance
 

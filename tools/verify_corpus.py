@@ -47,7 +47,13 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from snesmdb import events as events_mod, scores as scores_mod  # noqa: E402
+from snesmdb import (  # noqa: E402
+    corpus as corpus_mod,
+    events as events_mod,
+    sampleid,
+    scores as scores_mod,
+    trackclass,
+)
 
 #: The S-DSP has eight voices. Anything above this is arithmetically impossible
 #: and means the note model is double-counting.
@@ -223,8 +229,7 @@ def check_events(dist_dir: Path, report: Report, exhaustive: bool) -> None:
     index_path = dist_dir / "index.json"
     if not index_path.is_file():
         return
-    raw = json.loads(index_path.read_text())
-    entries = raw if isinstance(raw, list) else raw.get("tracks", [])
+    entries = corpus_mod.tracks_of(json.loads(index_path.read_text()))
     with_events = [e for e in entries if e.get("events")]
     report.check(
         "dist_events_present",
@@ -320,7 +325,65 @@ def check_dist(dist_dir: Path, report: Report, exhaustive: bool = False) -> None
     if not index_path.is_file():
         report.check("dist_index", False, f"no index.json in {dist_dir}")
         return
-    index = json.loads(index_path.read_text())
+    raw_index = json.loads(index_path.read_text())
+    index = corpus_mod.tracks_of(raw_index)
+
+    # The index must describe itself. A bare list cannot, which is what this
+    # replaced -- two downloads of different vintages were distinguishable
+    # only by diffing them.
+    report.check(
+        "dist_index_declares_schema",
+        isinstance(raw_index, dict)
+        and raw_index.get("schema") == corpus_mod.INDEX_SCHEMA,
+        f"index schema is {raw_index.get('schema') if isinstance(raw_index, dict) else 'a bare list'}"
+        f" (want {corpus_mod.INDEX_SCHEMA})",
+    )
+    formats = raw_index.get("formats", {}) if isinstance(raw_index, dict) else {}
+    # PER FORMAT, not one corpus version: events.v1 landed while the score
+    # payload was unchanged, so a consumer checks what it actually reads.
+    report.check(
+        "dist_index_names_format_schemas",
+        formats.get("events") == events_mod.SCHEMA
+        and formats.get("sample_id") == sampleid.SCHEMA
+        and formats.get("intake") == corpus_mod.INTAKE_SCHEMA
+        and float(formats.get("uniform_hz") or 0) == scores_mod.UNIFORM_HZ,
+        f"declared formats {formats}",
+    )
+    classed = [e for e in index if e.get("track_class") in trackclass.CLASSES]
+    report.check(
+        "dist_track_class_published",
+        len(classed) == len(index) and bool(index),
+        f"{len(classed)}/{len(index)} tracks carry a musical classification",
+    )
+    # The two fields must not be derivable from each other. If every class
+    # mapped to exactly one status, one of them would be carrying no
+    # information and a researcher filtering on either would be misled.
+    spans: dict[str, set[str]] = {}
+    for entry in index:
+        spans.setdefault(str(entry.get("track_class")), set()).add(
+            str(entry.get("extraction_status"))
+        )
+    report.check(
+        "dist_class_and_status_independent",
+        any(len(v) > 1 for v in spans.values()),
+        "; ".join(f"{k}={sorted(v)}" for k, v in sorted(spans.items())),
+    )
+    corpus = raw_index.get("corpus", {}) if isinstance(raw_index, dict) else {}
+    report.check(
+        "dist_corpus_counts_reconcile",
+        corpus.get("n_tracks") == len(index)
+        and corpus.get("n_events") == sum(
+            e.get("event_count", 0) for e in index
+        )
+        and corpus.get("n_pitched_events") == sum(
+            e.get("pitched_event_count", 0) for e in index
+        )
+        and corpus.get("n_attacks") == sum(
+            e.get("attack_count", 0) for e in index
+        ),
+        f"corpus block: {corpus.get('n_tracks')} tracks, "
+        f"{corpus.get('n_events')} events, {corpus.get('n_attacks')} attacks",
+    )
     report.check(
         "dist_scores_cover_index",
         all(e.get("scores") for e in index) and bool(index),

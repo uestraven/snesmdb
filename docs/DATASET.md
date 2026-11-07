@@ -56,7 +56,8 @@ fixed window. A flat 60 s captured 8.8% of Final Fantasy VI's 683-second
 
 | path | contents |
 |---|---|
-| `index.json` | one row per track: ids, game, composers, split, source hash, what was emitted |
+| `index.json` | the manifest: its own schema, each format's schema, corpus-level counts, and one row per track |
+| `events/*.json.gz` | **start here.** The flat event table, in seconds, pitched and unpitched |
 | `scores/*.json.gz` | the three score formats, plus the row clock and the onset grid |
 | `midi/*.mid` | 8-track type-1 MIDI, one track per DSP voice |
 | `intake/*.json.gz` | per-voice note trees with absolute times |
@@ -65,6 +66,35 @@ fixed window. A flat 60 s captured 8.8% of Final Fantasy VI's 683-second
 | `provenance.json` | the commit, dirty flag and parameters that built this tree |
 | `performance.json` | per-game performance conventions, over all tracks |
 | `performance_music.json` | the same, restricted to `track_class == music` |
+
+### `index.json`
+
+```json
+{
+  "schema": "snesmdb.index.v1",
+  "formats": {"events": "snesmdb.events.v1", "intake": "snesmdb.intake.v1",
+              "sample_id": "snesmdb.sample.v1", "uniform_hz": 100.0},
+  "corpus": {"n_tracks": 1316, "n_games": 22, "n_events": 2018409,
+             "n_pitched_events": 1560002, "n_attacks": 1863499,
+             "track_classes": {"music": 1006, "jingle": 233,
+                               "effect": 60, "drone": 17},
+             "extraction_statuses": {"complete_with_pitched_events": 1243,
+                                     "complete_unpitched_only": 56,
+                                     "complete_no_events": 17}},
+  "tracks": [ ... ]
+}
+```
+
+Each format is versioned **separately**, because they move separately: the
+event table reached `v1` while the score payload was unchanged. Check the
+format you read, not a corpus version.
+
+Every track row carries both `track_class` (`music`, `jingle`, `effect`,
+`drone`) and `extraction_status`, and **neither can be derived from the
+other**. 42 sound effects contain recoverable pitch; 11 music tracks contain
+none. Filter a melodic study on `track_class`; judge data quality on
+`extraction_status`; do not use one as a proxy for the other. Event counts are
+on the row too, so a corpus-wide census needs no pass over 1,316 files.
 
 **`timbre_codebook.json` is deliberately not published.** The milestone 5
 codebook failed its own validation -- class agreement across games falls to the
