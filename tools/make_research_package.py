@@ -239,12 +239,32 @@ def main() -> None:
         shutil.rmtree(package)
     package.mkdir(parents=True)
 
+    # A HALF-BUILT PACKAGE MUST NOT SURVIVE A FAILURE. The audit and the
+    # copy check already delete on rejection, but an unexpected exception
+    # left the partial tree on disk -- which happened: a missing parent
+    # directory for `docs/DATASET.md` raised FileNotFoundError after `dist/`
+    # had been copied, leaving something that looked like a package and was
+    # missing its documentation. Anything incomplete is removed.
+    try:
+        _assemble(repo, dist, package, pin, label)
+    except BaseException:
+        shutil.rmtree(package, ignore_errors=True)
+        raise
+
+
+def _assemble(
+    repo: Path, dist: Path, package: Path, pin: dict[str, Any], label: str
+) -> None:
     shutil.copytree(dist, package / "dist")
     for source, name in DOCS:
         path = repo / source
         if not path.is_file():
             raise SystemExit(f"missing public document: {source}")
-        (package / name).write_text(path.read_text())
+        target = package / name
+        # The documents keep their repository paths, so a destination may sit
+        # in a subdirectory that does not exist yet.
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(path.read_text())
 
     shutil.copyfile(
         Path(__file__).resolve().parent / "package_verify.py",
