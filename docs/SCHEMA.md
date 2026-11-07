@@ -69,7 +69,7 @@ gated-voice statistics ship the two numbers that reveal their own confound.
 | `event_id` | int | — | **a row key: unique within a track**, across both origins |
 | `parent_event_id` | int or null | — | **null on a `key_on`**; on a `legato_step`, the `event_id` of the key-on it continues |
 | `origin` | string | — | `key_on` (a new triggered note) or `legato_step` (a pitch change on a voice that never re-keyed) |
-| `onset_sec` | float | seconds | 0 to `duration_sec`, 6 dp (≈1 µs). Unquantised — taken from the event log, not from a grid. **`onset_sec` and `duration_sec` are rounded independently, so `onset + duration` can cross the next note's onset on the same voice by exactly 1 µs**: 3,695 consecutive pairs across 106 tracks do, none by more than 1 µs. A naive interval sweep reports two voices gated where one sounds; clamp to the next onset, or ignore overlaps of ≤1 µs |
+| `onset_sec` | float | seconds | 0 to `duration_sec`, 6 dp (≈1 µs). Unquantised — taken from the event log, not from a grid. **`onset_sec` and `duration_sec` are rounded independently, so `onset + duration` can cross the next note's onset on the same voice by exactly 1 µs**: 3,695 consecutive pairs across 106 tracks, none by more than 1 µs. **The overshoot is not limited to one voice.** SNES drivers key several voices on the same sequencer tick, so one crossing instant can affect up to 5 voices at once — a naive sweep reports **9 to 13** simultaneous voices on hardware that has 8, and Super Castlevania 4's true peak of 6 reads as 10. Means are unaffected (+0.00000 at five decimals); **peaks are not**. Three remedies each remove it completely: clamp a note's end to the next onset on its voice, ignore overlaps ≤1 µs, or union each voice's intervals. Half-open intervals also need **closes processed before opens** at equal timestamps, which alone takes 9 games over the limit down to 6. **And read the decimals exactly**: these 6-dp literals are not representable in binary float64, so parsing as `float` manufactures about 3,640 further overlaps of ~1e-16 s that do not exist in the data. Use `decimal.Decimal`, or threshold at 1 µs rather than at zero |
 | `duration_sec` | float or null | seconds | null, never zero length. **159,584 rows are null, of which 154,910 are legato steps** — a step has no duration of its own — leaving **4,674 key-ons that were still sounding when the render window ended.** Budget right-censoring against the 4,674, not the 159,584: their median onset is at 99.64% of the render window |
 | `voice` | int | — | `0..7`, the S-DSP hardware voice. **Not a fixed musical part** — assignment can change mid-track |
 | `pitch_status` | string | — | `estimated`, `noise`, `pitch_modulated`, `unrecoverable`. **Only `estimated` is a pitch** |
@@ -103,9 +103,10 @@ gated-voice statistics ship the two numbers that reveal their own confound.
 - **Reassembling a phrase** groups steps on `parent_event_id`.
 - `midi_note` outside `0..127` is real and must be filtered for MIDI work:
   **184 events, 114 of them negative.**
-- **2,926 of the 154,910 legato steps do write their parent's exact pitch**
-  (1.9%) — a driver rewriting the same PITCH value, typically alongside a
-  volume change. That is real data. Before `v3` *all* 154,910 did, which was
+- **4,164 of the 154,910 legato steps write their parent's exact PITCH
+  register**, of which **2,926 have a recovered pitch at both ends** and so
+  repeat the parent's `midi_note`; the other 1,238 are unpitched. A driver
+  rewriting the same register value, typically alongside a volume change. That is real data. Before `v3` *all* 154,910 did, which was
   a defect; a step matching its parent is now the exception rather than the
   rule.
 
@@ -151,6 +152,36 @@ it without supplying the mapping themselves.
 Row-indexed piano rolls, two grids: the primary one is this driver's own
 SPC700 timer tick (rate differs per track), and `uniform` is a fixed 100 Hz.
 **Use `uniform` to compare tracks or games.**
+
+| top-level key | contents |
+|---|---|
+| `separated`, `blended`, `expressive` | the three formats on the primary grid |
+| `uniform` | the same three on the fixed 100 Hz grid, plus its own `stats` |
+| `clock` | the SPC700 timer this track's rows are indexed on |
+| `timers`, `envelope`, `tick`, `software_divisor_m` | hardware context; see `DATASET.md` |
+| `onset_grid` | **the period the music's onsets actually lie on** — see below |
+| `stats` | the counters in the next table |
+
+### `onset_grid` — use this for rhythm and quantisation work
+
+Published on every track and **not** used to index any row. It carries
+`found`, `period_ticks`, `period_sec`, `rows_per_second`,
+`bpm_assuming_4_rows_per_beat`, `phase_ticks`, `n_rows`, `fit` and
+`median_abs_residual_ticks`.
+
+**If you are studying rhythm, start here, not with `clock`.** Onsets
+concentrate on `onset_grid` at R = 0.937 against only 0.262 on the timer
+clock, and a period fitted on half a track and tested on the other half
+reaches 0.853 against the tick's 0.188. `clock` is a hardware fact — one row
+is one timer tick — and the timer runs several times faster than the music: the
+measured onset period is a median 16.5× the tick. An evaluator measured
+quantisation against `clock` first, got R = 0.26, and nearly reported that this
+corpus's onsets are barely quantised.
+
+It is not used as a row index because the fitted period is not stable enough
+across tracks to build a comparable corpus-wide score on — 346 distinct rates
+across 664 tracks when that was attempted. That is a different question from
+whether it describes the music, and it does.
 
 | `stats` field | meaning |
 |---|---|
@@ -219,13 +250,38 @@ wrong depth, so a reader's first script found zero games and printed nothing:
 Every value is a **median over that game's tracks** of a per-track statistic,
 except the counts and fractions noted below.
 
+**Censoring convention.** These aggregates **extend a note with
+`duration_sec: null` to the end of the render window**; they do not drop it.
+Both treatments are defensible and the files had not said which they used, so
+a researcher comparing their own figures could not tell a method difference
+from an error. Dropping the 4,674 censored notes instead moves `voices.max` on
+at least one game and lowers `mean` across the board; with this convention an
+evaluator reproduced all 22 per-game maxima exactly and `mean_when_sounding`
+to a median 0.0076 voices.
+
+Register names used below, since this table assumes them: **VOLL/VOLR** are
+the per-voice left and right volumes (signed, −128..127); **EVOLL/EVOLR** are
+the echo output volumes and **EFB** the echo feedback, all signed; **EON**,
+**NON** and **PMON** are the per-voice enable bitmasks for echo, noise and
+pitch modulation; an **ADSR word** is the 16 bits of ADSR1+ADSR2, whose fields
+are a 4-bit attack rate, 3-bit decay rate, 3-bit sustain level and 5-bit
+sustain rate.
+
 | field | unit | meaning |
 |---|---|---|
 | `voices.max` | voices | largest voice count seen |
 | `voices.mean` | voices | mean over all rendered time, silence included |
 | `voices.mean_when_sounding` | voices | mean over time with at least one voice gated. **Read the two fields below before comparing this across games** |
-| `voices.median_release_gap_ms` | ms | median silence between a key-off and the next key-on on one voice. **Near zero means the driver holds voices gated, so the gated count overstates audible density**: Breath of Fire 2 and Mega Man X sit at 1.05 and 1.18 ms against 27–49 ms elsewhere |
-| `voices.gated_duty_cycle` | fraction | share of voice-time spent gated. **Approaching 1.0 means the gated measure is saturated and cannot discriminate**: the same two games sit at 0.96–0.97 |
+| `voices.median_release_gap_ms` | ms | median silence between a key-off and the next key-on **on the same voice**. Near zero means the driver holds voices gated, so a gated count overstates audible density |
+| `voices.gated_duty_cycle` | fraction | gated voice-time **divided by (rendered seconds × the number of voices the track actually uses)** — NOT by 8. The distinction matters: under a `/8` reading Plok! computes 0.588 and looks usable, where the published value is 0.960 and is not |
+
+**Apply a threshold, do not use a list.** An earlier version of this page named
+two games as saturated. Measured on `performance_music.json`, three exceed a
+`gated_duty_cycle` of 0.95 — Breath of Fire 2 **0.976**, Mega Man X **0.972**,
+Plok! **0.960** — and Dragon Quest 5 (0.906) and Batman Returns (0.898) are not
+far behind. An evaluator following the prose excluded two games and kept a
+third that the field flags equally. Pick a threshold, apply it to the field,
+and say which one you used.
 | `voices.silent_fraction` | fraction | share of rendered time with no voice gated |
 | `note_lengths.median_sec` | seconds | median note duration |
 | `note_lengths.under_100ms`, `over_1s` | fraction | share of notes shorter / longer |

@@ -20,6 +20,80 @@ version.
 
 ---
 
+## `gate5-rc7` — the third evaluation
+
+Eleven findings, all documentation. **No corpus data changed**: every row-level
+invariant and every published count held, and the evaluator reproduced roughly
+twenty named figures to the unit, matched all 22 per-game voice maxima, and
+recomputed every headline corpus count from the 1,316 event tables without
+consulting `index.json`.
+
+### The field I added last release to prevent this failed the same way
+
+`gated_duty_cycle` shipped in `rc6` to make a confound visible in data rather
+than prose. Its denominator — **the voices a track actually uses**, not 8 —
+was not stated, and the natural `/8` reading gives errors up to 0.372. Under
+that reading Plok! computes 0.588 and looks usable; the published value is
+0.960 and it is not. A field added to stop a name promising more than it
+measures did exactly that.
+
+Stated now, along with the convention needed to reproduce the aggregates:
+**`performance.json` extends a note with `duration_sec: null` to the end of
+the render window** rather than dropping it. With both conventions an
+evaluator reproduced the published statistics to a median 0.000027.
+
+### A wrong range, published for three releases
+
+`DATASET.md`'s row-duration cell read **"2.00–12.50 ms"**. Those were the two
+example games quoted beside the table, printed as if they were the range, and
+they contradicted the same table's own 32.8 Hz lower bound — 32.8 Hz is a
+30.5 ms row. The true span is **2.000–30.500 ms, median 4.875**, and the
+consequence matters: **341 tracks (25.9%) have a hardware row coarser than the
+10 ms uniform grid** and 178 (13.5%) are coarser than 12.50 ms. A reader would
+reasonably have concluded the hardware grid is always at least as fine as the
+uniform one. A release check now compares the documented range against the
+corpus.
+
+### `onset_grid` was undocumented, and it is the grid rhythm work needs
+
+The `rc3` rewrite of the row-grids section **deleted its documentation**,
+leaving a field published in all 1,316 score files and described nowhere.
+Onsets concentrate on it at **R = 0.937** against only 0.262 on the timer
+clock, which runs a median 16.5× faster than the music. An evaluator measured
+quantisation against `clock`, got 0.26, and nearly reported that this corpus's
+onsets are barely quantised. Now documented in all three places, with why it
+indexes no row and why that is a different question from whether it describes
+the music.
+
+### Corrections
+
+- **The saturation criterion is a threshold, not a list.** Three games exceed
+  `gated_duty_cycle` 0.95 — Breath of Fire 2 0.976, Mega Man X 0.972, **Plok!
+  0.960** — where the prose named two and an evaluator excluded two and kept
+  the third.
+- **The gated-voice confound is corpus-wide**, not confined to those games:
+  ρ = 0.703 against the gating habit versus 0.277 against an attack-based
+  density, and the two definitions disagree on which of a pair of games is
+  denser in 40% of pairs. A density comparison should report at least one
+  definition independent of key-off timing.
+- **The 1 µs rounding overshoot is not one voice.** Drivers key several voices
+  on one tick, so a naive sweep reports **9 to 13** simultaneous voices on
+  8-voice hardware, and Super Castlevania 4's true peak of 6 reads as 10.
+  Means are unaffected; peaks are not. Three remedies are named, plus the
+  requirement to process closes before opens at equal timestamps.
+- **The 6-dp decimals are not exact in binary float64**, which manufactures
+  about 3,640 phantom overlaps of ~1e-16 s on top of the documented 3,695.
+  Threshold at 1 µs, or parse with `decimal.Decimal`.
+- **`software_divisor_m` is a timer-to-write-cadence ratio, not ticks per
+  musical row.** Values run 1–8 while the onset period is a median 16.5× the
+  tick, so dividing by M still leaves rows several times finer than the music.
+  The derivation always said so; the label did not.
+- Legato steps repeating their parent: **4,164 match the PITCH register**, of
+  which 2,926 have a recovered pitch at both ends. The published figure was
+  the pitched subset.
+- A register glossary heads the `performance.json` table — `VOLL/VOLR`,
+  `EVOLL/EVOLR`, `EFB`, `EON/NON/PMON`, and the ADSR word layout.
+
 ## `gate5-rc6` — the second evaluation's findings
 
 A second independent evaluation of `gate5-rc5` returned **READY WITH

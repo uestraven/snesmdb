@@ -454,6 +454,29 @@ def check_dist(dist_dir: Path, report: Report, exhaustive: bool = False) -> None
         "summary.json still publishes max_polyphony"
         if '"max_polyphony"' in summary_text else "none present",
     )
+    # The documented row-duration range must match the corpus. This cell said
+    # "2.00-12.50 ms" for three releases: two example games printed as a
+    # range, contradicting the same table's own rate bounds, and understating
+    # how coarse the hardware grid gets for a quarter of the corpus.
+    doc = dist_dir / "DATASET.md"
+    if doc.is_file():
+        periods = []
+        for entry in (index if exhaustive else _sample_entries(index)):
+            path = dist_dir / entry.get("scores", "")
+            if not entry.get("scores") or not path.is_file():
+                continue
+            with gzip.open(path, "rt") as handle:
+                hz = (json.load(handle).get("clock") or {}).get("hz")
+            if hz:
+                periods.append(1000.0 / float(hz))
+        text = doc.read_text()
+        stated = f"{min(periods):.3f}\u2013{max(periods):.3f} ms" if periods else ""
+        report.check(
+            "dist_documented_row_duration_matches",
+            bool(periods) and stated in text,
+            f"measured {stated}; documented range "
+            f"{'found' if stated in text else 'NOT found'} in DATASET.md",
+        )
     report.check(
         "dist_scores_cover_index",
         all(e.get("scores") for e in index) and bool(index),

@@ -164,9 +164,13 @@ over: that figure is the NES's NTSC *video* frame rate, and it means nothing on
 SNES hardware, where the audio CPU runs off its own 1.024 MHz clock.
 
 An earlier design inferred the row period from note onsets instead; it produced
-346 distinct rates across 664 tracks and was abandoned. The onset period is
-still computed and published as `onset_grid`, because it is a real musical
-measurement, but it indexes nothing.
+346 distinct rates across 664 tracks and was abandoned **as a row index** —
+it is not stable enough across tracks to carry a comparable corpus-wide score.
+The period is still computed and published as `onset_grid` in every score
+file, and it is **the right starting point for rhythm and quantisation work**:
+onsets concentrate on it at R = 0.937 against 0.262 on the timer clock, which
+runs a median 16.5× faster than the music. See
+[SCHEMA.md](docs/SCHEMA.md).
 
 ### MIDI
 

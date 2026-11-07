@@ -458,14 +458,26 @@ Each score file carries **two** sets of the three formats.
 | | primary | `uniform` |
 |---|---|---|
 | row rate | this SPC's timer tick | **100 Hz, every track** |
-| row duration | 2.00–12.50 ms, 80 distinct rates | **10.00 ms, always** |
+| row duration | **2.000–30.500 ms**, median 4.875, 80 distinct rates | **10.00 ms, always** |
 | rows per music track (median) | 18,751 | **9,601** |
 | what it is | a hardware measurement | a convention, stated as one |
 | use it for | anything about this driver | comparing tracks or games |
 
 The primary grid is the honest hardware answer and it **cannot be compared
 across games**: the rate differs per track, so "notes per row" means something
-different in every one. That is what the uniform grid exists to fix — one row
+different in every one.
+
+**The hardware row is not always finer than the uniform one.** An earlier
+version of this table gave the row duration as "2.00–12.50 ms", which were in
+fact the two example games quoted beside it printed as if they were the range
+— and which contradicted the same table's own 32.8 Hz lower rate bound, since
+32.8 Hz is a 30.5 ms row. The true span is 2.000–30.500 ms. **341 tracks
+(25.9%) have a hardware row coarser than the 10 ms uniform grid, and 178
+(13.5%) are coarser than 12.50 ms**; Star Ocean and Tales of Phantasia sit
+around 20.5 ms, two to three times coarser than uniform. So "use the primary
+grid for anything about this driver" does not mean within-driver timing work
+loses nothing — for a quarter of the corpus the uniform grid is the finer of
+the two. An evaluator caught this. That is what the uniform grid exists to fix — one row
 means 10 ms in every track in the corpus.
 
 **100 Hz was chosen by measurement, not borrowed.** The corpus was scored at
@@ -483,6 +495,25 @@ means 10 ms in every track in the corpus.
 Quantisation error against the exact placement is 2.49 ms at the median and
 4.7 ms at p95, and durations under 10 ms cannot be represented at all (0.14%
 of notes). For microtiming, use the original timestamps — see above.
+
+### A third grid is published and indexes nothing: `onset_grid`
+
+Every score file carries `onset_grid` — a period fitted to the note onsets
+themselves. **No row is derived from it**, and it is **the right starting
+point for rhythm and quantisation work.** Onsets concentrate on it at
+R = 0.937 against only 0.262 on the timer `clock`, and a period fitted on one
+half of a track and tested on the other reaches 0.853 against the tick's
+0.188.
+
+The timer clock is a hardware fact — one row is one timer tick — and the timer
+runs a median **16.5× faster than the music**, so measuring quantisation
+against it makes the onsets look barely quantised. An evaluator did exactly
+that, measured R = 0.26, and nearly published that conclusion. It was
+abandoned as a *row index* because 346 distinct fitted rates across 664 tracks
+cannot carry a comparable corpus-wide score; that is a different question from
+whether it describes the music. Fields: `found`, `period_ticks`, `period_sec`,
+`rows_per_second`, `bpm_assuming_4_rows_per_beat`, `phase_ticks`, `n_rows`,
+`fit`, `median_abs_residual_ticks`.
 
 **This is not NES-MDB's rate and makes no claim of cross-corpus
 comparability.** NES-MDB's scores are 24 Hz. An earlier version of this
@@ -572,6 +603,14 @@ write-cadence estimate at all, 89% of them, median ratio exactly 1.00.
 that the row IS the musical row for the other 913 tracks. A consumer wanting
 musical rows must either restrict to tracks where M is known or accept rows at
 timer resolution.
+
+**M is a timer-to-write-cadence ratio, not ticks per musical row.** The label
+promises the musical row and the field does not deliver it: published values
+run `{1, 2, 3, 4, 8}` with a maximum of 8, while the measured onset period is a
+median **16.5× the timer tick** (p95 80×) — so dividing rows by M still leaves
+them several times finer than the music. The derivation below says so
+honestly; the description above it did not. **If you want the period the music
+is actually on, use `onset_grid`** — see below.
 
 `driver_tick_hz` is published beside it as the quantity M derives from. It is
 the SEQUENCER rate rather than the timer, and it is **null on the 797 tracks
