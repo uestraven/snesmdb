@@ -75,15 +75,32 @@ CHANNELS = ("note", "velocity", "timbre_class", "sustain")
 #:     pitched notes are under 26 ms and 5% under 56 ms -- and at 100 Hz only
 #:     0.1% are shorter than a single row.
 #:
-#: Measured over 369,635 pitched notes in 258 music tracks, with collisions
-#: counted per track:
+#: Benchmarked by `tools/rate_benchmark.py` over 421,375 pitched notes in 296
+#: music tracks, collisions counted per track:
 #:
-#:     rate   row ms   rows/track   notes < 1 row   duration lost
-#:       24     41.7        2,196            2.2%            0.9%
-#:       48     20.8        4,392            0.6%            0.2%
-#:       64     15.6        5,856            0.4%            0.1%
-#:      100     10.0        9,150            0.1%            0.0%
-#:      200      5.0       18,300            0.0%            0.0%
+#:   rate  exact  preserved  repeat-att  collide  <1 row  onset med/p95  MB/40
+#:     24     no   99.947%      0.041%    0.011%   2.29%   10.38/19.7     0.2
+#:     50    yes   99.996%      0.001%    0.002%   0.52%    5.00/ 9.5     0.4
+#:    100    yes  100.000%      0.000%    0.000%   0.09%    2.48/ 4.7     0.5
+#:    200    yes  100.000%      0.000%    0.000%   0.00%    1.25/ 2.4     0.7
+#:    400    yes  100.000%      0.000%    0.000%   0.00%    0.65/ 1.2     1.1
+#:
+#: 100 Hz is the CHEAPEST RATE THAT LOSES NOTHING. It preserves 100.000% of
+#: note events with zero collisions and zero repeated-attack losses -- the same
+#: as 200 and 400 Hz -- at half the rows and 70% of the storage of 200 Hz.
+#: Going finer buys timing precision only, not a single preserved event.
+#:
+#: 50 Hz was considered seriously and rejected on two counts rather than
+#: preservation, which is near-identical at 99.996%: it puts 0.52% of notes
+#: inside a single row so they lose their duration outright, against 0.09% at
+#: 100 Hz, and its p95 onset error is 9.5 ms, which is real rhythmic jitter in
+#: a corpus partly meant for studying timing. The asymmetry decides it -- a
+#: consumer can downsample 100 Hz to 50 Hz trivially and nobody can restore
+#: 50 Hz to 100 Hz, so the database ships the rate that loses nothing.
+#:
+#: The 24 Hz row is why this was benchmarked rather than reasoned about. It is
+#: the only rate here that destroys musically significant events: 174 repeated
+#: attacks, where a tremolo or drum roll collapses into one sustained note.
 #:
 #: An earlier version of this constant was 60.0988 Hz, justified as "the
 #: NES-MDB row rate". That was wrong twice. NES-MDB's SCORES are 24 Hz --
