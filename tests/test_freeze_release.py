@@ -32,6 +32,32 @@ def _tree(root: Path) -> Path:
     return dist
 
 
+def test_the_pin_separates_build_provenance_from_freeze_provenance(tmp_path):
+    """Freezing happens after building, often several commits later. A single
+    field read as "the commit that produced this corpus" named the checkout at
+    freeze time instead -- correct by coincidence for the first release, and
+    wrong by three commits for the second."""
+    dist = _tree(tmp_path)
+    (dist / "provenance.json").write_text(json.dumps({
+        "git_commit": "aaaaaaa", "git_branch": "main",
+        "built_utc": "2026-11-07T07:02:00Z", "dirty": False,
+    }))
+    pin = freeze.build(dist, "rc1")
+    assert pin["built_from"]["git_commit"] == "aaaaaaa"
+    assert "git_commit" in pin["frozen_by"]
+    # The freeze's own commit comes from the live checkout, so it is whatever
+    # this repository is on -- the point is only that it is a SEPARATE field.
+    assert pin["frozen_by"]["git_commit"] != "aaaaaaa"
+
+
+def test_a_tree_without_provenance_still_freezes(tmp_path):
+    """An older or hand-assembled tree has no provenance.json. That makes the
+    build commit unknown, which must be reported as empty rather than
+    silently filled in from the current checkout."""
+    dist = _tree(tmp_path)
+    assert freeze.build(dist, "rc1")["built_from"] == {}
+
+
 def test_the_pin_covers_every_published_file(tmp_path):
     dist = _tree(tmp_path)
     pin = freeze.build(dist, "rc1")

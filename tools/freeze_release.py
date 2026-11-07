@@ -85,6 +85,26 @@ def inventory(dist: Path) -> dict[str, dict[str, Any]]:
     return found
 
 
+def _build_provenance(dist: Path) -> dict[str, Any]:
+    """What the tree records about its own construction.
+
+    Read from `provenance.json` in the tree, because that is the only record
+    of the commit the corpus was actually published from. The checkout at
+    freeze time is a different thing and must not be substituted for it.
+    """
+    path = dist / "provenance.json"
+    if not path.is_file():
+        return {}
+    try:
+        record = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return {}
+    return {
+        key: record.get(key)
+        for key in ("git_commit", "git_branch", "built_utc", "dirty")
+    }
+
+
 def build(dist: Path, label: str) -> dict[str, Any]:
     index_path = dist / "index.json"
     if not index_path.is_file():
@@ -103,8 +123,17 @@ def build(dist: Path, label: str) -> dict[str, Any]:
         "n_tracks_in_index": len(corpus_mod.tracks_of(raw)),
         "n_files": len(files),
         "total_bytes": sum(f["bytes"] for f in files.values()),
-        # The code that produced the tree, not just the tree.
-        "built_by": provenance_mod.record(tool="freeze_release.py"),
+        # PROVENANCE OF THE FREEZE, which is not provenance of the build.
+        # This field was called `built_by`, and it was read as naming the
+        # commit that produced the corpus. It does not: freezing happens
+        # later, often after further commits. The two coincided for the first
+        # release and the mislabelling was invisible; by the second, the pin
+        # named a commit three commits after the one that built the tree.
+        "frozen_by": provenance_mod.record(tool="freeze_release.py"),
+        # Provenance of the BUILD, taken from the tree's own record rather
+        # than from the current checkout. This is the commit to return to in
+        # order to reproduce these bytes.
+        "built_from": _build_provenance(dist),
         "files": files,
     }
 
@@ -126,7 +155,8 @@ def verify(dist: Path) -> int:
     added = sorted(current.keys() - recorded.keys())
 
     print(f"release {pinned.get('label')} frozen {pinned.get('frozen_utc')}")
-    print(f"  commit      {pinned.get('built_by', {}).get('git_commit')}")
+    print(f"  built from  {pinned.get('built_from', {}).get('git_commit')}")
+    print(f"  frozen at   {pinned.get('frozen_by', {}).get('git_commit')}")
     print(f"  files       {len(recorded)} pinned, {len(current)} present")
     for label, group in (
         ("CHANGED", changed), ("MISSING", missing), ("ADDED", added),
@@ -178,7 +208,7 @@ def main() -> None:
         raise SystemExit(min(verify(dist), 125))
 
     pin = build(dist, args.label)
-    built = pin["built_by"]
+    built = pin["frozen_by"]
     if built.get("dirty") and not args.allow_dirty:
         raise SystemExit(
             f"refusing to freeze: the working tree has uncommitted changes, "
@@ -218,8 +248,9 @@ def main() -> None:
     (dist / RELEASE_FILE).write_text(json.dumps(pin, indent=1))
     print(f"froze {pin['n_files']} files, {pin['total_bytes'] / 1e9:.2f} GB")
     print(f"  label       {pin['label']}")
-    print(f"  commit      {pin['built_by'].get('git_commit')}")
-    print(f"  dirty       {pin['built_by'].get('dirty')}")
+    print(f"  built from  {(pin.get('built_from') or {}).get('git_commit')}")
+    print(f"  frozen at   {pin['frozen_by'].get('git_commit')}")
+    print(f"  dirty       {pin['frozen_by'].get('dirty')}")
     print(f"  index       {pin['index_schema']}")
     print(f"  tracks      {pin['n_tracks_in_index']}")
     print(f"  wrote       {dist / RELEASE_FILE}")
