@@ -120,9 +120,8 @@ def check_out_dir(out_dir: Path, report: Report) -> None:
         )
         report.check(
             "provenance_recorded",
-            bool(summary.get("provenance") or summary.get("provenance_reclock")),
-            "present" if summary.get("provenance")
-            or summary.get("provenance_reclock") else "absent",
+            bool(summary.get("provenance")),
+            "present" if summary.get("provenance") else "absent",
         )
 
 

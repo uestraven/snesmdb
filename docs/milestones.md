@@ -1190,6 +1190,37 @@ And two of the S-DSP's distinctive features are dead hardware here: **106 noise
 notes and 727 pitch-modulated notes out of 1,863,499**. Drivers write NON and
 PMON 1.48 million times in a 40-track sample, always zero.
 
+## The pipeline is one pass, and the equivalence was proved not assumed
+
+Dropping the per-game clock consensus removed the only thing that needed a
+whole-corpus pass, so the second tool folded into extraction. The claim that
+had to be checked is that the single pass produces the SAME corpus, because a
+silent divergence between two code paths is exactly the failure this change
+exists to remove -- it would have been self-defeating to take it on faith.
+
+Diffed across all 1,316 tracks, against the two-pass manifest kept for the
+purpose:
+
+| compared | result |
+|---|---|
+| track ids | identical set |
+| `clock.period_ticks`, `.source`, `.hz` | match |
+| `scores.n_rows`, `max_polyphony`, `n_notes_represented`, `n_cells_filled` | match |
+| `envelope.n_holds_full`, `summary.n_notes`, `n_legato_steps` | match |
+| `track_class`, `split`, `timers.sequencer_hz` | match |
+| `separated`, `blended`, `expressive` payloads | byte-identical, 40 sampled |
+| note and `legato_steps` records | byte-identical |
+
+The only difference corpus-wide is the two fields deliberately removed with
+the consensus, `agreement` and `n_confident_tracks`. Every shared field
+matches, including the reason strings. `make verify` passes 13/13 on the
+result.
+
+Cost: one pass of about 53 minutes against the old 50 plus 10, so the fold is
+slightly faster as well as being a step that can no longer be forgotten --
+which was not hypothetical, since the shipped rebuild recipe forgot it and
+produced a corpus with zero scored tracks, silently.
+
 ## Open defects, in one place
 
 Everything here is measured, reproducible and unfixed. None of it is hidden in
