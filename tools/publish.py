@@ -275,6 +275,11 @@ def main() -> None:
 
         # The three scores are indexed on the SPC700 timer register, which
         # every track has, so this is no longer conditional on an inference.
+        # Resolved BEFORE the intake tree is written, which needs them. An
+        # evaluator found intake notes carrying only `srcn` -- the identifier
+        # the documentation explicitly tells researchers not to join on --
+        # with no path to a `sample_id` at all.
+        sample_ids = _sample_ids(spc_index, row)
         track_clock = _clock_from_dict(row.get("clock", {}))
         if track_clock.period_ticks:
             counts["with_clock"] += 1
@@ -376,6 +381,12 @@ def main() -> None:
                                     n, scores_mod._velocity(n)
                                 ),
                                 "srcn": n["srcn"],
+                                # The joinable identity. `srcn` is an ARAM
+                                # index and is not stable across a game's
+                                # tracks; this is the content hash.
+                                "sample_id": sample_ids.get(
+                                    int(n["srcn"]), ""
+                                ),
                                 "timbre_class": timbre_of.get(int(n["srcn"]), -1),
                             }
                             for n in notes if int(n["voice"]) == v
@@ -390,7 +401,7 @@ def main() -> None:
                 counts["with_software_divisor"] += 1
             entry["intake"] = f"intake/{stem}.json.gz"
 
-        # events.v2 -- the researcher-facing table. Flat, in seconds, pitched
+        # events.v3 -- the researcher-facing table. Flat, in seconds, pitched
         # AND unpitched, with every absence explained.
         #
         # OUTSIDE the clock conditional, deliberately. This block used to sit
@@ -400,7 +411,6 @@ def main() -> None:
         # invisible -- but the published contract says every track has an event
         # table, and that claim must not rest on a coincidence in the current
         # corpus.
-        sample_ids = _sample_ids(spc_index, row)
         counts["sample_ids_resolved"] += len(sample_ids)
         table = events_mod.build(
             track_id=row["track_id"],
@@ -423,6 +433,7 @@ def main() -> None:
         entry["events"] = f"events/{stem}.json.gz"
         entry["event_count"] = table["event_count"]
         entry["pitched_event_count"] = table["pitched_event_count"]
+        entry["pitched_attack_count"] = table["pitched_attack_count"]
         entry["unpitched_event_count"] = table["unpitched_event_count"]
         # An event is not an attack. Published alongside the event total so a
         # rhythmic study gets the right number without filtering by `origin`.
@@ -466,7 +477,7 @@ def main() -> None:
     # CHANGELOG.md ships with the corpus because the index's top-level shape
     # changed: a download whose migration note stayed in the repository would
     # leave a consumer to discover the break by crashing.
-    for doc in ("DATASET.md", "CHANGELOG.md"):
+    for doc in ("DATASET.md", "CHANGELOG.md", "SCHEMA.md"):
         source = Path(__file__).resolve().parent.parent / "docs" / doc
         if source.is_file():
             (args.dist_dir / doc).write_text(source.read_text())

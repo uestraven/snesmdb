@@ -293,7 +293,7 @@ def test_scores_build_on_a_clock_without_modification():
     notes = [_note(0, i * step, i * step + step, 60 + i % 12) for i in range(20)]
     built = scores.build(notes, c.to_grid(render), render)
     assert built.n_rows > 0
-    assert built.stats()["max_polyphony"] <= scores.N_VOICES
+    assert built.stats()["max_voices_sounding_per_row"] <= scores.N_VOICES
 
 
 def test_a_slow_and_a_fast_track_on_one_clock_both_score():

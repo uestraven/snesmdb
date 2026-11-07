@@ -198,7 +198,7 @@ def test_the_uniform_score_is_shorter_than_a_fast_primary_grid():
 # Gate 2: events.v1 -- the researcher-facing event table
 # --------------------------------------------------------------------------
 
-EVENTS_SCHEMA = "snesmdb.events.v2"
+EVENTS_SCHEMA = "snesmdb.events.v3"
 
 #: An absence of recovered pitch must never be readable as extraction failure
 #: or as musical silence. These four are distinct states and a researcher has

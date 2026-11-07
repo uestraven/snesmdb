@@ -143,7 +143,22 @@ class Scores:
 
     n_cells_filled: int = 0
     n_rows_sounding: int = 0
-    max_polyphony: int = 0
+    #: RENAMED FROM `max_polyphony`, which was neither polyphony nor voices.
+    #: It is the largest number of DISTINCT PITCHES on any one row, over
+    #: PITCHED notes only -- a piano roll has no cell for a note with no
+    #: recovered pitch. Read as "maximum simultaneous voices" it understated
+    #: exact voice concurrency on 571 of 1,006 music tracks (median +1, max
+    #: +7) and reported 0 for three Star Ocean tracks where six voices sound.
+    #: Two unisons on different voices also count once.
+    max_distinct_pitched_notes_per_row: int = 0
+    #: Voices holding a PITCHED note on one row. Still excludes unpitched
+    #: notes, because the piano roll cannot represent them.
+    max_pitched_voices_per_row: int = 0
+    #: Voices holding ANY note on one row, pitched or not. This is the
+    #: voice-concurrency figure a reader reaching for `max_polyphony`
+    #: generally wants, and it is computed from the notes rather than from
+    #: the roll so percussion counts.
+    max_voices_sounding_per_row: int = 0
 
     @property
     def coverage(self) -> float:
@@ -173,7 +188,10 @@ class Scores:
             "rows_sounding_fraction": (
                 round(self.n_rows_sounding / self.n_rows, 4) if self.n_rows else 0.0
             ),
-            "max_polyphony": self.max_polyphony,
+            "max_distinct_pitched_notes_per_row":
+                self.max_distinct_pitched_notes_per_row,
+            "max_pitched_voices_per_row": self.max_pitched_voices_per_row,
+            "max_voices_sounding_per_row": self.max_voices_sounding_per_row,
         }
 
     def to_dict(self) -> dict[str, Any]:
@@ -444,5 +462,25 @@ def build(
     scores.blended = blended
     scores.n_cells_filled = sum(1 for track in separated for cell in track if cell)
     scores.n_rows_sounding = sum(1 for row in blended if row)
-    scores.max_polyphony = max((len(row) for row in blended), default=0)
+    scores.max_distinct_pitched_notes_per_row = max(
+        (len(row) for row in blended), default=0
+    )
+    scores.max_pitched_voices_per_row = max(
+        (sum(1 for v in range(N_VOICES) if separated[v][row]) for row in
+         range(n_rows)),
+        default=0,
+    )
+    # Voice occupancy INCLUDING unpitched notes, which never reach the roll.
+    # Counted here so the published statistics carry at least one figure that
+    # means "how many voices are sounding".
+    occupancy = [0] * n_rows
+    for note in notes:
+        voice = int(note["voice"])
+        start = int(note["start"])
+        end_tick = int(note.get("end") or render_ticks)
+        first = max(0, -(-(start - grid.phase_ticks) // grid.period_ticks))
+        last = -(-(end_tick - grid.phase_ticks) // grid.period_ticks) - 1
+        for row in range(int(first), min(int(last), n_rows - 1) + 1):
+            occupancy[row] += 1
+    scores.max_voices_sounding_per_row = min(max(occupancy, default=0), N_VOICES)
     return scores

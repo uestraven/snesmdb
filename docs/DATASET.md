@@ -187,13 +187,54 @@ disjointness would pass on a technicality.
 
 # Limitations
 
+## Known issues, consolidated
+
+Every defect the authors know about, in one place, so a recipient can tell a
+discovery from a known problem. The project's full build log is not
+distributed; this list is, and it is the authoritative one for the artifact.
+
+| issue | status |
+|---|---|
+| No cross-game instrument vocabulary; `timbre_class` is the constant `-1` and no codebook ships | **known, unresolved.** Milestone 5 failed its own validation; see "The timbre axis" below |
+| `srcn` does not name a fixed sample across a game's tracks | **by design.** Join on `sample_id` instead |
+| The 100 Hz uniform grid loses one repeated attack in 1,458,211 pitched notes | **known, quantified.** `axe-03`; original timestamps keep both |
+| 21.75% of notes carry no pitch, and out-of-range pitch varies 27× by game | **known, disclosed above** |
+| The intake schema is not verified against its intended consumer | **known, flagged** in its own section |
+| A row is a hardware timer tick, not always a musical row; `software_divisor_m` is recoverable for only 403 tracks | **known, disclosed** |
+| Composer credits truncate at 32 characters in the source tags | **known, flagged per track** |
+| 24 tracks extract no events at all (17 drones, 7 effects) | **known, classified** |
+| Echo and pitch modulation are effectively unused by these games | **measured, not a defect** |
+
+Fixed in `snesmdb.events.v3` after an independent evaluation, and listed here
+because earlier downloads carry them: legato steps published their parent's
+pitch rather than their own, and `event_id` was not unique within a track.
+Both are corrected; see [CHANGELOG.md](CHANGELOG.md).
+
+
 Read this section before using the data. Everything here was measured.
 
 ## Pitch is usable in bulk, unreliable per note
 
-**78.7% of notes carry a note number.** The rest are percussion, noise,
+**78.25% of notes carry a note number.** The rest are percussion, noise,
 or samples whose fundamental was not recoverable — labelled unpitched rather
 than given a confident wrong number.
+
+**Out-of-range pitch is not uniform across games.** 1.730% of pitched attacks
+fall outside MIDI 12–108 corpus-wide, but per game that runs from **0.30% to
+8.16%** — a 27× spread, so a per-game study must budget for its own game:
+
+| worst | | best | |
+|---|---|---|---|
+| Breath of Fire 2 | 8.16% | Zelda: A Link to the Past | 0.30% |
+| Super Mario World | 7.84% | Final Fantasy 6 | 0.30% |
+| Secret of Mana | 3.78% | Super Turrican | 0.31% |
+| Earthbound | 3.46% | Axelay | 0.38% |
+
+**`midi_note` is not clamped to MIDI's domain at all.** A small number of
+values fall outside 0–127, including negatives. They are real estimates of
+very low or very high fundamentals, they are harmless if filtered and
+silently corrupting if not, and the exact counts are in
+[SCHEMA.md](SCHEMA.md).
 
 **1.78% of pitched notes land outside MIDI 12–108**, down from 9.1%.
 Both estimators are ambiguous by factors of two — autocorrelation can latch
@@ -249,7 +290,7 @@ recorded as sample 0. Worst affected: Super Turrican (100% of its notes),
 Dragon Quest 5 (41%), Breath of Fire 2 (37%), Earthbound (30%), Mega Man X
 (24%).
 
-Pitched-note coverage fell slightly, 78.7% to 78.3%, because some of the
+Pitched-note coverage fell slightly, from 78.7% to 78.25%, because some of the
 newly-correct samples fail the f0 plausibility test that the wrong ones passed.
 Fewer and right beats more and wrong.
 
@@ -368,7 +409,7 @@ Each score file carries **two** sets of the three formats.
 | | primary | `uniform` |
 |---|---|---|
 | row rate | this SPC's timer tick | **100 Hz, every track** |
-| row duration | 2.00–12.50 ms, 78 distinct rates | **10.00 ms, always** |
+| row duration | 2.00–12.50 ms, 80 distinct rates | **10.00 ms, always** |
 | rows per music track (median) | 18,751 | **9,601** |
 | what it is | a hardware measurement | a convention, stated as one |
 | use it for | anything about this driver | comparing tracks or games |
@@ -566,16 +607,26 @@ the whole corpus sits at the shuffled-label null on every axis. So the finer
 structure describes each game's own sample bank.
 
 Each score carries `timbre_validated: "tonal_vs_percussive_only"`. Use the
-class as a binary tonal/percussive flag. Do not treat class 3 as an instrument.
+class as a binary tonal/percussive flag.** That instruction was wrong and is
+withdrawn: `timbre_class` is the constant `-1` in every published file, so a
+tonal/percussive split computed from it partitions nothing. The score blocks
+still report `timbre_validated: "tonal_vs_percussive_only"`, which describes
+how far the *analysis* got, not a capability of the data. There is no usable
+timbre field in this distribution. **Do not treat class 3 as an instrument
 
 **Voice roles are not provided.** A role needs register and function, and
 register is exactly what fails to transfer.
 
 ## MIDI drops things, and names them
 
-Only notes with a recovered pitch appear — 1,465,863 of 1,863,499 notes are
-written and 382,544 dropped, across 1,252 of the 1,316 tracks (a track with no
-pitched note at all gets no file). No General MIDI
+Only notes with a recovered pitch appear — 1,458,120 of 1,863,499 notes are
+written and 402,635 dropped, across 1,243 of the 1,316 tracks (a track with no
+pitched note at all gets no file). Each file is **type 1 with nine chunks**:
+a conductor track followed by eight voice tracks, so chunk *n+1* is voice
+*n* — indexing chunks 0–7 as voices 0–7 is off by one. Each voice track
+carries a `voice N` text name, so the mapping is self-correcting from the
+file. Voice 7 is written to MIDI channel 8 (1-based), skipping channel 7, so
+that 0-based channel 9 — GM percussion — stays empty. No General MIDI
 program is set, because sample identity does not transfer and a program number
 would be fabricated. Channel 9 is never used, so nothing is implicitly a drum.
 **Phase inversion is lost**: a negative side volume inverts that side's phase

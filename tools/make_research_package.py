@@ -46,6 +46,7 @@ DOCS = (
     ("README.md", "README.md"),
     ("docs/DATASET.md", "docs/DATASET.md"),
     ("docs/CHANGELOG.md", "docs/CHANGELOG.md"),
+    ("docs/SCHEMA.md", "docs/SCHEMA.md"),
 )
 
 #: Development documents that must never enter the package. Named explicitly
@@ -128,6 +129,7 @@ documentation, and they are what the project intends researchers to work from.
 | `README.md` | what the project is and how the formats relate |
 | `docs/DATASET.md` | the dataset reference: every format, and where the data is wrong |
 | `docs/CHANGELOG.md` | published format versions and the breaking changes so far |
+| `docs/SCHEMA.md` | **field reference**: every field, its type, unit, range and null meaning |
 
 `DATASET.md` and `CHANGELOG.md` also appear inside `dist/`, as they do in any
 download. The copies under `docs/` are identical, and are placed there so the

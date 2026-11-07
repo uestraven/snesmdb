@@ -614,8 +614,9 @@ def main() -> None:
             "n_notes_unplaced": sum(
                 r.get("scores", {}).get("n_notes_unplaced", 0) for r in good
             ),
-            "max_polyphony": max(
-                (r.get("scores", {}).get("max_polyphony", 0) for r in good),
+            "max_voices_sounding_per_row": max(
+                (r.get("scores", {}).get("max_voices_sounding_per_row", 0)
+                 for r in good),
                 default=0,
             ),
         },

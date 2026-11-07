@@ -1,4 +1,4 @@
-"""`snesmdb.events.v2` — the researcher-facing event table.
+"""`snesmdb.events.v3` — the researcher-facing event table.
 
 Everything else this project publishes is shaped by the hardware: scores
 indexed by DSP voice and row, notes carrying `srcn` and register values, a row
@@ -41,9 +41,35 @@ unpitched observations.
 
 from __future__ import annotations
 
+import math
 from typing import Any, Iterable
 
-SCHEMA = "snesmdb.events.v2"
+SCHEMA = "snesmdb.events.v3"
+
+#: v3 FIXES TWO FIELDS THAT DID NOT MEAN WHAT THEY SAID. Both were found by an
+#: independent evaluator working only from the published artifact, and neither
+#: was detectable by any self-consistency check: the data agreed with itself
+#: perfectly in both cases, which is why 31 audit checks and 422 tests missed
+#: them.
+#:
+#:   * `midi_note` on a `legato_step` carried the PARENT's pitch -- all
+#:     154,910 steps, max difference exactly 0.0. The field defined as "a
+#:     pitch change on a voice that never re-keyed" contained no pitch
+#:     change, which ruled out the format's own advertised use and made 7% of
+#:     the corpus's pitched-event total duplicate rows. It now carries the
+#:     pitch the step wrote, recovered from the raw registers; see
+#:     `step_midi_note`.
+#:   * `event_id` was not a row key. A step published its PARENT's id as its
+#:     own, so ids were duplicated in 517 of 1,316 tracks -- up to 85% of one
+#:     track's rows sharing ids -- and `parent_event_id == event_id` held for
+#:     all 2,018,409 rows. A routine `set_index("event_id")` silently
+#:     discarded rows. Ids are now unique within a track, and
+#:     `parent_event_id` is null on a key-on.
+#:
+#: NOT ADDITIVE, unlike v2. A v2 reader that grouped on `parent_event_id` to
+#: find steps now sees nulls, and any pitch statistic computed over steps
+#: changes. That is the intent: the previous values were wrong.
+PREVIOUS_SCHEMAS = ("snesmdb.events.v2", "snesmdb.events.v1")
 
 #: v2 adds `game`, `game_slug` and `track_class` to the header. The change is
 #: PURELY ADDITIVE -- nothing was renamed, moved or removed, so a v1 reader
@@ -61,7 +87,6 @@ SCHEMA = "snesmdb.events.v2"
 #: documentation explicitly forbids. A single file being the sole home of a
 #: field researchers are told to filter on is a single point of failure, so the
 #: filter fields now travel with the data they describe.
-PREVIOUS_SCHEMA = "snesmdb.events.v1"
 
 #: Why an event has, or has not, a pitch.
 PITCH_ESTIMATED = "estimated"
@@ -103,7 +128,9 @@ ORIGIN_LEGATO_STEP = "legato_step"
 #:
 #: `parent_event_id` makes the last two answerable without hardware knowledge:
 #: a legato step names the key-on event it belongs to, so a continuous phrase
-#: can be reassembled by grouping on it.
+#: can be reassembled by grouping on it. It is NULL on a key-on.
+#:
+#: `event_id` IS A ROW KEY: unique within a track, across both origins.
 
 
 def pitch_status(note: dict[str, Any]) -> str:
@@ -182,12 +209,16 @@ def _event(
         "sustain_level": int(note.get("_sustain_level", 0)),
         "origin": origin,
         "event_id": event_id,
-        # For a key-on, itself. For a legato step, the key-on it continues --
-        # so grouping on this field reassembles a phrase that the driver
-        # expressed as one sounding voice with several pitches.
-        "parent_event_id": (
-            event_id if parent_event_id is None else parent_event_id
-        ),
+        # NULL for a key-on; for a legato step, the key-on it continues --
+        # so grouping on it reassembles a phrase the driver expressed as one
+        # sounding voice with several pitches.
+        #
+        # It used to be the event's own id on a key-on, which made
+        # `parent_event_id == event_id` for all 2,018,409 rows and left no way
+        # to tell a step from an attack by the id fields alone. Both the
+        # README and the changelog already described the behaviour implemented
+        # here; the code did something else.
+        "parent_event_id": parent_event_id,
     }
 
 
@@ -203,6 +234,47 @@ def game_slug(track_id: str) -> str:
     this project simply knows.
     """
     return track_id.split(":")[0].split("-")[0]
+
+
+def step_midi_note(
+    step: dict[str, Any], parent: dict[str, Any]
+) -> float | None:
+    """The pitch a legato step actually wrote.
+
+    THE DEFECT THIS FIXES. Every one of the 154,910 published steps carried
+    its parent's `midi_note` verbatim -- max difference exactly 0.0 -- because
+    the code read `step.get("midi_note", parent["midi_note"])` and a step
+    record has no `midi_note` key. So the field defined as "a pitch change on
+    a voice that never re-keyed" contained no pitch change, which ruled out
+    the format's own advertised use and made the corpus's pitched-event total
+    7% duplicates. An independent evaluator found this; no self-consistency
+    check could, because the data was perfectly consistent with itself.
+
+    The pitch is recovered from the RAW REGISTERS, which the extraction
+    records carry: a step's `pitch` against its parent's `pitch_register`.
+    PITCH is a frequency multiplier, so the interval is
+    `12 * log2(step_pitch / parent_pitch_register)` semitones.
+
+    NOT from the step's `semitones` field, which is relative to the PREVIOUS
+    write rather than to the note. Steps chain: in the first Actraiser track
+    79 of 103 steps disagree between the two readings, and only the register
+    ratio is correct for a chain.
+
+    Returns None when the parent has no estimated pitch, or when either
+    register is missing or zero -- an unrecoverable pitch must stay
+    unrecoverable rather than become the parent's.
+    """
+    base = parent.get("midi_note")
+    if base is None:
+        return None
+    try:
+        written = float(step.get("pitch") or 0.0)
+        reference = float(parent.get("pitch_register") or 0.0)
+    except (TypeError, ValueError):
+        return None
+    if written <= 0.0 or reference <= 0.0:
+        return None
+    return float(base) + 12.0 * math.log2(written / reference)
 
 
 def build(
@@ -251,6 +323,9 @@ def build(
             event_id,
         ))
 
+    # Step ids start above every key-on id, so an id identifies exactly one
+    # row. See `SCHEMA`: a step used to publish its PARENT's id as its own.
+    next_id = (max(by_note_id.values()) + 1) if by_note_id else 0
     parents = {n.get("note_id"): n for n in notes}
     for step in legato_steps:
         parent = parents.get(step.get("parent_note_id"))
@@ -260,22 +335,28 @@ def build(
         enriched["noise"] = parent.get("noise")
         enriched["pitch_modulated"] = parent.get("pitch_modulated")
         enriched["pitch_confidence"] = parent.get("pitch_confidence")
-        # A legato step's pitch is the step's own; the sample and envelope are
+        # A legato step's pitch is the step's OWN; the sample and envelope are
         # the parent's, since a step does not re-key.
-        enriched["midi_note"] = step.get("midi_note", parent.get("midi_note"))
+        enriched["midi_note"] = step_midi_note(step, parent)
         enriched["start_sec"] = step.get("time_sec", 0.0)
         enriched["end_sec"] = None
         events.append(_event(
             enriched,
             sample_ids.get(int(parent.get("srcn", -1)), ""),
             ORIGIN_LEGATO_STEP,
-            int(step.get("parent_note_id", -1)),
+            next_id,
             by_note_id.get(step.get("parent_note_id")),
         ))
+        next_id += 1
 
     events.sort(key=lambda e: (e["onset_sec"], e["voice"]))
     pitched = sum(1 for e in events if e["pitch_status"] == PITCH_ESTIMATED)
     attacks = sum(1 for e in events if e["origin"] == ORIGIN_KEY_ON)
+    pitched_attacks = sum(
+        1 for e in events
+        if e["origin"] == ORIGIN_KEY_ON
+        and e["pitch_status"] == PITCH_ESTIMATED
+    )
     return {
         "schema": SCHEMA,
         "track_id": track_id,
@@ -294,5 +375,12 @@ def build(
         # rhythmic analysis does not have to filter to get the right number.
         "attack_count": attacks,
         "legato_step_count": len(events) - attacks,
+        # Pitched ATTACKS, published because the distinction decides which
+        # denominator a pitch statistic should use. A reviewer reported
+        # "the corpus contains 1.56 M pitched events" as inflated, since every
+        # step then duplicated its parent's pitch; the steps now carry their
+        # own pitch, and the split is published so the question cannot arise
+        # again from the headline figure alone.
+        "pitched_attack_count": pitched_attacks,
         "events": events,
     }

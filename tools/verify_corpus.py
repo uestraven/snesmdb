@@ -114,7 +114,8 @@ def check_out_dir(out_dir: Path, report: Report) -> None:
     )
 
     poly = [
-        int((r.get("scores") or {}).get("max_polyphony") or 0) for r in good
+        int((r.get("scores") or {}).get("max_voices_sounding_per_row") or 0)
+        for r in good
     ]
     worst = max(poly) if poly else 0
     report.check(
@@ -220,7 +221,7 @@ def check_uniform_preservation(out_dir: Path, report: Report, limit: int) -> Non
 
 
 def check_events(dist_dir: Path, report: Report, exhaustive: bool) -> None:
-    """The events.v2 contract, over the published tables.
+    """The events.v3 contract, over the published tables.
 
     Sampled for a build gate, exhaustive for a release -- and sample_id
     uniqueness is only meaningful exhaustively, since a collision between two

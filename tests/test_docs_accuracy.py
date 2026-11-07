@@ -30,6 +30,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from snesmdb import corpus, events, sampleid, scores  # noqa: E402
 
 README = (ROOT / "README.md").read_text()
+SCHEMA_DOC = (ROOT / "docs" / "SCHEMA.md").read_text()
 DATASET = (ROOT / "docs" / "DATASET.md").read_text()
 CHANGELOG = (ROOT / "docs" / "CHANGELOG.md").read_text()
 
@@ -174,7 +175,8 @@ def test_the_documented_quantization_loss_matches_the_measured_one():
 #: package carries `README.md`, `docs/DATASET.md`, `docs/CHANGELOG.md`,
 #: `verify.py` and `dist/`, and nothing else.
 SHIPPED_PATHS = frozenset({
-    "README.md", "docs/DATASET.md", "docs/CHANGELOG.md", "verify.py",
+    "README.md", "docs/DATASET.md", "docs/CHANGELOG.md", "docs/SCHEMA.md",
+    "verify.py", "SCHEMA.md", "CHANGELOG.md", "DATASET.md",
 })
 
 

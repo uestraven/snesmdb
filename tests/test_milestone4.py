@@ -184,7 +184,7 @@ def test_blended_can_never_exceed_the_eight_voices_the_hardware_has() -> None:
         notes.append(_note(voice, 0, 2 * ROW, 80 + voice))  # same voice, same tick
     g = Grid(found=True, period_ticks=ROW, phase_ticks=0, n_rows=4)
     s = scores_mod.build(notes, g, render_ticks=4 * ROW)
-    assert s.max_polyphony <= scores_mod.N_VOICES
+    assert s.max_voices_sounding_per_row <= scores_mod.N_VOICES
     assert all(len(row) <= scores_mod.N_VOICES for row in s.blended)
     assert s.n_cells_contested > 0, "the collision should be counted, not hidden"
 

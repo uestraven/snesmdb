@@ -351,7 +351,7 @@ def test_a_uniform_score_builds_and_respects_the_hardware() -> None:
              for i in range(60)]
     built = scores.build(notes, g, render)
     assert built.n_rows == g.n_rows
-    assert built.stats()["max_polyphony"] <= scores.N_VOICES
+    assert built.stats()["max_voices_sounding_per_row"] <= scores.N_VOICES
     assert built.stats()["n_notes_represented"] > 0
 
 

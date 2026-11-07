@@ -45,7 +45,9 @@ INDEX_SCHEMA = "snesmdb.index.v1"
 #: doing strict equality does not. Both statements are now precise: field
 #: access is unaffected; a consumer pinning the exact string must add the new
 #: version to its accepted set.
-SUPPORTED_EVENT_SCHEMAS = ("snesmdb.events.v2", "snesmdb.events.v1")
+SUPPORTED_EVENT_SCHEMAS = (
+    "snesmdb.events.v3", "snesmdb.events.v2", "snesmdb.events.v1",
+)
 EVENTS_SCHEMA = SUPPORTED_EVENT_SCHEMAS[0]
 
 #: A pitch is usable as a pitch only in this state. The other three say WHY

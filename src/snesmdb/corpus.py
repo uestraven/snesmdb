@@ -27,7 +27,7 @@ import csv
 import io
 from typing import Any
 
-from . import events, sampleid, scores
+from . import drivers, events, sampleid, scores
 
 #: Columns of `tracks.csv`, in order. The per-track metadata in a form that
 #: degrades gracefully: a truncated CSV loses its tail and keeps every
@@ -35,8 +35,10 @@ from . import events, sampleid, scores
 TRACKS_CSV_COLUMNS = (
     "track_id", "game_slug", "game", "title", "composers", "track_class",
     "extraction_status", "split", "render_seconds", "n_notes",
-    "event_count", "pitched_event_count", "attack_count",
-    "legato_step_count",
+    "event_count", "pitched_event_count", "pitched_attack_count",
+    "attack_count", "legato_step_count",
+    # CURATED EXTERNAL KNOWLEDGE, not measured. See `snesmdb.drivers`.
+    "driver", "driver_vendor", "driver_confidence",
 )
 
 #: The index's own schema.
@@ -63,6 +65,7 @@ def formats() -> dict[str, Any]:
         "sample_id": sampleid.SCHEMA,
         "uniform_hz": scores.UNIFORM_HZ,
         "tracks_csv": TRACKS_CSV_SCHEMA,
+        "drivers": drivers.SCHEMA,
     }
 
 
@@ -95,6 +98,15 @@ def index_document(tracks: list[dict[str, Any]]) -> dict[str, Any]:
             # voice that never re-keyed. Published so a rhythmic study does
             # not have to know that to get the right number.
             "n_attacks": sum(e.get("attack_count", 0) for e in tracks),
+            # Pitched ATTACKS, separate from pitched events. A reviewer read
+            # `n_pitched_events` as a count of distinct musical pitches and
+            # was right to call it inflated while every legato step duplicated
+            # its parent's pitch. The steps now carry their own pitch and both
+            # figures are published, so the question is answerable from the
+            # header.
+            "n_pitched_attacks": sum(
+                e.get("pitched_attack_count", 0) for e in tracks
+            ),
             "n_games": len({e.get("game") for e in tracks}),
             "track_classes": classes,
             "extraction_statuses": statuses,
@@ -102,6 +114,12 @@ def index_document(tracks: list[dict[str, Any]]) -> dict[str, Any]:
         # Slug to game name. Load-bearing for per-game work and previously
         # inferrable only by counting tracks per game.
         "games": games(tracks),
+        # The one curated field in the distribution, carrying its own
+        # provenance so a consumer reading only JSON learns that it is not
+        # measured. Published because DATASET.md conditions advice on the
+        # driver in four places and shipped no mapping, which made that
+        # advice unactionable without outside knowledge.
+        "drivers": drivers.block(),
         "tracks": tracks,
     }
 
@@ -136,6 +154,7 @@ def tracks_csv(tracks: list[dict[str, Any]]) -> str:
         # Semicolons, because a composer list inside a CSV cell must not
         # collide with the delimiter.
         row["composers"] = "; ".join(entry.get("composers") or [])
+        row.update(drivers.for_slug(row["game_slug"]))
         writer.writerow([row.get(column, "") for column in TRACKS_CSV_COLUMNS])
     return out.getvalue()
 
