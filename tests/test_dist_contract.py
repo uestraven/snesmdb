@@ -189,3 +189,207 @@ def test_the_uniform_score_is_shorter_than_a_fast_primary_grid():
         checked += 1
     if not checked:
         pytest.skip("no sampled track has a primary clock above 300 Hz")
+
+
+# --------------------------------------------------------------------------
+# Gate 2: events.v1 -- the researcher-facing event table
+# --------------------------------------------------------------------------
+
+EVENTS_SCHEMA = "snesmdb.events.v1"
+
+#: An absence of recovered pitch must never be readable as extraction failure
+#: or as musical silence. These four are distinct states and a researcher has
+#: to be able to tell them apart from the published file alone.
+EXTRACTION_STATES = frozenset({
+    "complete_with_pitched_events",
+    "complete_unpitched_only",
+    "complete_no_events",
+    "incomplete",
+})
+
+#: `estimated` rather than `measured`: a sample's fundamental is estimated from
+#: its BRR content, and `measured` would claim a certainty the pipeline does
+#: not establish.
+PITCH_STATES = frozenset({
+    "estimated", "noise", "pitch_modulated", "unrecoverable",
+})
+
+
+def _events(entry: dict) -> dict:
+    assert entry.get("events"), (
+        f"{entry['track_id']}: index has no `events` reference, so the "
+        f"researcher-facing table was not published"
+    )
+    path = DIST / entry["events"]
+    assert path.is_file(), f"index names {entry['events']} but it is absent"
+    with gzip.open(path, "rt") as handle:
+        return json.load(handle)
+
+
+def test_every_track_publishes_an_event_table():
+    """Including the 73 with no pitched notes. A track that produced only
+    unpitched observations still has musical content."""
+    entries = _need_dist()
+    missing = [e["track_id"] for e in entries if not e.get("events")]
+    assert not missing, f"{len(missing)} of {len(entries)} tracks have none"
+
+
+def test_the_event_table_declares_its_schema_version():
+    for entry in _sample(_need_dist()):
+        assert _events(entry)["schema"] == EVENTS_SCHEMA
+
+
+def test_events_are_a_flat_list_in_seconds():
+    """Not nested under eight DSP voices. A researcher should not have to
+    know the hardware has eight voices to iterate the notes."""
+    for entry in _sample(_need_dist()):
+        table = _events(entry)
+        assert isinstance(table["events"], list)
+        for event in table["events"][:50]:
+            assert isinstance(event["onset_sec"], (int, float))
+            assert event["onset_sec"] >= 0.0
+            assert "duration_sec" in event
+
+
+def test_every_event_declares_a_pitch_status():
+    """The published artifact gave `midi_note: null` with no reason, so a
+    researcher could not tell percussion from a failed estimate."""
+    for entry in _sample(_need_dist()):
+        for event in _events(entry)["events"]:
+            assert event["pitch_status"] in PITCH_STATES, (
+                f"{entry['track_id']}: pitch_status "
+                f"{event.get('pitch_status')!r} is not one of {PITCH_STATES}"
+            )
+
+
+def test_a_pitch_is_present_exactly_when_it_was_estimated():
+    for entry in _sample(_need_dist()):
+        for event in _events(entry)["events"]:
+            if event["pitch_status"] == "estimated":
+                assert event["midi_note"] is not None
+            else:
+                assert event["midi_note"] is None, (
+                    "a non-estimated event must not carry a pitch"
+                )
+
+
+def test_pitch_confidence_is_separate_from_pitch_status():
+    """An estimated note with high confidence is still an estimate, so the
+    two must not be collapsed into one field."""
+    for entry in _sample(_need_dist()):
+        estimated = [
+            e for e in _events(entry)["events"]
+            if e["pitch_status"] == "estimated"
+        ]
+        if estimated:
+            assert "pitch_confidence" in estimated[0]
+            return
+    pytest.skip("no estimated events in the sample")
+
+
+def test_amplitude_is_published_as_attack_and_sustain_levels():
+    """Not as `velocity`, which implies a measured loudness the register
+    values do not provide."""
+    for entry in _sample(_need_dist()):
+        for event in _events(entry)["events"][:20]:
+            assert "attack_level" in event and "sustain_level" in event
+            assert "velocity" not in event, (
+                "`velocity` implies perceived loudness; use attack_level"
+            )
+
+
+def test_sample_identity_is_content_based_not_a_hardware_index():
+    """`srcn` is an ARAM directory index that is not stable across a game's
+    tracks -- Super Turrican's 8 indices resolve to 48 distinct samples -- so
+    it is not usable as instrument identity."""
+    for entry in _sample(_need_dist()):
+        for event in _events(entry)["events"][:20]:
+            assert "sample_id" in event
+            assert isinstance(event["sample_id"], str) and event["sample_id"]
+            assert "srcn" not in event, "srcn belongs to the hardware layer"
+
+
+def test_extraction_status_is_declared_and_valid():
+    for entry in _sample(_need_dist()):
+        table = _events(entry)
+        assert table["extraction_status"] in EXTRACTION_STATES
+
+
+def test_extraction_status_is_independent_of_track_class():
+    """A sound effect can contain recoverable pitch and a music track can
+    contain only unpitched observations, so a musical label must never double
+    as a data-quality indicator."""
+    for entry in _sample(_need_dist()):
+        table = _events(entry)
+        assert "track_class" not in table["extraction_status"]
+
+
+def test_the_counts_reconcile_with_the_event_list():
+    for entry in _sample(_need_dist()):
+        table = _events(entry)
+        events = table["events"]
+        pitched = sum(1 for e in events if e["pitch_status"] == "estimated")
+        assert table["event_count"] == len(events)
+        assert table["pitched_event_count"] == pitched
+        assert table["unpitched_event_count"] == len(events) - pitched
+
+
+def test_a_track_with_no_pitched_events_is_not_an_extraction_failure():
+    """THE ACCEPTANCE TEST FOR THIS GATE.
+
+    73 tracks recovered no pitch at all. Their musical events must still be
+    published, their missing pitches explained, and the track distinguishable
+    from a failed extraction -- which the previous artifact could not do.
+    """
+    found = None
+    for entry in _need_dist():
+        if not entry.get("events"):
+            continue
+        table = _events(entry)
+        if table["pitched_event_count"] == 0 and table["event_count"] > 0:
+            found = (entry, table)
+            break
+    if found is None:
+        pytest.skip("no track in this corpus has events but no pitch")
+    entry, table = found
+    assert table["extraction_status"] == "complete_unpitched_only", (
+        f"{entry['track_id']}: {table['extraction_status']!r} -- a successful "
+        f"extraction of unpitched events must not read as a failure"
+    )
+    assert table["events"], "the musical events must still be present"
+    for event in table["events"]:
+        assert event["pitch_status"] in PITCH_STATES - {"estimated"}
+        assert event["midi_note"] is None
+
+
+def test_events_reconcile_against_the_source_records():
+    """Every published event must correspond to a note in `data/out`, and
+    none may be invented or dropped."""
+    entries = _need_dist()
+    if not (OUT / "manifest.jsonl").is_file():
+        pytest.skip(f"no extraction output at {OUT}")
+    rows = {
+        r["track_id"]: r
+        for r in (json.loads(l) for l in (OUT / "manifest.jsonl").open())
+        if r.get("record_path")
+    }
+    compared = 0
+    for entry in _sample(entries, 6):
+        row = rows.get(entry["track_id"])
+        if not row:
+            continue
+        record = json.loads((OUT / row["record_path"]).read_text())
+        table = _events(entry)
+        source_onsets = sorted(
+            round(n["start_sec"], 6) for n in record["notes"]
+        )
+        published = sorted(
+            round(e["onset_sec"], 6) for e in table["events"]
+            if e.get("origin", "key_on") == "key_on"
+        )
+        assert published == source_onsets, (
+            f"{entry['track_id']}: {len(published)} key-on events published "
+            f"against {len(source_onsets)} notes in the source record"
+        )
+        compared += 1
+    assert compared, "no track could be reconciled"

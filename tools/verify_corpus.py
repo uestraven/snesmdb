@@ -208,7 +208,7 @@ def check_uniform_preservation(out_dir: Path, report: Report, limit: int) -> Non
     )
 
 
-def check_dist(dist_dir: Path, report: Report) -> None:
+def check_dist(dist_dir: Path, report: Report, exhaustive: bool = False) -> None:
     index_path = dist_dir / "index.json"
     if not index_path.is_file():
         report.check("dist_index", False, f"no index.json in {dist_dir}")
@@ -245,7 +245,12 @@ def check_dist(dist_dir: Path, report: Report) -> None:
     # or not a uniform score was ever written -- which it was not, for the
     # whole period the rate was being benchmarked. A gate that cannot detect
     # the absence of the thing it is about is decoration.
-    sampled = index[:: max(1, len(index) // 25)]
+    # SAMPLED BY DEFAULT, EXHAUSTIVE FOR A RELEASE. 26 of 1,316 gives about a
+    # 2% chance of catching one corrupted file, which is fine for a fast gate
+    # on every build and not fine for a release audit -- an isolated bad
+    # artifact outside the sample escapes entirely. `--exhaustive` opens all
+    # of them.
+    sampled = index if exhaustive else index[:: max(1, len(index) // 25)]
     bad_clock = bad_channels = no_uniform = bad_uniform = 0
     for entry in sampled:
         if not entry.get("scores"):
@@ -306,6 +311,12 @@ def main() -> None:
     parser.add_argument("out_dir", type=Path)
     parser.add_argument("dist_dir", type=Path, nargs="?")
     parser.add_argument("--sample", type=int, default=60)
+    parser.add_argument(
+        "--exhaustive", action="store_true",
+        help="open EVERY published score rather than a sample. Slower, and "
+             "the only mode that catches a single corrupted artifact. Use it "
+             "for a release audit; the sampled default is the build gate.",
+    )
     args = parser.parse_args()
 
     report = Report()
@@ -313,7 +324,7 @@ def main() -> None:
     check_records(args.out_dir, report, args.sample)
     check_uniform_preservation(args.out_dir, report, args.sample * 4)
     if args.dist_dir and args.dist_dir.exists():
-        check_dist(args.dist_dir, report)
+        check_dist(args.dist_dir, report, exhaustive=args.exhaustive)
     elif args.dist_dir:
         report.check("dist_present", False, f"{args.dist_dir} does not exist")
 

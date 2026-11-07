@@ -41,7 +41,7 @@ OUT_DIR ?= data/out
 DIST_DIR ?= $(HOME)/snesmdb-corpus/dist
 JOBS    ?= 8
 
-.PHONY: all clean test venv corpus extract performance publish verify \
+.PHONY: all clean test venv corpus extract performance publish verify audit \
         check-data check-history hooks help
 
 all: $(BUILD)/spc_dump
@@ -126,12 +126,20 @@ verify:
 	@echo "== verify =="
 	@$(PYTHON) -I tools/verify_corpus.py $(OUT_DIR) $(DIST_DIR)
 
+# RELEASE AUDIT. `verify` samples 26 of 1,316 published scores, which is the
+# right trade for a gate that runs on every build and misses an isolated
+# corrupted artifact. This opens all of them. Run it before publishing.
+audit:
+	@echo "== exhaustive release audit =="
+	@$(PYTHON) -I tools/verify_corpus.py $(OUT_DIR) $(DIST_DIR) --exhaustive
+
 help:
 	@echo "make                 build build/spc_dump"
 	@echo "make test            run the test suite (creates $(VENV) if needed)"
 	@echo "make venv            just create $(VENV) with pytest"
 	@echo "make corpus          full rebuild: extract -> performance -> publish -> verify"
-	@echo "make verify          check an existing corpus and dist tree"
+	@echo "make verify          check an existing corpus and dist tree (sampled)"
+	@echo "make audit           release audit: opens EVERY published score"
 	@echo "make check-data      refuse derived corpus data in the tracked tree"
 	@echo "make check-history   same, across all git history (slow)"
 	@echo "make hooks           install the pre-commit data guard"

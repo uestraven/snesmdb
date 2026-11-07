@@ -19,6 +19,8 @@ the directory is refused if it is inside one.
 from __future__ import annotations
 
 import argparse
+import glob
+import hashlib
 import gzip
 import json
 import subprocess
@@ -29,9 +31,12 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from snesmdb import (  # noqa: E402
+    brr,
     clock as clock_mod,
     envelope as envelope_mod,
+    events as events_mod,
     provenance as provenance_mod,
+    spcfile,
     grid as grid_mod,
     midi as midi_mod,
     scores as scores_mod,
@@ -80,6 +85,39 @@ def _timbre_map(out_dir: Path) -> dict[str, dict[int, int]]:
     }
 
 
+def _sample_ids(
+    spc_index: dict[str, str], row: dict[str, Any]
+) -> dict[int, str]:
+    """SRCN -> content hash of the decoded BRR block, for THIS track.
+
+    An index does not name a fixed sample even inside one game: Super
+    Turrican's 8 indices resolve to 48 distinct samples across its 12 tracks,
+    because each SPC is its own ARAM snapshot and drivers reload their bank.
+    So identity has to be the content, and the mapping is per track.
+    """
+    path = spc_index.get(row.get("source", ""))
+    if not path:
+        return {}
+    try:
+        spc = spcfile.load(Path(path))
+    except Exception:
+        return {}
+    srcns = {int(k) for k in (row.get("samples") or {})}
+    out: dict[int, str] = {}
+    for srcn, entry in brr.read_directory(spc.aram, spc.dsp[0x5D], srcns).items():
+        if not entry.plausible:
+            continue
+        try:
+            decoded = brr.decode(spc.aram, entry.start, entry.loop)
+        except (ValueError, IndexError):
+            continue
+        if decoded.data:
+            out[srcn] = hashlib.sha256(
+                repr(decoded.data).encode()
+            ).hexdigest()[:16]
+    return out
+
+
 def _software_divisor(row: dict[str, Any], clock_hz: float) -> int | None:
     """How many timer ticks the driver counts per sequencer row, or None.
 
@@ -112,6 +150,12 @@ def main() -> None:
     parser.add_argument("out_dir", type=Path)
     parser.add_argument("dist_dir", type=Path)
     parser.add_argument("--limit", type=int, default=0)
+    parser.add_argument(
+        "--spc-dir", type=Path, default=Path("data/spc"),
+        help="where to find SPC files. Needed for content-based sample_id: an "
+             "SRCN index does not name a fixed sample even within one game, "
+             "so identity is the hash of the decoded BRR block.",
+    )
     args = parser.parse_args()
 
     # Refuse to write derived copyrighted material into a git tree.
@@ -132,7 +176,7 @@ def main() -> None:
         good = good[: args.limit]
 
     timbre_by_game = _timbre_map(args.out_dir)
-    for sub in ("scores", "midi", "intake"):
+    for sub in ("scores", "midi", "intake", "events"):
         (args.dist_dir / sub).mkdir(parents=True, exist_ok=True)
 
     counts = {
@@ -140,7 +184,14 @@ def main() -> None:
         "midi_notes_written": 0, "midi_notes_dropped": 0,
         "expressive_with_timbre": 0, "intake_written": 0,
         "with_software_divisor": 0, "uniform_written": 0,
+        "events_written": 0, "events_total": 0, "events_unpitched": 0,
+        "tracks_unpitched_only": 0, "sample_ids_resolved": 0,
     }
+    spc_index = {
+        Path(p).name: p
+        for p in glob.glob(str(args.spc_dir / "*" / "*.spc"))
+    }
+
     index: list[dict[str, Any]] = []
 
     for row in good:
@@ -294,6 +345,35 @@ def main() -> None:
             with gzip.open(args.dist_dir / "intake" / f"{stem}.json.gz", "wt") as handle:
                 json.dump(intake, handle, separators=(",", ":"))
             counts["intake_written"] += 1
+
+            # events.v1 -- the researcher-facing table. Flat, in seconds,
+            # pitched AND unpitched, with every absence explained.
+            sample_ids = _sample_ids(spc_index, row)
+            counts["sample_ids_resolved"] += len(sample_ids)
+            table = events_mod.build(
+                track_id=row["track_id"],
+                ok=bool(row.get("ok")),
+                duration_sec=float(row.get("render_seconds") or 0.0),
+                notes=notes,
+                sample_ids=sample_ids,
+                legato_steps=record.get("legato_steps") or [],
+                attack_level=scores_mod._velocity,
+                sustain_level=scores_mod._sustain,
+            )
+            with gzip.open(
+                args.dist_dir / "events" / f"{stem}.json.gz", "wt"
+            ) as handle:
+                json.dump(table, handle, separators=(",", ":"))
+            counts["events_written"] += 1
+            counts["events_total"] += table["event_count"]
+            counts["events_unpitched"] += table["unpitched_event_count"]
+            if table["extraction_status"] == events_mod.STATUS_UNPITCHED_ONLY:
+                counts["tracks_unpitched_only"] += 1
+            entry["events"] = f"events/{stem}.json.gz"
+            entry["event_count"] = table["event_count"]
+            entry["pitched_event_count"] = table["pitched_event_count"]
+            entry["unpitched_event_count"] = table["unpitched_event_count"]
+            entry["extraction_status"] = table["extraction_status"]
             if _software_divisor(row, track_clock.hz):
                 counts["with_software_divisor"] += 1
             entry["intake"] = f"intake/{stem}.json.gz"
