@@ -1221,6 +1221,101 @@ slightly faster as well as being a step that can no longer be forgotten --
 which was not hypothetical, since the shipped rebuild recipe forgot it and
 produced a corpus with zero scored tracks, silently.
 
+## Research Publication Contract — gates 0 to 5
+
+The milestones above are about extraction being correct. These are about the
+PUBLISHED ARTIFACT containing what the pipeline claims, and then being usable
+by someone who does not know how an SPC700 works. The distinction earned its
+own section because the same defect shipped three times: `scores.expressive`
+was dead code for two milestones, the documented rebuild recipe omitted the
+step that derived the row clock, and the 100 Hz uniform grid was benchmarked
+at length and never reached `publish.py`. Each time the internal measurement
+was correct and the artifact did not have it.
+
+**Every gate introduces its own failing acceptance test before its
+implementation, and those tests open files under `dist`.** They do not call
+extraction or scoring functions to reconstruct the expected output — a test
+that called `scores.build` would have agreed with the broken publisher and
+reported success. `tests/test_dist_contract.py` is where they live.
+
+| gate | what it establishes | state |
+|---|---|---|
+| 0 | repository carries no licensed or derived material | ✅ closed |
+| 1 | the 100 Hz uniform scores are present in `dist`, with contents checked against `data/out` | in progress |
+| 2 | `events.v1`: flat event list in seconds, pitch uncertainty, sample content identity, amplitude semantics | |
+| 3 | `track_class`, extraction status, event counts, schema versions; legacy contracts preserved | |
+| 4 | end-to-end researcher workflows using only `dist` | |
+| 5 | **blind researcher acceptance** | |
+
+### Gate 2 schema decisions, settled before implementation
+
+**`pitch_status` uses `estimated`, not `measured`.** A sample's fundamental is
+ESTIMATED from its BRR content; calling it measured would claim a certainty the
+pipeline does not establish. The values are `estimated`, `noise`,
+`pitch_modulated`, `unrecoverable`. `pitch_confidence` stays a separate field,
+the underlying `noise` and `pitch_modulated` flags are preserved rather than
+collapsed into the status, and the resolution order for overlapping conditions
+is documented.
+
+**`extraction_status` is independent of `track_class`.** An absence of
+recovered pitches must never imply extraction failure or musical silence. Four
+states are distinguished: successful with pitched events, successful with only
+unpitched events, successful with no detected events, and incomplete or failed.
+A sound effect can contain recoverable pitch and a music track can contain only
+unpitched observations, so a musical label must never double as a data-quality
+indicator. Defined in gate 2 so the event schema can express "empty" versus
+"failed" from the start; published to `index.json` in gate 3.
+
+**`attack_level` and `sustain_level`** replace the velocity/sustain naming in
+the new schema, documented as: *register-derived amplitude controls at attack
+and sustain. They are not measurements of perceived loudness, acoustic
+intensity, or standardized MIDI velocity.*
+
+**`sample_id` is a content hash, not an instrument label.** It identifies the
+decoded BRR block reproducibly, which `srcn` does not — Super Turrican's 8
+indices resolve to 48 distinct samples across 12 tracks. It is not evidence
+that a sample always performs the same musical role.
+
+### Gate 5: blind researcher acceptance
+
+The first test of whether this is what was intended, rather than whether the
+code behaves as designed. **Not** a test of whether someone can use the
+database after we explain it.
+
+Protocol: the evaluator gets a copy of `dist`, `README.md` and `DATASET.md`,
+and nothing else — no source, no developer notes, no access to this file.
+Five research questions, plus at least one open-ended question of their own
+choosing, which carries more weight because a prescribed task can only confirm
+what was anticipated. Two evaluator types, since they fail differently: a
+computational music researcher and a competent programmer with no
+music-hardware background.
+
+The question designed to expose silent interpretation errors: *which games use
+the greatest average number of simultaneous musical voices?* Counting only
+pitched MIDI notes gives an incomplete answer. **If a researcher confidently
+produces the wrong answer because the documentation or the schema led them
+there, that is a database failure, not a researcher failure.**
+
+Success is not perfection on the first run. It is that researchers can
+complete the analyses without chip-specific knowledge, can distinguish missing
+information from genuinely absent musical activity, and produce reproducible
+results without unknowingly using an inappropriate representation. Every
+failure becomes a documented issue and then a regression test.
+
+**Two threats to the test's validity, recorded because both are already
+real.** The schema must not be redesigned just before the test to make the
+tasks easier: the release candidate freezes, the evaluation runs, and the
+findings decide what changes. And the implementer has now READ the five
+questions, so gate 2 risks being fitted to them — mitigated by adding
+questions at test time that the implementer has not seen, and by weighting the
+evaluator's own question most heavily.
+
+Blindness also leaks through the environment, not just the briefing. An
+evaluator on this machine can read the repository, the commit messages and
+this file, which is a catalogue of every defect; and the repository is public,
+so network access finds the source. The evaluator must be confined to a staged
+copy of the artifact with no repository and no network.
+
 ## Open defects, in one place
 
 Everything here is measured, reproducible and unfixed. None of it is hidden in
