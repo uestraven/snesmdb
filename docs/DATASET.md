@@ -323,37 +323,39 @@ Each score file carries **two** sets of the three formats.
 
 | | primary | `uniform` |
 |---|---|---|
-| row rate | this SPC's timer tick | **60.0988 Hz, every track** |
-| row duration | 2.00–12.50 ms, 78 distinct rates | **16.639 ms, always** |
-| rows per music track (median) | 12,690 | **4,658** |
+| row rate | this SPC's timer tick | **100 Hz, every track** |
+| row duration | 2.00–12.50 ms, 78 distinct rates | **10.00 ms, always** |
+| rows per music track (median) | 18,751 | **9,601** |
 | what it is | a hardware measurement | a convention, stated as one |
-| use it for | anything about this driver | comparing games, or NES-MDB |
+| use it for | anything about this driver | comparing tracks or games |
 
 The primary grid is the honest hardware answer and it **cannot be compared
 across games**: the rate differs per track, so "notes per row" means something
-different in every one. NES-MDB has no such problem — every row there is
-16.64 ms because every NTSC engine inherits one video frame rate — and that
-uniformity is what makes a corpus of row arrays comparable at all.
+different in every one. That is what the uniform grid exists to fix — one row
+means 10 ms in every track in the corpus.
 
-So the `uniform` block re-indexes the same notes at the NES-MDB rate.
-**Matching 60.0988 Hz is not physically meaningful on the SNES** — it is an
-NTSC video artifact and the SPC700 has no relationship to it — and the grid
-says so in its own `reason` field. The point is a shared time unit, not
-physics: a model can train across both corpora without rescaling.
+**100 Hz was chosen by measurement, not borrowed.** The corpus was scored at
+24, 50, 100 and 200 Hz and the costs compared:
 
-It also costs less than the primary grid rather than more. Measured over 120
-music tracks:
-
-- **4.03× fewer rows** (677,194 against 2,731,994), because a 500 Hz driver
-  clock produces eight times the rows of a 60 Hz grid
-- **3 notes unplaced of 155,633** (0.002%)
+- it divides the SPC700's 1,024,000-tick second **exactly** — 10,240 ticks per
+  row, so no rounding accumulates across a long track
+- it is **achievable on the hardware**: T0/T1 at 8 kHz divided by 80
+- it loses **one** repeated-note attack in 1,458,211 pitched events. 50 Hz
+  loses 1,275; 24 Hz loses far more. 200 Hz loses none but doubles the rows
+  for that single event
+- about **1.95× fewer rows** than the primary grid at the median
 - max polyphony 8, within the hardware
 
-The quantisation error is 4.15 ms median against the primary grid's exact
-placement. That error *is* the 16.64 ms grid, and it is the same one NES-MDB
-carries, so a consumer comparing the two corpora is comparing like with like.
-If you want finer, 100 Hz divides the SPC700 clock exactly and costs 2.49 ms —
-the rate is `scores.UNIFORM_HZ` and a rebuild can change it.
+Quantisation error against the exact placement is 2.49 ms at the median and
+4.7 ms at p95, and durations under 10 ms cannot be represented at all (0.14%
+of notes). For microtiming, use the original timestamps — see above.
+
+**This is not NES-MDB's rate and makes no claim of cross-corpus
+comparability.** NES-MDB's scores are 24 Hz. An earlier version of this
+document specified 60.0988 Hz and attributed it to NES-MDB; that was wrong
+twice over, since 60.0988 Hz is the NES's NTSC *video* frame rate and the
+SPC700 has no relationship to it. A model training across both corpora must
+rescale.
 
 ## Rows are indexed on the SPC700's own timer register
 
@@ -592,7 +594,9 @@ make                 # build/spc_dump
 make extract         # ~50 min  SPCs -> manifest, records, scores, clock
 make performance     #          the §7 analysis, all tracks and music-only
 make publish         # ~18 min  -> DIST_DIR
-make verify          #          13 checks; exits non-zero on any failure
+make verify          #          26 checks; exits non-zero on any failure
+make audit           #          27 checks, opening EVERY published file
+make freeze LABEL=.. #          pin the tree by file hash for an evaluation
 ```
 
 Override with `SPC_DIR=`, `OUT_DIR=`, `DIST_DIR=`, `JOBS=`.

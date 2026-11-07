@@ -107,6 +107,20 @@ def test_verifying_an_unpinned_tree_is_refused(tmp_path):
         freeze.verify(dist)
 
 
+def test_the_pin_archive_is_not_part_of_the_pinned_tree(tmp_path):
+    """Otherwise writing a pin would change the tree it is pinning, and no
+    pin could ever verify."""
+    dist = _tree(tmp_path)
+    (dist / freeze.RELEASE_DIR).mkdir()
+    (dist / freeze.RELEASE_DIR / "rc0.json").write_text("{}")
+    pin = freeze.build(dist, "rc1")
+    assert not any(
+        key.startswith(f"{freeze.RELEASE_DIR}/") for key in pin["files"]
+    )
+    (dist / freeze.RELEASE_FILE).write_text(json.dumps(pin))
+    assert freeze.verify(dist) == 0
+
+
 def test_a_pre_v1_bare_list_index_still_freezes(tmp_path):
     """A corpus published before the index became a document can still be
     pinned for evaluation; its `index_schema` is simply absent."""

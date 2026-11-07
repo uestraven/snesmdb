@@ -1399,6 +1399,57 @@ It **refuses to freeze a dirty working tree** unless forced: a pin naming a
 commit that does not contain the code which built the corpus cannot be
 reproduced, which is the one thing a release candidate has to offer.
 
+### Pre-flight: documentation defects in `gate5-rc1`
+
+A review of the **frozen** RC1 commit found researcher-facing documentation
+defects. They are recorded here because they are the kind of failure Gate 5
+exists to find, and finding them in review instead means RC1 would have spent
+the evaluation's budget on problems already known.
+
+| defect | state at RC1 | corrected |
+|---|---|---|
+| uniform score rate | documented as **60.0988 Hz, "the NES-MDB row rate"** | 100 Hz, 10.00 ms |
+| uniform row counts | 16.639 ms, 4,658 rows/track, 4.03× fewer rows | 10.00 ms, 9,601 rows, 1.95× |
+| `make test` | 287 tests | 388 |
+| `make verify` | 13 checks | 26, plus `make audit` at 27 |
+| `timbre_class` | "published as -1 for every note" | located per format; absent from `events.v1` |
+
+**The rate defect was the serious one.** It appeared in both `README.md` and
+`DATASET.md` — the latter ships inside `dist` — in a passage instructing
+researchers to use the uniform block for cross-game comparison. 60.0988 Hz is
+the NES's NTSC *video* frame rate; NES-MDB's scores are 24 Hz; this corpus
+publishes 100 Hz. Anyone following that sentence would have mistimed every
+uniform row by 66%, and `DATASET.md` contradicted itself, stating 10 ms in one
+section and 16.639 ms in another.
+
+Correcting prose by hand is what produced the defect, so the claims are now
+checked: `tests/test_docs_accuracy.py` asserts the stated test count against
+what the session collected, the documented row duration against
+`scores.UNIFORM_HZ`, and that no stale rate is ever attached to the uniform
+grid again. The first version of that last check only looked for `"100"`
+somewhere in `DATASET.md`, which is true of almost any document and missed the
+whole stale section; it now checks the row-duration claim, which cannot be
+satisfied by coincidence.
+
+`CHANGELOG.md` now ships inside `dist` as well. A download whose migration
+note stayed in the repository would leave a consumer to discover the index's
+shape change by crashing.
+
+Also reclassified: the recurring-sample pitch-span check moved out of the Gate
+4 contract tests into `tests/test_corpus_characterization.py`. `sample_id` is
+not an instrument label **by definition**, whatever a corpus's pitch-span
+statistics show, and a definition that could be falsified by a statistic would
+be a weak definition rather than a strong test. The measurement is still
+recorded — it is good evidence that the distinction matters on real data — but
+as a corpus characterization whose failure means the corpus changed.
+
+RC1 is preserved for comparison at `~/snesmdb-corpus/dist-gate5-rc1` with its
+own pin. `freeze_release.py` now refuses to write a differently-labelled pin
+over an existing one without `--replace`, and archives every pin under
+`releases/<label>.json`: an evaluation in progress names a label, and silently
+repointing it at a different tree would invalidate the evaluation without
+leaving a trace.
+
 ### Gate 5: researcher acceptance
 
 The first test of whether this is what was intended, rather than whether the

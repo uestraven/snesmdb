@@ -430,7 +430,10 @@ def main() -> None:
         source = args.out_dir / name
         if source.is_file():
             (args.dist_dir / name).write_text(source.read_text())
-    for doc in ("DATASET.md",):
+    # CHANGELOG.md ships with the corpus because the index's top-level shape
+    # changed: a download whose migration note stayed in the repository would
+    # leave a consumer to discover the break by crashing.
+    for doc in ("DATASET.md", "CHANGELOG.md"):
         source = Path(__file__).resolve().parent.parent / "docs" / doc
         if source.is_file():
             (args.dist_dir / doc).write_text(source.read_text())

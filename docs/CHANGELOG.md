@@ -111,6 +111,24 @@ Use this, not `srcn`, to join across tracks. An SRCN is an ARAM directory
 index and does not name a fixed sample even within one game — Super Turrican's
 8 indices resolve to 48 distinct samples across its 12 tracks.
 
+## Documentation correction, `gate5-rc2`
+
+No data or schema changed between `gate5-rc1` and `gate5-rc2`. The documents
+did.
+
+`README.md` and `DATASET.md` described the uniform score as **60.0988 Hz**,
+attributing that rate to NES-MDB, in a passage recommending it for cross-game
+comparison. The published rate is and was **100 Hz**. 60.0988 Hz is the NES's
+NTSC *video* frame rate, NES-MDB's scores are 24 Hz, and `DATASET.md`
+contradicted itself by stating 10 ms elsewhere. **If you read either document
+at `gate5-rc1`, re-read the uniform-score section.** The data was correct
+throughout; only its description was wrong.
+
+Also corrected at rc2: stale tool counts, and an imprecise description of
+`timbre_class` as simply "published", which is now located per format — it is
+absent from `events.v1` and present as an inert `-1` in the score and intake
+trees.
+
 ## Uniform 100 Hz scores
 
 `scores/*.json.gz` gained a `uniform` block: the three score formats on a

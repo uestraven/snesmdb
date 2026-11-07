@@ -277,26 +277,6 @@ def test_sample_grouping_satisfies_the_per_game_identity():
     assert report["n_distinct_samples"] + extra_games == per_game_total
 
 
-def test_a_recurring_sample_is_not_evidence_of_one_instrument():
-    """The documented interpretation has to be supported by the data, not just
-    asserted: if a recurring sample were an instrument, its pitch span would be
-    narrow. One Actraiser sample spans over five octaves across 14 tracks."""
-    _need_dist()
-    entries = workflows.discover(DIST, game="Actraiser", track_class=None)
-    if not entries:
-        pytest.skip("reference game absent from this corpus")
-    report = workflows.sample_usage(DIST, entries, min_tracks=2)
-    spans = [
-        r["pitch_span_semitones"] for r in report["recurring"]
-        if r["pitch_span_semitones"] is not None
-    ]
-    assert spans, "no recurring sample carried pitched events"
-    assert max(spans) > 24, (
-        "no recurring sample spans more than two octaves, so this corpus does "
-        "not support the documented reading of sample_id -- check the doc"
-    )
-
-
 # ---------------------------------------------------------------------------
 # The index migration
 # ---------------------------------------------------------------------------

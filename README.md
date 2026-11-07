@@ -11,20 +11,40 @@ That shielding is harder here than on the NES, and the reasons are worth
 understanding before choosing a format — see the
 [SNES Synthesizer Primer](#snes-synthesizer-primer).
 
-**Status: five of six [milestones](docs/milestones.md) met, one failed.**
-**1,316 tracks from 22 games, 1,863,499 notes**, composer-disjoint splits
-(1,049 / 135 / 132), every track clocked from its own SPC700 timer register.
-Scores, MIDI and intake trees all build, and `make verify` gates the result on
-13 checks.
+**Status: five of six [milestones](docs/milestones.md) met, one failed;
+publication gates 0–4 closed.**
+**1,316 tracks from 22 games**, composer-disjoint splits (1,049 / 135 / 132),
+every track clocked from its own SPC700 timer register. The corpus publishes
+**2,018,409 events** — 1,863,499 note attacks plus 154,910 legato steps, of
+which 1,560,002 carry a recovered pitch. `make verify` gates a build on 26
+checks and `make audit` opens every published file for 27.
+
+**If you are here to do research, start with `events/*.json.gz`**, the flat
+event table in seconds described in [DATASET.md](docs/DATASET.md). The score,
+MIDI and intake formats below are the hardware-indexed views and need more
+context to read correctly.
 
 **Milestone 5 — the timbre vocabulary — did not work**, and that is the headline
 rather than a footnote. A cross-game instrument vocabulary was the one piece
 NES-MDB gets free and this project had to construct, it was named as the
 project's main risk at the outset, and the risk landed: class agreement across
-games collapses to the shuffled null once features that leak are removed. So
-`timbre_class` is published as `-1` for every note in the corpus. The
-expressive score's third channel carries no information, and no codebook is
-shipped. See [the analysis](docs/milestones.md).
+games collapses to the shuffled null once features that leak are removed. No
+codebook is shipped.
+
+`timbre_class` is therefore an **inert field**, written as `-1` everywhere it
+appears, and where it appears is worth being exact about:
+
+| format | `timbre_class` |
+|---|---|
+| `events/*.json.gz` | **absent.** The researcher-facing table has no such field |
+| `scores/*.json.gz` | present as the expressive score's third channel, always `-1` |
+| `intake/*.json.gz` | present per note, always `-1` |
+
+It remains in the two older formats because removing a field from a published
+shape is a breaking change, and it is flagged there rather than quietly
+carried: each expressive block reports
+`timbre_validated: "tonal_vs_percussive_only"` and
+`timbre_classes_present: [-1]`. See [the analysis](docs/milestones.md).
 
 Known defects are listed in one place in
 [milestones.md](docs/milestones.md) rather than scattered: nine of them, all
@@ -89,6 +109,11 @@ the docs.
 
 ### Score formats
 
+These are the **hardware-indexed** views, kept for comparability with NES-MDB
+and for work that needs the chip's own time base. For most research questions
+`events/*.json.gz` is the better starting point: it is flat, in seconds, and
+explains every absent pitch.
+
 **Implemented**, for all 1,316 tracks, in the same three flavours NES-MDB
 publishes:
 
@@ -114,15 +139,25 @@ uniform *definition* but not a uniform *duration*, since the rate differs per
 game (2.00 ms in Super Mario World against 12.50 ms in Donkey Kong Country,
 78 rates corpus-wide).
 
-The `uniform` block re-indexes the same notes at **60.0988 Hz, the NES-MDB
-row rate**, so a row means 16.639 ms in every track and in both corpora. That
-rate has no physical meaning on the SNES and the grid says so itself; the
-point is a shared time unit. It is also *cheaper*: 4.03× fewer rows than the
-timer tick, at 0.002% of notes unplaced. **Use `uniform` for anything that
-compares games.** An earlier design inferred the row period from
-note onsets instead; it produced 346 distinct rates across 664 tracks and was
-abandoned. The onset period is still computed and published as `onset_grid`,
-because it is a real musical measurement, but it indexes nothing.
+The `uniform` block re-indexes the same notes at a fixed **100 Hz**, so a row
+means exactly 10 ms in every track. **Use `uniform` for anything that compares
+tracks or games.** The rate was chosen by benchmarking the corpus at 24, 50,
+100 and 200 Hz rather than borrowed: 100 Hz divides the 1,024,000-tick second
+exactly (10,240 ticks per row), is achievable on the hardware as T0/T1 ÷ 80,
+and loses **one** repeated-note attack among 1,458,211 pitched events — in
+Axelay `axe-03`, where two same-pitch attacks fall about 5.1 ms apart. 50 Hz
+lost 1,275; 24 Hz lost far more.
+
+It is **not** NES-MDB's rate and makes no claim to cross-corpus
+comparability. NES-MDB's scores are 24 Hz. An earlier version of this file
+documented 60.0988 Hz here and attributed it to NES-MDB, which was wrong twice
+over: that figure is the NES's NTSC *video* frame rate, and it means nothing on
+SNES hardware, where the audio CPU runs off its own 1.024 MHz clock.
+
+An earlier design inferred the row period from note onsets instead; it produced
+346 distinct rates across 664 tracks and was abandoned. The onset period is
+still computed and published as `onset_grid`, because it is a real musical
+measurement, but it indexes nothing.
 
 ### MIDI
 
@@ -147,9 +182,13 @@ Python extractor works on an existing log.
 
 ```sh
 make                        # builds build/spc_dump
-make test                   # 287 tests, no skips (bootstraps .venv for pytest)
+make test                   # 389 tests, no skips (bootstraps .venv for pytest)
 make corpus                 # full rebuild: ~80 min on 8 jobs
-make verify                 # 13 checks on an existing corpus and dist tree
+make verify                 # 26 checks on an existing corpus and dist tree
+make audit                  # 27 checks, opening EVERY published file
+make workflows              # the three dist-only research workflows
+make freeze LABEL=rc1       # pin the published tree by file hash
+make check-freeze           # re-hash the tree against its pin
 ```
 
 **pytest is the only Python dependency**, and `make test` creates a `.venv`

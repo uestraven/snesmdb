@@ -44,6 +44,11 @@ SCHEMA = "snesmdb.release.v1"
 #: The name of the pin itself, excluded from the hashes it contains.
 RELEASE_FILE = "RELEASE.json"
 
+#: Every pin ever written to a tree is also kept here under its label, so
+#: superseding a candidate does not destroy the record of what the previous
+#: one contained. Excluded from the hashes for the same reason as the pin.
+RELEASE_DIR = "releases"
+
 #: Read in chunks: the tree is a few gigabytes and a release should not need
 #: to hold a file in memory to hash it.
 CHUNK = 1 << 20
@@ -72,6 +77,10 @@ def inventory(dist: Path) -> dict[str, dict[str, Any]]:
         if not path.is_file() or path.name == RELEASE_FILE:
             continue
         key = path.relative_to(dist).as_posix()
+        # The pin archive is metadata about releases, not published data; a
+        # new pin would otherwise change the tree it is pinning.
+        if key.startswith(f"{RELEASE_DIR}/"):
+            continue
         found[key] = {"sha256": digest(path), "bytes": path.stat().st_size}
     return found
 
@@ -144,6 +153,10 @@ def main() -> None:
         help="re-hash the tree and report differences from the pin",
     )
     parser.add_argument(
+        "--replace", action="store_true",
+        help="supersede a pin that carries a different label",
+    )
+    parser.add_argument(
         "--allow-dirty", action="store_true",
         help="freeze even though the working tree has uncommitted changes. "
              "Refused by default: a pin naming a commit that does not "
@@ -174,6 +187,23 @@ def main() -> None:
             f"  dirty: {', '.join(built.get('dirty_paths') or [])[:300]}\n"
             f"Commit first, or pass --allow-dirty for a throwaway pin."
         )
+    # Superseding a candidate must be deliberate. An evaluation in progress
+    # names a label, and silently repointing that label at a different tree
+    # would invalidate the evaluation without leaving a trace.
+    existing = dist / RELEASE_FILE
+    if existing.is_file():
+        previous = json.loads(existing.read_text()).get("label")
+        if previous != args.label and not args.replace:
+            raise SystemExit(
+                f"this tree is already pinned as {previous!r}. Writing "
+                f"{args.label!r} over it would leave no record of what "
+                f"{previous!r} contained.\nPass --replace to supersede it; the "
+                f"old pin is kept in {RELEASE_DIR}/{previous}.json either way."
+            )
+
+    archive = dist / RELEASE_DIR
+    archive.mkdir(exist_ok=True)
+    (archive / f"{args.label}.json").write_text(json.dumps(pin, indent=1))
     (dist / RELEASE_FILE).write_text(json.dumps(pin, indent=1))
     print(f"froze {pin['n_files']} files, {pin['total_bytes'] / 1e9:.2f} GB")
     print(f"  label       {pin['label']}")
