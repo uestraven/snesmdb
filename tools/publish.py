@@ -34,6 +34,7 @@ from snesmdb import (  # noqa: E402
     brr,
     clock as clock_mod,
     corpus as corpus_mod,
+    drivers as drivers_mod,
     envelope as envelope_mod,
     events as events_mod,
     provenance as provenance_mod,
@@ -49,6 +50,35 @@ TICKS = grid_mod.TICKS_PER_SECOND
 #: The published-tree schema names and the index document live in the library,
 #: so the verifier checks the same definition this writes rather than a copy.
 INTAKE_SCHEMA = corpus_mod.INTAKE_SCHEMA
+
+
+def _retire_summary_names(text: str) -> str:
+    """Rename a field in `summary.json` that the changelog says was retired.
+
+    `summary.json` is written by the extractor, which has not re-run since
+    `max_polyphony` was renamed -- so the distribution went out announcing in
+    `CHANGELOG.md` that the name "was neither polyphony nor voices" while
+    `summary.json` still published it, with no caveat and no companion
+    fields. A reader starting there would revive the exact misreading the
+    rename was made to prevent.
+
+    The value is correct for what the old field measured, so this renames
+    rather than drops: the figure was always the largest number of distinct
+    PITCHES on a row, over pitched notes only.
+    """
+    out = json.loads(text)
+    scores = out.get("scores")
+    if isinstance(scores, dict) and "max_polyphony" in scores:
+        scores["max_distinct_pitched_notes_per_row"] = scores.pop(
+            "max_polyphony"
+        )
+        scores["note"] = (
+            "max_distinct_pitched_notes_per_row was published as "
+            "max_polyphony before snesmdb.events.v3; it counts distinct "
+            "pitches among pitched notes, not voices. For voice concurrency "
+            "see scores/*.json.gz stats.max_voices_sounding_per_row."
+        )
+    return json.dumps(out, indent=1)
 
 
 def write_json_gz(path: Path, payload: Any) -> None:
@@ -255,6 +285,12 @@ def main() -> None:
             # `extraction_status`: 42 effects contain recoverable pitch and 11
             # music tracks contain none, so neither field implies the other.
             "track_class": row.get("track_class"),
+            # SCHEMA.md says an index row carries the same fields as
+            # tracks.csv. Four did not -- the slug and the three driver
+            # columns -- so a documented join by slug failed and the slug had
+            # to be parsed out of `track_id` instead.
+            "game_slug": events_mod.game_slug(row["track_id"]),
+            **drivers_mod.for_slug(events_mod.game_slug(row["track_id"])),
         }
 
         # MIDI: available for every track with any pitched note.
@@ -359,10 +395,27 @@ def main() -> None:
                     # Multiply a row index by this to get a sequencer row.
                     # None means it is not known -- not that it is 1.
                     "software_divisor_m": _software_divisor(row, track_clock.hz),
-                    # The write-cadence estimate the divisor comes from. It is
-                    # the SEQUENCER rate, not the timer, and it is absent for
-                    # 797 tracks and wrong for a documented 20.
-                    "driver_tick_hz": (row.get("tick") or {}).get("hz"),
+                    # The write-cadence estimate the divisor comes from. It
+                    # is the SEQUENCER rate, not the timer.
+                    #
+                    # NULL WHERE THE ESTIMATE WAS REFUSED. This published the
+                    # rejected value on all 1,316 tracks while the
+                    # documentation beside it promised "absent for 797" and
+                    # "null, never 1, where unknown" -- so a filter on
+                    # non-null returned 1,316 instead of 519 and admitted 797
+                    # estimates this project's own `tick.found` flag had
+                    # refused. An evaluator found Actraiser tracks with a
+                    # 500 Hz timer carrying 157.079 Hz here. The guard
+                    # existed; this field escaped it.
+                    "driver_tick_hz": (
+                        (row.get("tick") or {}).get("hz")
+                        if (row.get("tick") or {}).get("found") else None
+                    ),
+                    # Published so the absence is self-describing rather than
+                    # needing a second file to interpret.
+                    "driver_tick_found": bool(
+                        (row.get("tick") or {}).get("found")
+                    ),
                 },
                 "voices": [
                     {
@@ -473,7 +526,10 @@ def main() -> None:
                  "performance.json", "performance_music.json"):
         source = args.out_dir / name
         if source.is_file():
-            (args.dist_dir / name).write_text(source.read_text())
+            text = source.read_text()
+            if name == "summary.json":
+                text = _retire_summary_names(text)
+            (args.dist_dir / name).write_text(text)
     # CHANGELOG.md ships with the corpus because the index's top-level shape
     # changed: a download whose migration note stayed in the repository would
     # leave a consumer to discover the break by crashing.

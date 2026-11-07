@@ -339,6 +339,11 @@ def check_events(dist_dir: Path, report: Report, exhaustive: bool) -> None:
         )
 
 
+def _sample_entries(index, n=25):
+    """A spread of entries for a sampled check."""
+    return index[:: max(1, len(index) // n)] if index else []
+
+
 def check_dist(dist_dir: Path, report: Report, exhaustive: bool = False) -> None:
     index_path = dist_dir / "index.json"
     if not index_path.is_file():
@@ -418,6 +423,36 @@ def check_dist(dist_dir: Path, report: Report, exhaustive: bool = False) -> None
         "dist_slug_to_game_map_complete",
         set(declared_games) == slugs and bool(slugs),
         f"{len(declared_games)} slugs declared for {len(slugs)} in use",
+    )
+    # A published estimate must be absent where it was refused. This field
+    # published the rejected value on all 1,316 tracks while the docs promised
+    # it was absent for 797, so a filter on non-null admitted them silently.
+    ticks = 0
+    for entry in index if exhaustive else _sample_entries(index):
+        path = dist_dir / entry.get("intake", "")
+        if not entry.get("intake") or not path.is_file():
+            continue
+        with gzip.open(path, "rt") as handle:
+            timing = (json.load(handle).get("timing") or {})
+        if (timing.get("driver_tick_hz") is None) != (
+            not timing.get("driver_tick_found")
+        ):
+            ticks += 1
+    report.check(
+        "dist_refused_tick_estimates_are_null",
+        ticks == 0,
+        f"{ticks} tracks whose driver_tick_hz disagrees with "
+        f"driver_tick_found",
+    )
+    # The retired name must not reappear under a different roof.
+    summary_text = (dist_dir / "summary.json").read_text() if (
+        dist_dir / "summary.json"
+    ).is_file() else "{}"
+    report.check(
+        "dist_no_retired_field_names",
+        '"max_polyphony"' not in summary_text,
+        "summary.json still publishes max_polyphony"
+        if '"max_polyphony"' in summary_text else "none present",
     )
     report.check(
         "dist_scores_cover_index",

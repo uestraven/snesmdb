@@ -20,6 +20,100 @@ version.
 
 ---
 
+## `gate5-rc6` — the second evaluation's findings
+
+A second independent evaluation of `gate5-rc5` returned **READY WITH
+LIMITATIONS** with thirteen findings. It also validated the previous round:
+working from `SCHEMA.md` alone the evaluator reconstructed
+`performance_music.json`'s per-game voice statistic to a **median error of
+0.0079 voices across 22 games**, matched the published per-game maxima on
+**22 of 22**, and agreed with the new `max_voices_sounding_per_row` on
+**1,315 of 1,316 tracks** — the one exception being a 6.42 ms event both row
+grids are too coarse to see.
+
+### Data corrections
+
+**`driver_tick_hz` is now null where the estimate was refused.** It published
+the rejected value on all 1,316 tracks while the documentation beside it
+promised "absent for 797" and "null, never 1, where unknown" — so a filter on
+non-null returned 1,316 instead of 519 and admitted 797 refused estimates
+with no error. Actraiser tracks with a 500 Hz timer carried 157.079 Hz. Each
+intake record now also carries **`driver_tick_found`**, so the absence is
+self-describing.
+
+**`pitch_confidence` is null where there is no pitch.** 341 rows published
+`pitch_status: unrecoverable` with a `high` or `medium` confidence —
+confidence in a pitch that does not exist.
+
+**`summary.json` no longer publishes `max_polyphony`.** The field the previous
+release renamed survived under the old name in a file the extractor writes,
+with no caveat, so a reader starting there could revive exactly the
+misreading the rename was made to prevent. It now appears as
+`max_distinct_pitched_notes_per_row` with a note.
+
+**Index track rows carry `game_slug` and the three `driver*` fields.**
+`SCHEMA.md` said a row held the same fields as `tracks.csv`; four columns were
+missing, so a documented join by slug failed.
+
+**New: `pitch_register` on every event** — the raw 14-bit PITCH value the
+event wrote, beside the derived `midi_note`. The evaluator found deep, fast
+pitch oscillations in the step table, could not determine whether they were
+real driver sound design or a derivation artefact, and named this field as
+what would settle it.
+
+### A withdrawn claim
+
+**The Capcom interval-safety instruction is withdrawn.** This documentation
+said median deviation from a semitone ladder was "0.30 cents for Rare and
+10.67 cents for Capcom" and concluded interval work "is not safe for Capcom".
+Re-measured on the published corpus, **Capcom is 2.46 cents** and no driver
+exceeds 2.5. The 10.67 figure predates the voice-seeding fix, which corrected
+sample attribution for 148,422 notes — before it, notes from different samples
+pooled into one group, which inflates ladder deviation exactly this way. A
+researcher following the instruction would have excluded 77 sound Capcom
+tracks. The full per-driver table now ships, with its method and its two
+caveats.
+
+### A confound now documented
+
+**A gated voice is not an audible voice, and the gap is not uniform.** Breath
+of Fire 2 and Mega Man X hold a median 1.1–1.2 ms between a key-off and the
+next key-on on the same voice, against 27–64 ms elsewhere — a 50× spread — so
+any gated-voice measure saturates for those two games for a reason that is not
+musical. The evaluator nearly published a density comparison on that basis.
+`performance.json`'s own voice statistic carries the same exposure, and this is
+now stated where the measure is prescribed.
+
+### Documentation corrections
+
+- **`performance.json` is described at the right path and in full.** The
+  previous page put the display-name keying at the top level and three of its
+  four named fields at the wrong depth, so a reader's first script found zero
+  games; and it documented 4 of about 25 fields. All of them now have a unit
+  and a definition, including what `echo.n_sampled` counts.
+- The `duration_sec: null` count is attached to the right clause: of 159,584
+  nulls, **154,910 are legato steps and only 4,674 are truncated notes** — the
+  figure overstated right-censoring by 34×.
+- **`onset_sec` and `duration_sec` are rounded independently**, so a note can
+  cross the next onset on its voice by exactly 1 µs; 3,695 pairs across 106
+  tracks do. Documented, with how to handle it.
+- `pitch_confidence` is **binary in practice** — only `high` and `medium`
+  occur on rows that have a pitch.
+- The timbre section was left **syntactically broken** by the previous
+  release's own edit: an orphaned `**`, a sentence cut mid-clause, and an
+  opening that still asserted a usable codebook. Rewritten.
+- The pipeline diagram still showed the row clock being measured from write
+  cadence and a timbre class being emitted. Neither happens.
+- `README.md` said "78 rates"; there are 80. The `index.json` example still
+  showed `events.v2`. "1.78% outside MIDI 12–108" is **1.730%**, which the
+  same document already stated correctly elsewhere.
+- `README.md` pointed at a per-game legato breakdown that is not in the
+  distribution; replaced with the caveat that the share depends on the
+  definition — 54.7% of chains against 10.7% of steps under one reading.
+- The three figures near 1.458 million are now explained rather than left to
+  look inconsistent: 1,458,211 pitched attacks, 1,458,115 placed on a row,
+  1,458,120 MIDI note-ons. They reconcile exactly.
+
 ## `gate5-rc5` — two fields now mean what they say
 
 An independent researcher evaluated `gate5-rc3` using only the published

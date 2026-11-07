@@ -197,11 +197,25 @@ def _event(
             round(float(note["midi_note"]), 4)
             if status == PITCH_ESTIMATED else None
         ),
-        "pitch_confidence": note.get("pitch_confidence"),
+        # NULL when there is no pitch to be confident about. 341 rows
+        # published `unrecoverable` with a `high` or `medium` confidence --
+        # confidence in a pitch that does not exist -- which an evaluator
+        # reported as a contradiction, correctly.
+        "pitch_confidence": (
+            note.get("pitch_confidence") if status == PITCH_ESTIMATED else None
+        ),
         # Content identity of the decoded BRR block. Identifies the SOUND
         # SOURCE reproducibly; it is NOT an instrument label, and carries no
         # claim that a sample performs a consistent musical role.
         "sample_id": sample_id,
+        # The raw 14-bit PITCH register this event wrote, alongside the
+        # derived `midi_note`. Published so a reader can check a surprising
+        # pitch against the hardware value rather than taking the derivation
+        # on trust: an evaluator found deep, fast pitch oscillations in the
+        # step table, could not resolve whether they were real driver sound
+        # design or a derivation artefact, and named this field as what would
+        # settle it.
+        "pitch_register": note.get("_pitch_register"),
         # Register-derived amplitude controls at attack and sustain. NOT
         # measurements of perceived loudness, acoustic intensity, or
         # standardised MIDI velocity.
@@ -302,6 +316,14 @@ def build(
     """
     def levels(note: dict[str, Any]) -> dict[str, Any]:
         enriched = dict(note)
+        # The register this event wrote: a note's own PITCH, or the value a
+        # step wrote. Carried under a private key so `_event` reads one field
+        # for both origins.
+        enriched["_pitch_register"] = (
+            note.get("pitch_register")
+            if note.get("pitch_register") is not None
+            else note.get("pitch")
+        )
         attack = attack_level(note) if attack_level is not None else 0
         enriched["_attack_level"] = attack
         enriched["_sustain_level"] = (
@@ -340,6 +362,7 @@ def build(
         enriched["midi_note"] = step_midi_note(step, parent)
         enriched["start_sec"] = step.get("time_sec", 0.0)
         enriched["end_sec"] = None
+        enriched["_pitch_register"] = step.get("pitch")
         events.append(_event(
             enriched,
             sample_ids.get(int(parent.get("srcn", -1)), ""),

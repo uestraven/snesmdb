@@ -110,8 +110,11 @@ are kept out of the note stream deliberately: a note is observed at a hardware
 edge, a step is inferred from a register write the DSP cannot distinguish from
 a pitch bend, and the two are not equally strong claims. Each step names its
 parent note. Only about a third of them look melodic; the rest come from
-drivers using PITCH for continuous modulation, and the per-game breakdown is in
-the docs.
+drivers using PITCH for continuous modulation. The exact share depends on where
+the melodic threshold is put and on whether chains or steps are counted — an
+evaluator measured 54.7% of chains against 10.7% of steps for one definition,
+so treat "about a third" as a rough figure and derive your own from
+`events/*.json.gz`.
 
 ### Score formats
 
@@ -143,7 +146,7 @@ scale, so equal means the note holds and lower means it decays to that level.
 tick, read from the `$F1`/`$FA`–`$FC` registers the SPC file carries — a
 uniform *definition* but not a uniform *duration*, since the rate differs per
 game (2.00 ms in Super Mario World against 12.50 ms in Donkey Kong Country,
-78 rates corpus-wide).
+80 rates corpus-wide).
 
 The `uniform` block re-indexes the same notes at a fixed **100 Hz**, so a row
 means exactly 10 ms in every track. **Use `uniform` for anything that compares

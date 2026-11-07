@@ -36,10 +36,16 @@ the tag gives one per *track*.
 SPC ─► emulate SPC700, log every DSP write ─► per-voice note events
          (blargg's snes_spc, unpatched; hook via its own macro)
      ─► decode each BRR sample from ARAM, estimate f0 ─► note numbers
-     ─► measure the driver's timer from write cadence ─► the row clock
+     ─► read the SPC700 timer registers the SPC carries ─► the row clock
+     ─► (also: estimate the driver's write cadence, published where it
+         passes its own plausibility check, and used for nothing else)
      ─► (also: fit a period to onsets, reported but not used for rows)
-     ─► cluster sample features                     ─► timbre classes
      ─► emit
+
+An earlier version of this diagram showed the row clock being *measured from
+write cadence* and a *timbre class* being emitted. Neither is what happens:
+the clock is read from the `$F1`/`$FA`–`$FC` registers, and the timbre
+clustering failed its own validation and ships nothing.
 ```
 
 No step identifies the driver. Nothing game-specific enters the pipeline, and
@@ -73,7 +79,7 @@ fixed window. A flat 60 s captured 8.8% of Final Fantasy VI's 683-second
 ```json
 {
   "schema": "snesmdb.index.v1",
-  "formats": {"events": "snesmdb.events.v2", "intake": "snesmdb.intake.v1",
+  "formats": {"events": "snesmdb.events.v3", "intake": "snesmdb.intake.v1",
               "sample_id": "snesmdb.sample.v1", "uniform_hz": 100.0,
               "tracks_csv": "snesmdb.tracks.v1"},
   "corpus": {"n_tracks": 1316, "n_games": 22, "n_events": 2018409,
@@ -236,7 +242,7 @@ very low or very high fundamentals, they are harmless if filtered and
 silently corrupting if not, and the exact counts are in
 [SCHEMA.md](SCHEMA.md).
 
-**1.78% of pitched notes land outside MIDI 12–108**, down from 9.1%.
+**1.730% of pitched notes land outside MIDI 12–108**, down from 9.1%.
 Both estimators are ambiguous by factors of two — autocorrelation can latch
 onto twice the period, and the loop refinement's integer period count preserves
 whatever octave it was handed — so the octave is resolved against the spectrum
@@ -256,10 +262,39 @@ marginal. Every estimate carries `octave_shift` and `octave_margin` so a
 consumer can see what was moved and on what evidence, and every note carries
 `pitch_confidence`.
 
-Relative pitch within a sample is near-exact for some drivers and not others —
-median deviation from an equal-tempered ladder is 0.30 cents for Rare and
-**10.67 cents for Capcom**. Interval-level work is safe for Rare and Square and
-is not safe for Capcom.
+**Relative pitch within a sample is good everywhere, and the earlier claim to
+the contrary was stale.** Median deviation from an exact semitone ladder, per
+sample, measured on the published corpus over sample groups with at least 8
+notes, with a free offset:
+
+| driver | cents | | driver | cents |
+|---|---|---|---|---|
+| Factor 5 | 0.33 | | AKAO-derived | 0.46 |
+| Software Creations | 0.33 | | Konami | 0.47 |
+| AKAO (Square) | 0.34 | | Quintet | 0.74 |
+| Chunsoft | 0.37 | | N-SPC (Nintendo) | 0.77 |
+| Rare | 0.39 | | Neverland | 1.57 |
+| | | | Capcom | **2.46** |
+
+An earlier version of this document reported **10.67 cents for Capcom** and
+concluded that *"interval-level work is safe for Rare and Square and is not
+safe for Capcom"*. **That instruction is withdrawn.** The figure predates the
+voice-seeding fix described below, which corrected sample attribution for
+148,422 notes: before it, notes belonging to different samples were pooled
+into one sample group, which inflates ladder deviation exactly this way and
+hit Capcom hardest. Re-measured, Capcom is 2.46 cents — below the ~5-cent
+threshold at which melodic intervals are generally distinguishable — and no
+driver in the corpus exceeds 2.5.
+
+An independent evaluator could not reproduce the 10.67 figure, measured 2.69
+cents by their own method, and found that under a different reading the
+ranking inverted. They were right to report it.
+
+Two cautions on this table. It groups by `sample_id`, so it measures
+**relative** pitch within one sample and says nothing about absolute tuning,
+which remains unreliable. And it is keyed on `driver`, which is
+[curated external knowledge](SCHEMA.md) rather than anything measured from
+the SPC files — so read it as a hypothesis about engines, not a result.
 
 ## Voice state is seeded from the SPC snapshot
 
@@ -330,7 +365,21 @@ price of the rate is one note: doubling to 200 Hz recovers a single attack, at
 twice the rows and storage. That is the whole argument, and it is now a known
 quantity rather than a bound.
 
-### Known quantisation limitation
+### Three similar totals, and how they relate
+
+The documents use three figures near 1.458 million, and they are different
+quantities rather than an inconsistency:
+
+| figure | what it is |
+|---|---|
+| **1,458,211** | pitched note attacks — the benchmark denominator |
+| **1,458,115** | of those, placed on a score row (−91 out of range, −5 unplaced) |
+| **1,458,120** | MIDI note-ons written (the 91 out-of-range are dropped) |
+
+An evaluator checked the arithmetic and nearly reported them as a defect; they
+reconcile exactly, and the documents had never said so.
+
+## Known quantisation limitation
 
 > The 100 Hz uniform grid loses one repeated-note attack among 1,458,211
 > pitched events in the evaluated corpus. The affected passage occurs in
@@ -525,9 +574,21 @@ musical rows must either restrict to tracks where M is known or accept rows at
 timer resolution.
 
 `driver_tick_hz` is published beside it as the quantity M derives from. It is
-the SEQUENCER rate rather than the timer, is absent for 797 tracks, and is
-wrong for 20 that report exactly 2,048 ticks -- intra-burst write spacing
-mistaken for a timer. Those 20 are refused a divisor because their ratio is not
+the SEQUENCER rate rather than the timer, and it is **null on the 797 tracks
+where the estimate did not pass its own plausibility check** — 519 carry a
+value. Each record also carries `driver_tick_found`, so the absence is
+self-describing without consulting a second file.
+
+This field previously published the *refused* estimate on all 1,316 tracks
+while this paragraph promised it was absent for 797, so a filter on non-null
+returned every track and silently admitted 797 rejected values — Actraiser
+tracks with a 500 Hz timer carried 157.079 Hz. An evaluator found it. The
+guard existed in `scores[*].tick.found` and this field had escaped it;
+`software_divisor_m` beside it kept the contract exactly, null on 913 and set
+on 403.
+
+A further 20 tracks report exactly 2,048 ticks -- intra-burst write spacing
+mistaken for a timer. Those are refused a divisor because their ratio is not
 a clean integer, which is the guard working rather than an accident.
 
 ## Velocity is the attack; sustain is a separate channel
@@ -595,27 +656,37 @@ Phase inversion is still lost: velocity takes the magnitude, and a negative
 side volume inverts that side's phase, which two games do on over half their
 notes.
 
-## The timbre axis is a binary distinction, not a vocabulary
+## There is no usable timbre field
 
-`expressive` carries a class from a 5-class codebook over 1,162 distinct
-samples. **Only the tonal/percussive split was shown to transfer across games.**
+**`timbre_class` is the constant `-1` in every published file.** Nothing can be
+derived from it. No codebook ships. If you are looking for instrument identity,
+use `sample_id` — a content hash of the decoded audio, which identifies a sound
+source but is explicitly *not* an instrument label.
 
-Fitted on the 16 train games and applied to 6 unseen ones, the pitched/
-unpitched division transfers exactly, while register does not — one class moved
-**16 semitones** between training and held-out games. Cross-game agreement over
-the whole corpus sits at the shuffled-label null on every axis. So the finer
-structure describes each game's own sample bank.
+### Why, and what the earlier claim was
 
-Each score carries `timbre_validated: "tonal_vs_percussive_only"`. Use the
-class as a binary tonal/percussive flag.** That instruction was wrong and is
-withdrawn: `timbre_class` is the constant `-1` in every published file, so a
-tonal/percussive split computed from it partitions nothing. The score blocks
-still report `timbre_validated: "tonal_vs_percussive_only"`, which describes
-how far the *analysis* got, not a capability of the data. There is no usable
-timbre field in this distribution. **Do not treat class 3 as an instrument
+Milestone 5 fitted a 5-class codebook over 1,162 distinct samples and found
+that only the tonal/percussive split transferred across games: fitted on 16
+train games and applied to 6 unseen ones, the pitched/unpitched division
+transferred exactly, while register did not — one class moved **16 semitones**
+between training and held-out games. Cross-game agreement over the whole
+corpus sits at the shuffled-label null on every axis, so the finer structure
+describes each game's own sample bank and not a vocabulary.
 
-**Voice roles are not provided.** A role needs register and function, and
-register is exactly what fails to transfer.
+On that basis an earlier version of this document told researchers to *"use
+the class as a binary tonal/percussive flag"*. **That instruction was wrong
+and is withdrawn.** The classes were never written into the published files —
+every note carries `-1` — so a tonal/percussive split computed from the field
+partitions nothing. It was the one place in this documentation where following
+the instructions produced a *false* result rather than an unclear one, and an
+independent evaluator reported it as such.
+
+`expressive.timbre_validated` still reads `"tonal_vs_percussive_only"`. That
+describes **how far the analysis got**, not a capability of the data, and it
+will be removed when the score payload next changes shape.
+
+**Voice roles are not provided either.** A role needs register and function,
+and register is exactly what failed to transfer.
 
 ## MIDI drops things, and names them
 

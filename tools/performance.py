@@ -111,6 +111,26 @@ def voice_usage(notes: list[dict], render_ticks: int, step: int = TICKS // 50) -
             end = int(note["end"]) if note.get("end") is not None else following
             by_voice[voice].append((start, max(start, min(end, following))))
 
+    # THE CONFOUND, MEASURED AND PUBLISHED RATHER THAN WARNED ABOUT.
+    #
+    # `mean_voices_when_sounding` counts GATED voices. A driver that never
+    # releases a voice saturates it for a reason that is not musical: Breath
+    # of Fire 2 and Mega Man X hold a median 1.1-1.2 ms between a key-off and
+    # the next key-on on the same voice, against 27-64 ms elsewhere -- a 50x
+    # spread -- so they top any such ranking while sounding no denser. An
+    # evaluator caught this and nearly published a density comparison on it.
+    #
+    # A prose caveat only reaches a reader who is already suspicious. These
+    # two numbers sit beside the statistic they undermine, so a researcher
+    # comparing games sees the confound in the same table.
+    gaps: list[int] = []
+    for intervals in by_voice.values():
+        ordered = sorted(intervals)
+        for (_, end), (next_start, _) in zip(ordered, ordered[1:]):
+            if next_start >= end:
+                gaps.append(next_start - end)
+    gated = sum(b - a for intervals in by_voice.values() for a, b in intervals)
+
     counts = Counter()
     samples = 0
     for t in range(0, render_ticks, step):
@@ -127,6 +147,18 @@ def voice_usage(notes: list[dict], render_ticks: int, step: int = TICKS // 50) -
     weighted = sum(k * v for k, v in counts.items()) / samples
     sounding = [k for k in counts for _ in range(counts[k]) if k > 0]
     return {
+        # Median silence between a key-off and the next key-on on the same
+        # voice. Near zero means the driver holds voices gated, so the gated
+        # count overstates audible density.
+        "median_release_gap_ms": (
+            round(statistics.median(gaps) / TICKS * 1000.0, 3) if gaps else None
+        ),
+        # Share of available voice-time spent gated. Approaching 1.0 means a
+        # gated-voice measure is saturated and cannot discriminate.
+        "gated_duty_cycle": (
+            round(gated / (render_ticks * max(len(by_voice), 1)), 4)
+            if render_ticks else None
+        ),
         "mean_voices": round(weighted, 3),
         "mean_voices_when_sounding": round(
             statistics.fmean(sounding), 3
@@ -357,6 +389,7 @@ def main() -> None:
     for game, tracks in sorted(by_game.items()):
         voice_means, voice_sounding, silent, maxv = [], [], [], []
         lengths_median, short, long_ = [], [], []
+        release_gaps, duty = [], []
         volumes, pans, hard, inverted = [], [], [], []
         corr_pos, corr_reg, corr_voice = [], [], []
         adsr_frac, adsr_words, attack, sustain = [], [], [], []
@@ -372,6 +405,10 @@ def main() -> None:
                 voice_means.append(v["mean_voices"])
                 voice_sounding.append(v["mean_voices_when_sounding"])
                 silent.append(v["silent_fraction"])
+                if v.get("median_release_gap_ms") is not None:
+                    release_gaps.append(v["median_release_gap_ms"])
+                if v.get("gated_duty_cycle") is not None:
+                    duty.append(v["gated_duty_cycle"])
                 maxv.append(v["max_voices"])
             n = note_lengths(notes)
             if n:
@@ -414,6 +451,12 @@ def main() -> None:
                 "mean_when_sounding": med(voice_sounding),
                 "silent_fraction": med(silent),
                 "max": max(maxv) if maxv else None,
+                # Read these two BEFORE comparing mean_when_sounding across
+                # games. A near-zero release gap with a duty cycle close to
+                # 1.0 means the driver holds voices gated and the mean is
+                # saturated by engine policy rather than by musical density.
+                "median_release_gap_ms": med(release_gaps),
+                "gated_duty_cycle": med(duty),
             },
             "note_lengths": {
                 "median_sec": med(lengths_median),
