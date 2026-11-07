@@ -1450,6 +1450,74 @@ over an existing one without `--replace`, and archives every pin under
 repointing it at a different tree would invalidate the evaluation without
 leaving a trace.
 
+### The `gate5-rc2` transfer incident, and what it exposed
+
+An evaluator reported `gate5-rc2` as corrupt: `index.json` truncated to 56.0%
+of its length, mid-string, at exactly 768 KiB (`0xC0000`), with
+`json.load` failing on an unterminated string. The report was careful,
+reproducible, and correct about everything it measured.
+
+**The release was not corrupt.** `index.json` in both the source tree and the
+delivered package is 1,405,102 bytes with sha256 `577f089bb0923ae0…`, exactly
+as `RELEASE.json` declares, and parses cleanly; both trees verify 5,200 of
+5,200 intact. The damage was introduced by the copy that created the
+evaluator's working tree — a short write, as the clean binary boundary
+suggested.
+
+One inference in the report inverted: it read `index.json`'s mtime as *later*
+than the freeze and concluded something had rewritten it afterwards. In the
+delivered package `index.json` carries mtime 07:05:22, preserved from publish
+by `copytree`, while `RELEASE.json` carries 07:28:07 matching `frozen_utc` —
+index older than freeze, as it should be. The `07:34`/`07:35` stamps belonged
+to the copy operation that damaged the tree.
+
+**That an evaluator could not distinguish a damaged transfer from a damaged
+release is the real finding, and it is ours.** Four defects followed from it:
+
+1. **`make_research_package.py` never verified the copy.** It checked the
+   source pin before copying and audited exclusions after, but never re-hashed
+   the copied bytes — so a short write during *our* copy would have shipped
+   silently. It now verifies the copied tree and deletes the package on
+   mismatch.
+2. **No verifier shipped.** The blanket `.py` exclusion denied the recipient
+   any supplied way to answer the question, so they wrote their own. An
+   integrity checker is not the extraction source under evaluation;
+   excluding it was over-broad. `verify.py` now ships, reports a wrong
+   *length* as a damaged copy and a wrong *hash* as altered content, and says
+   "re-copy before reporting anything".
+3. **`game` and `track_class` lived in `index.json` and nowhere else**, while
+   the documentation emphatically instructs filtering a melodic study on
+   `track_class`. Losing one file made that instruction impossible to follow
+   for 582 tracks and left only `extraction_status` — the proxy the same
+   documentation forbids. Both fields now travel in every event table header
+   (`events.v2`, purely additive) and in a new `tracks.csv`, which degrades
+   line by line where a truncated JSON document does not degrade at all.
+4. **`DATASET.md` named `records/*.json` and `raw/*.jsonl.gz` as "preserved
+   and published".** Neither is distributed — one is intermediate build
+   output, the other the compressed-log form this project's own rules exclude
+   — so the microtiming section directed researchers to two trees that do not
+   exist in the distribution, as did the `axe-03` example. Both now point at
+   `events/*.json.gz`, which carries the same onsets to microsecond
+   resolution and was always the right answer. Verified directly: `axe-03`
+   carries `event_id` 940 and 941, 5.106 ms apart, matching the documented
+   figures.
+
+Also fixed: the slug→game map is published (`index.json` → `games`,
+`tracks.csv` → `game_slug`, and every event header). The evaluator had to
+reconstruct it by matching per-game track counts and then break a tie between
+two 66-track games from their clock rates — ingenious, and reverse
+engineering of something this project already knew. The slugs are not
+guessable: `mo2` is Earthbound (Mother 2), `sd2` is Secret of Mana (Seiken
+Densetsu 2), `ed2` is Lufia 2, `dkq` is Donkey Kong Country 2. References to
+this build log as the authoritative defect list were removed from the
+distributed documents, since the log is deliberately not distributed.
+
+What the incident did **not** touch: every corpus-level total the evaluator
+recomputed from the 1,316 intact event files matched the declared `corpus`
+block exactly — events, pitched events, attacks, legato steps, rendered
+seconds and the status census. The extraction and the data were never in
+question.
+
 ### Gate 5: researcher acceptance
 
 The first test of whether this is what was intended, rather than whether the

@@ -1,4 +1,4 @@
-"""`snesmdb.events.v1` — the researcher-facing event table.
+"""`snesmdb.events.v2` — the researcher-facing event table.
 
 Everything else this project publishes is shaped by the hardware: scores
 indexed by DSP voice and row, notes carrying `srcn` and register values, a row
@@ -43,7 +43,25 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
-SCHEMA = "snesmdb.events.v1"
+SCHEMA = "snesmdb.events.v2"
+
+#: v2 adds `game`, `game_slug` and `track_class` to the header. The change is
+#: PURELY ADDITIVE -- nothing was renamed, moved or removed, so a v1 reader
+#: works unchanged -- and the version is still bumped, because the version
+#: exists so a consumer can tell which fields to expect. Two trees both
+#: claiming `v1` while carrying different fields is precisely the silent
+#: incompatibility that versioning is supposed to prevent.
+#:
+#: The reason for the addition is a defect report. `game` and `track_class`
+#: lived in `index.json` and NOWHERE else, while the documentation instructs,
+#: emphatically, that a melodic study should filter on `track_class`. An
+#: evaluator who received a truncated copy of `index.json` lost both fields for
+#: 44% of tracks and found `track_class` unrecoverable from any other
+#: published file -- leaving only `extraction_status`, which is the proxy the
+#: documentation explicitly forbids. A single file being the sole home of a
+#: field researchers are told to filter on is a single point of failure, so the
+#: filter fields now travel with the data they describe.
+PREVIOUS_SCHEMA = "snesmdb.events.v1"
 
 #: Why an event has, or has not, a pitch.
 PITCH_ESTIMATED = "estimated"
@@ -173,6 +191,20 @@ def _event(
     }
 
 
+def game_slug(track_id: str) -> str:
+    """The game's short identifier, taken from the track id.
+
+    Published rather than left to be inferred. The slugs are not guessable
+    from the game names -- `mo2` is Earthbound (Mother 2), `sd2` is Secret of
+    Mana (Seiken Densetsu 2), `ed2` is Lufia 2, `dkq` is Donkey Kong Country 2
+    -- and an evaluator who needed the mapping had to reconstruct it by
+    matching per-game track counts, then break a tie between two 66-track
+    games from their clock rates. That is reverse engineering of something
+    this project simply knows.
+    """
+    return track_id.split(":")[0].split("-")[0]
+
+
 def build(
     track_id: str,
     ok: bool,
@@ -182,6 +214,8 @@ def build(
     legato_steps: Iterable[dict[str, Any]] = (),
     attack_level: Any = None,
     sustain_level: Any = None,
+    game: str | None = None,
+    track_class: str | None = None,
 ) -> dict[str, Any]:
     """One track's event table.
 
@@ -189,6 +223,10 @@ def build(
     does not name a fixed sample even within one game. `attack_level` and
     `sustain_level` are callables, so the amplitude derivation stays with the
     scoring code that owns it.
+
+    `game` and `track_class` are carried here as well as in the index, so that
+    the two fields a researcher is told to filter on survive the loss of any
+    single file. See the note on `SCHEMA`.
     """
     def levels(note: dict[str, Any]) -> dict[str, Any]:
         enriched = dict(note)
@@ -241,6 +279,12 @@ def build(
     return {
         "schema": SCHEMA,
         "track_id": track_id,
+        # Denormalised deliberately. These describe the track, not the events,
+        # and duplicating them is the price of not having a single file whose
+        # loss takes the filter fields with it.
+        "game": game,
+        "game_slug": game_slug(track_id),
+        "track_class": track_class,
         "duration_sec": round(float(duration_sec), 4),
         "extraction_status": extraction_status(ok, len(events), pitched),
         "event_count": len(events),

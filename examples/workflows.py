@@ -35,7 +35,18 @@ from typing import Any
 #: The index shapes this code accepts. `snesmdb.index.v1` made the index a
 #: document; before that it was a bare list of track rows.
 INDEX_SCHEMA = "snesmdb.index.v1"
-EVENTS_SCHEMA = "snesmdb.events.v1"
+
+#: The event-table versions this script understands, newest first. A READER
+#: SHOULD ACCEPT EVERY VERSION IT KNOWS, not only the one it was written
+#: against. This script originally tested the schema string for equality with
+#: `v1` and refused `v2` outright -- even though v2 only ADDS fields and every
+#: field this code touches is unchanged. That is worth noting because the
+#: changelog claimed "a reader written for v1 works unchanged", and a reader
+#: doing strict equality does not. Both statements are now precise: field
+#: access is unaffected; a consumer pinning the exact string must add the new
+#: version to its accepted set.
+SUPPORTED_EVENT_SCHEMAS = ("snesmdb.events.v2", "snesmdb.events.v1")
+EVENTS_SCHEMA = SUPPORTED_EVENT_SCHEMAS[0]
 
 #: A pitch is usable as a pitch only in this state. The other three say WHY
 #: there is no note number -- hardware noise, pitch modulation from the
@@ -85,8 +96,11 @@ def load_events(dist: Path, entry: dict[str, Any]) -> dict[str, Any]:
     """
     with gzip.open(dist / entry["events"], "rt") as handle:
         table = json.load(handle)
-    if table.get("schema") != EVENTS_SCHEMA:
-        raise SystemExit(f"{entry['track_id']}: unexpected event schema")
+    if table.get("schema") not in SUPPORTED_EVENT_SCHEMAS:
+        raise SystemExit(
+            f"{entry['track_id']}: event schema {table.get('schema')!r} is "
+            f"not one this script knows ({', '.join(SUPPORTED_EVENT_SCHEMAS)})"
+        )
     for field in ("track_id", "event_count", "pitched_event_count",
                   "attack_count", "extraction_status"):
         if entry.get(field) != table.get(field):

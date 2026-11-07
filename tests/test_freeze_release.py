@@ -24,7 +24,7 @@ def _tree(root: Path) -> Path:
     (dist / "events").mkdir(parents=True)
     (dist / "index.json").write_text(json.dumps({
         "schema": "snesmdb.index.v1",
-        "formats": {"events": "snesmdb.events.v1"},
+        "formats": {"events": "snesmdb.events.v2"},
         "corpus": {"n_tracks": 1},
         "tracks": [{"track_id": "x:1"}],
     }))

@@ -53,9 +53,19 @@ EXCLUDED_DOCS = (
 #: Checked by walking the result, not by trusting the copy step.
 FORBIDDEN_NAMES = (".git", "src", "tests", "examples", "data", "build",
                    "vendor", ".venv", "tools")
+#: The ONE executable the package carries. A recipient needs a way to check
+#: that what arrived is what was sent, and a blanket ban on `.py` denied them
+#: that: an evaluator received a copy whose `index.json` had been truncated
+#: mid-string by a short write at a 768 KiB boundary, could not tell a
+#: transfer failure from a packaging failure, and wrote their own verifier
+#: before concluding -- reasonably but wrongly -- that the release was
+#: corrupt. An integrity checker is not the extraction source under
+#: evaluation, and excluding it was over-broad.
+VERIFY_SCRIPT = "verify.py"
+
 FORBIDDEN_SUFFIXES = (
     # Source and test code: the evaluator must read the artifact, not the
-    # program that produced it.
+    # program that produced it. `verify.py` is the sole exception.
     ".py", ".cpp", ".h", ".hpp", ".c",
     # The copyrighted source material and anything audio. These never leave
     # the machine they were ripped on; the licence is narrower than research
@@ -79,6 +89,8 @@ def audit(package: Path) -> list[tuple[str, str]]:
             found.append((key, "a development note"))
             continue
         if not path.is_file():
+            continue
+        if key == VERIFY_SCRIPT:
             continue
         lowered = path.name.lower()
         for suffix in FORBIDDEN_SUFFIXES:
@@ -106,10 +118,11 @@ documentation, and they are what the project intends researchers to work from.
 
 | path | contents |
 |---|---|
+| `verify.py` | **run this first** — checks the copy against its hashes |
 | `dist/` | the complete frozen distribution — {n_files} files |
 | `README.md` | what the project is and how the formats relate |
 | `DATASET.md` | the dataset reference: every format, and where the data is wrong |
-| `CHANGELOG.md` | published format versions and the one breaking change so far |
+| `CHANGELOG.md` | published format versions and the breaking changes so far |
 
 `DATASET.md` and `CHANGELOG.md` also appear inside `dist/`, as they do in any
 download. The copies at the top level are identical.
@@ -127,12 +140,35 @@ there. For most questions the per-track event tables in `dist/events/` are the
 intended entry point; `DATASET.md` explains the alternatives and when the
 hardware-indexed formats are the better choice.
 
-## This distribution is pinned
+**No field lives in only one file.** `dist/tracks.csv` carries the same
+per-track metadata one line at a time, and each event table repeats its own
+`game`, `game_slug` and `track_class` in its header. So the two fields the
+documentation tells you to filter on survive the loss of any single file, and
+a partial copy degrades row by row instead of all at once.
+`index.json` also carries a `games` block mapping each track-id slug to its
+game name — `mo2` is Earthbound, `sd2` is Secret of Mana — which is not
+guessable and should never have had to be inferred.
 
-`dist/RELEASE.json` records a SHA-256 for every file, the corpus counts, and
-the commit that produced the tree. If you need to confirm that what you have
-is unmodified, the hashes in that file are the reference. Every number quoted
-in the documentation refers to this exact tree.
+## Verify this copy first
+
+```sh
+python3 verify.py
+```
+
+**Do this before trusting any number in the data or the documentation.** It
+needs only the standard library, takes a few seconds, and re-hashes every file
+against `dist/RELEASE.json`, which records a SHA-256 and a byte count for all
+{n_files} of them.
+
+This is not a formality. A copy of this distribution once arrived with
+`index.json` truncated mid-string by a short write at a 768 KiB boundary. The
+corpus data was perfect and the manifest was unparseable — and because the
+manifest is the documented entry point, the damage read as a defect in the
+release rather than in the transfer. **A wrong byte count means the copy
+failed: re-copy and re-run before reporting anything.** A correct count with a
+wrong hash means something altered the contents.
+
+Every number quoted in the documentation refers to this exact tree.
 
 ## What is deliberately not supplied
 
@@ -204,11 +240,31 @@ def main() -> None:
             raise SystemExit(f"missing public document: {source}")
         (package / name).write_text(path.read_text())
 
+    shutil.copyfile(
+        Path(__file__).resolve().parent / "package_verify.py",
+        package / VERIFY_SCRIPT,
+    )
+
     index = json.loads((dist / "index.json").read_text())
     n_files = pin.get("n_files", 0)
     (package / "START-HERE.md").write_text(
         instructions(label, index, n_files)
     )
+
+    # VERIFY THE COPY, not just the source. The source pin was checked before
+    # copying, which says nothing about whether the copy succeeded: a short
+    # write during this step would have shipped silently, and that is exactly
+    # the failure an evaluator hit one copy further downstream. Re-hashing
+    # here is the difference between "the tree we meant to send was good" and
+    # "the tree we are sending is good".
+    copied = freeze.verify(package / "dist")
+    if copied:
+        shutil.rmtree(package)
+        raise SystemExit(
+            f"the copied tree does not match the pin ({copied} difference(s)) "
+            f"-- the copy failed. The package has been deleted rather than "
+            f"shipped."
+        )
 
     problems = audit(package)
     if problems:

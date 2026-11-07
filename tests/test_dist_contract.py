@@ -198,7 +198,7 @@ def test_the_uniform_score_is_shorter_than_a_fast_primary_grid():
 # Gate 2: events.v1 -- the researcher-facing event table
 # --------------------------------------------------------------------------
 
-EVENTS_SCHEMA = "snesmdb.events.v1"
+EVENTS_SCHEMA = "snesmdb.events.v2"
 
 #: An absence of recovered pitch must never be readable as extraction failure
 #: or as musical silence. These four are distinct states and a researcher has
@@ -532,7 +532,7 @@ def test_the_index_names_the_schema_of_every_published_format():
     """So a consumer can check compatibility per format rather than guessing
     from the corpus version."""
     formats = _index_meta()["formats"]
-    assert formats["events"] == "snesmdb.events.v1"
+    assert formats["events"] == EVENTS_SCHEMA
     assert formats["intake"] == "snesmdb.intake.v1"
     assert formats["sample_id"] == "snesmdb.sample.v1"
     assert float(formats["uniform_hz"]) == 100.0

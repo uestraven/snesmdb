@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 import publish  # noqa: E402
 
-PAYLOAD = {"schema": "snesmdb.events.v1", "events": [{"onset_sec": 0.5}]}
+PAYLOAD = {"schema": "snesmdb.events.v2", "events": [{"onset_sec": 0.5}]}
 
 
 def test_identical_content_produces_identical_bytes(tmp_path):

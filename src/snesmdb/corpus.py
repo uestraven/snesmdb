@@ -23,9 +23,21 @@ contract, and it cannot do that honestly by importing a copy.
 
 from __future__ import annotations
 
+import csv
+import io
 from typing import Any
 
 from . import events, sampleid, scores
+
+#: Columns of `tracks.csv`, in order. The per-track metadata in a form that
+#: degrades gracefully: a truncated CSV loses its tail and keeps every
+#: complete line, where a truncated JSON document is unparseable in full.
+TRACKS_CSV_COLUMNS = (
+    "track_id", "game_slug", "game", "title", "composers", "track_class",
+    "extraction_status", "split", "render_seconds", "n_notes",
+    "event_count", "pitched_event_count", "attack_count",
+    "legato_step_count",
+)
 
 #: The index's own schema.
 INDEX_SCHEMA = "snesmdb.index.v1"
@@ -33,6 +45,10 @@ INDEX_SCHEMA = "snesmdb.index.v1"
 #: The intake tree's schema, named once. The index declares it and the payload
 #: carries it; a literal in both places is an invitation for them to disagree.
 INTAKE_SCHEMA = "snesmdb.intake.v1"
+
+#: `tracks.csv`'s schema. Versioned like the others so a consumer can tell
+#: which columns to expect.
+TRACKS_CSV_SCHEMA = "snesmdb.tracks.v1"
 
 
 def formats() -> dict[str, Any]:
@@ -46,6 +62,7 @@ def formats() -> dict[str, Any]:
         "intake": INTAKE_SCHEMA,
         "sample_id": sampleid.SCHEMA,
         "uniform_hz": scores.UNIFORM_HZ,
+        "tracks_csv": TRACKS_CSV_SCHEMA,
     }
 
 
@@ -82,8 +99,45 @@ def index_document(tracks: list[dict[str, Any]]) -> dict[str, Any]:
             "track_classes": classes,
             "extraction_statuses": statuses,
         },
+        # Slug to game name. Load-bearing for per-game work and previously
+        # inferrable only by counting tracks per game.
+        "games": games(tracks),
         "tracks": tracks,
     }
+
+
+def games(tracks: list[dict[str, Any]]) -> dict[str, str]:
+    """Slug to game name, published rather than left to be inferred.
+
+    The slugs are not derivable from the names: `mo2` is Earthbound (Mother
+    2), `sd2` is Secret of Mana (Seiken Densetsu 2), `ed2` is Lufia 2, `dkq`
+    is Donkey Kong Country 2. An evaluator who needed this had to match
+    per-game track counts and then break a tie between two 66-track games
+    using their clock rates -- correct, ingenious, and reverse engineering of
+    something the project already knows.
+    """
+    found: dict[str, str] = {}
+    for entry in tracks:
+        slug = events.game_slug(str(entry.get("track_id", "")))
+        name = entry.get("game")
+        if slug and name:
+            found.setdefault(slug, name)
+    return dict(sorted(found.items()))
+
+
+def tracks_csv(tracks: list[dict[str, Any]]) -> str:
+    """`tracks.csv` -- the per-track metadata, one line per track."""
+    out = io.StringIO()
+    writer = csv.writer(out, lineterminator="\n")
+    writer.writerow(TRACKS_CSV_COLUMNS)
+    for entry in sorted(tracks, key=lambda e: str(e.get("track_id"))):
+        row = dict(entry)
+        row["game_slug"] = events.game_slug(str(entry.get("track_id", "")))
+        # Semicolons, because a composer list inside a CSV cell must not
+        # collide with the delimiter.
+        row["composers"] = "; ".join(entry.get("composers") or [])
+        writer.writerow([row.get(column, "") for column in TRACKS_CSV_COLUMNS])
+    return out.getvalue()
 
 
 def tracks_of(raw: Any) -> list[dict[str, Any]]:

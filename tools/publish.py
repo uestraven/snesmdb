@@ -390,7 +390,7 @@ def main() -> None:
                 counts["with_software_divisor"] += 1
             entry["intake"] = f"intake/{stem}.json.gz"
 
-        # events.v1 -- the researcher-facing table. Flat, in seconds, pitched
+        # events.v2 -- the researcher-facing table. Flat, in seconds, pitched
         # AND unpitched, with every absence explained.
         #
         # OUTSIDE the clock conditional, deliberately. This block used to sit
@@ -411,6 +411,8 @@ def main() -> None:
             legato_steps=record.get("legato_steps") or [],
             attack_level=scores_mod._velocity,
             sustain_level=scores_mod._sustain,
+            game=row["tag"]["game"],
+            track_class=row.get("track_class"),
         )
         write_json_gz(args.dist_dir / "events" / f"{stem}.json.gz", table)
         counts["events_written"] += 1
@@ -433,6 +435,13 @@ def main() -> None:
     (args.dist_dir / "index.json").write_text(
         json.dumps(corpus_mod.index_document(index), indent=1)
     )
+    # tracks.csv: the same per-track metadata in a format that degrades
+    # gracefully. A truncated JSON document is unparseable in its entirety --
+    # an evaluator received a copy of index.json short-written at a 768 KiB
+    # boundary and lost all 1,316 rows to one unterminated string, recovering
+    # 734 only by incremental decoding. A truncated CSV loses the tail and
+    # keeps every line before it.
+    (args.dist_dir / "tracks.csv").write_text(corpus_mod.tracks_csv(index))
     # Stands alone so the artifact is traceable without opening summary.json.
     (args.dist_dir / "provenance.json").write_text(json.dumps(
         provenance_mod.record(

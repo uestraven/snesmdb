@@ -56,7 +56,8 @@ fixed window. A flat 60 s captured 8.8% of Final Fantasy VI's 683-second
 
 | path | contents |
 |---|---|
-| `index.json` | the manifest: its own schema, each format's schema, corpus-level counts, and one row per track |
+| `index.json` | the manifest: its own schema, each format's schema, corpus-level counts, the slug→game map, and one row per track |
+| `tracks.csv` | the same per-track metadata, one line per track — use this if `index.json` is unavailable or damaged |
 | `events/*.json.gz` | **start here.** The flat event table, in seconds, pitched and unpitched |
 | `scores/*.json.gz` | the three score formats, plus the row clock and the onset grid |
 | `midi/*.mid` | 8-track type-1 MIDI, one track per DSP voice |
@@ -88,8 +89,9 @@ artifact can be read. Each one documents the mistake it avoids.
 ```json
 {
   "schema": "snesmdb.index.v1",
-  "formats": {"events": "snesmdb.events.v1", "intake": "snesmdb.intake.v1",
-              "sample_id": "snesmdb.sample.v1", "uniform_hz": 100.0},
+  "formats": {"events": "snesmdb.events.v2", "intake": "snesmdb.intake.v1",
+              "sample_id": "snesmdb.sample.v1", "uniform_hz": 100.0,
+              "tracks_csv": "snesmdb.tracks.v1"},
   "corpus": {"n_tracks": 1316, "n_games": 22, "n_events": 2018409,
              "n_pitched_events": 1560002, "n_attacks": 1863499,
              "track_classes": {"music": 1006, "jingle": 233,
@@ -97,13 +99,53 @@ artifact can be read. Each one documents the mistake it avoids.
              "extraction_statuses": {"complete_with_pitched_events": 1243,
                                      "complete_unpitched_only": 56,
                                      "complete_no_events": 17}},
+  "games": {"actr": "Actraiser", "mo2": "Earthbound", ... },
   "tracks": [ ... ]
 }
 ```
 
 Each format is versioned **separately**, because they move separately: the
-event table reached `v1` while the score payload was unchanged. Check the
+event table reached `v2` while the score payload was unchanged. Check the
 format you read, not a corpus version.
+
+### Track ids and game slugs
+
+A track id is `<slug>-<number>:<hash>`. The slug names the game and **is not
+guessable from it** — `mo2` is Earthbound (Mother 2), `sd2` is Secret of Mana
+(Seiken Densetsu 2), `ed2` is Lufia 2, `dkq` is Donkey Kong Country 2. The
+mapping is published in `index.json` under `games`, in `tracks.csv` as
+`game_slug`, and in each event table's header, so it never has to be inferred:
+
+| slug | game | slug | game |
+|---|---|---|---|
+| `actr` | Actraiser | `mo2` | Earthbound |
+| `axe` | Axelay | `mmx` | Megaman X |
+| `bof2` | Breath of Fire 2 | `plok` | Plok! |
+| `br` | Batman Returns | `scv4` | Super Castlevania 4 |
+| `ct` | Chrono Trigger | `sd2` | Secret of Mana |
+| `dkc` | Donkey Kong Country | `sm` | Super Metroid |
+| `dkq` | Donkey Kong Country 2 | `smw` | Super Mario World |
+| `dq5` | Dragon Quest 5 | `so` | Star Ocean |
+| `ed2` | Lufia 2 | `top` | Tales of Phantasia |
+| `ff6` | Final Fantasy 6 | `turr` | Super Turrican |
+| `kss` | Kirby Super Star | `loz3` | Legend of Zelda: A Link to the P |
+
+Game names come from the SPC files' ID666 tags and inherit their 32-character
+limit, which is why Zelda's is cut short.
+
+### No field lives in only one file
+
+`game` and `track_class` appear in `index.json`, in `tracks.csv`, **and** in
+every event table's header. The duplication is deliberate. The documentation
+tells you to filter a melodic study on `track_class`, and for a while that
+field existed in exactly one file — so a single damaged manifest made the
+instruction impossible to follow and left only `extraction_status`, which is
+the proxy this document explicitly tells you not to use. A field researchers
+are directed to filter on should not have a single point of failure.
+
+`tracks.csv` exists for the same reason in the other direction: a truncated
+JSON document is unparseable in its entirety, while a truncated CSV loses its
+tail and keeps every complete line before it.
 
 Every track row carries both `track_class` (`music`, `jingle`, `effect`,
 `drone`) and `extraction_status`, and **neither can be derived from the
@@ -118,7 +160,9 @@ shuffled null once the leaking features are removed -- and `timbre_class` is
 written as `-1` for every note in this corpus rather than offering a number
 from it. Shipping the file would invite a consumer to use a clustering this
 project has documented as not transferable. The analysis and the negative
-result are in [milestones.md](milestones.md); the artifact carries neither.
+result are in the project's build log, `docs/milestones.md`, which lives in
+the repository and is not part of this distribution; the artifact carries
+neither the codebook nor a usable class.
 
 ### The three score formats
 
@@ -277,7 +321,7 @@ is plain quantisation.
 | | |
 |---|---|
 | track | `axe-03` — Axelay, "Unkai" |
-| notes | voice 5, both MIDI 98.998, `srcn` 1, note ids 940 and 941 |
+| notes | voice 5, both MIDI 98.998, `srcn` 1, `event_id` 940 and 941 |
 | gap | 5,228 ticks = **5.1055 ms** |
 
 Two consecutive same-pitch attacks 5.1 ms apart, a retrigger around 196 Hz. At
@@ -285,8 +329,11 @@ Two consecutive same-pitch attacks 5.1 ms apart, a retrigger around 196 Hz. At
 rewritten as duration. At 200 Hz the rows are 5 ms and they separate, which is
 why the loss disappears there and nowhere beyond.
 
-Both notes are present with exact timestamps in `records/` and `raw/`. Only
-the 100 Hz score drops the second attack.
+**Both notes are present in this distribution**, in
+`events/axe-03_*.json.gz`, as two separate `key_on` events 5.1 ms apart. Only
+the 100 Hz uniform score drops the second attack. (Earlier versions of this
+document pointed at `records/` and `raw/` here, which are not distributed; the
+event table carries the same timestamps to microsecond resolution.)
 
 Two figures in this section were wrong before being measured directly, and the
 corrections are kept because the pattern is instructive. A 296-track sample
@@ -304,14 +351,27 @@ rate first considered for NES-MDB comparability, that loss is 174 events.
 
 Even at 100 Hz a row is 10 ms, and onsets move by 2.49 ms at the median and
 4.7 ms at p95. Durations under 10 ms cannot be represented at all (0.14% of
-notes). **Anyone studying expressive microtiming should use the original
-timestamps, not reconstructed score rows.** Those are preserved and published:
+notes). **Anyone studying expressive microtiming should use unquantised
+times, not reconstructed score rows.** In this distribution those are:
 
-- `records/*.json` — every note with `start` and `end` in **raw SPC700
-  clocks**, one tick being 0.00098 ms, unquantised
-- `raw/*.jsonl.gz` — the full timestamped DSP register write log, which is
-  what everything else is derived from
-- `intake/*.json.gz` — absolute times in seconds, in the published tree
+- `events/*.json.gz` — `onset_sec` and `duration_sec` in seconds to six
+  decimal places, about 1 µs, taken straight from the event log and never
+  placed on a grid. **This is the one to use.**
+- `intake/*.json.gz` — the same absolute times arranged per voice
+
+**Not in this distribution**, and named here because earlier versions of this
+document wrongly listed them as published:
+
+- `records/*.json` — notes with `start`/`end` in raw SPC700 clocks, one tick
+  being 0.00098 ms. Intermediate extraction output; it stays in the build
+  tree (`data/out/`) and is not distributed.
+- `raw/*.jsonl.gz` — the full timestamped DSP register write log. Not
+  distributed either: it is the compressed-log form that this project's own
+  distribution rules exclude.
+
+Both can be regenerated from SPC files you supply yourself, using the tools in
+the project repository. Neither is needed for microtiming work: `events`
+preserves the same onsets to microsecond resolution.
 
 The event log is the authoritative representation. Both score grids are
 derived, lossy views of it, and the uniform grid is additionally a convention
@@ -624,7 +684,7 @@ announced itself** -- each was found by reading output that looked fine.
 
 `tools/timbre_features.py` and `tools/timbre_codebook.py` are deliberately
 absent from this sequence. They still run, and the analysis is in
-[milestones.md](milestones.md), but their output is not published -- see the
+the repository's `docs/milestones.md`, but their output is not published -- see the
 note on `timbre_codebook.json` above.
 
 `publish.py` refuses to write inside a git work tree, because the output is

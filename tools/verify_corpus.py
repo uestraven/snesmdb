@@ -219,7 +219,7 @@ def check_uniform_preservation(out_dir: Path, report: Report, limit: int) -> Non
 
 
 def check_events(dist_dir: Path, report: Report, exhaustive: bool) -> None:
-    """The events.v1 contract, over the published tables.
+    """The events.v2 contract, over the published tables.
 
     Sampled for a build gate, exhaustive for a release -- and sample_id
     uniqueness is only meaningful exhaustively, since a collision between two
@@ -242,7 +242,7 @@ def check_events(dist_dir: Path, report: Report, exhaustive: bool) -> None:
     chosen = with_events if exhaustive else with_events[
         :: max(1, len(with_events) // 25)
     ]
-    bad_status = bad_pitch = bad_counts = 0
+    bad_status = bad_pitch = bad_counts = bad_fields = 0
     ids: dict[str, str] = {}
     statuses: dict[str, int] = {}
     for entry in chosen:
@@ -254,6 +254,17 @@ def check_events(dist_dir: Path, report: Report, exhaustive: bool) -> None:
             table = json.load(handle)
         if table.get("schema") != events_mod.SCHEMA:
             bad_status += 1
+        # The filter fields must travel WITH the data and must agree with
+        # the index. A denormalised copy that disagrees is worse than none:
+        # it gives two answers to "is this a music track".
+        if (
+            table.get("game") != entry.get("game")
+            or table.get("track_class") != entry.get("track_class")
+            or table.get("game_slug") != events_mod.game_slug(
+                str(entry.get("track_id"))
+            )
+        ):
+            bad_fields += 1
         status = table.get("extraction_status")
         statuses[status] = statuses.get(status, 0) + 1
         if status not in events_mod.EXTRACTION_STATES:
@@ -299,6 +310,12 @@ def check_events(dist_dir: Path, report: Report, exhaustive: bool) -> None:
         bad_pitch == 0,
         f"{len(chosen)} tables, {bad_pitch} events whose pitch_status is "
         f"invalid or disagrees with whether a pitch is present",
+    )
+    report.check(
+        "dist_events_carry_filter_fields",
+        bad_fields == 0,
+        f"{len(chosen)} tables, {bad_fields} whose game, game_slug or "
+        f"track_class is absent or disagrees with the index",
     )
     report.check(
         "dist_events_counts_reconcile",
@@ -383,6 +400,22 @@ def check_dist(dist_dir: Path, report: Report, exhaustive: bool = False) -> None
         ),
         f"corpus block: {corpus.get('n_tracks')} tracks, "
         f"{corpus.get('n_events')} events, {corpus.get('n_attacks')} attacks",
+    )
+    # tracks.csv and the slug map: the redundancy that stops `game` and
+    # `track_class` from having a single point of failure.
+    csv_path = dist_dir / "tracks.csv"
+    csv_lines = csv_path.read_text().splitlines() if csv_path.is_file() else []
+    report.check(
+        "dist_tracks_csv_covers_every_track",
+        len(csv_lines) == len(index) + 1 and bool(index),
+        f"tracks.csv has {max(len(csv_lines) - 1, 0)} rows for {len(index)} tracks",
+    )
+    declared_games = raw_index.get("games", {}) if isinstance(raw_index, dict) else {}
+    slugs = {events_mod.game_slug(str(e.get("track_id"))) for e in index}
+    report.check(
+        "dist_slug_to_game_map_complete",
+        set(declared_games) == slugs and bool(slugs),
+        f"{len(declared_games)} slugs declared for {len(slugs)} in use",
     )
     report.check(
         "dist_scores_cover_index",

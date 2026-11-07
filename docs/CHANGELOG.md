@@ -1,7 +1,8 @@
 # Changes to the published corpus
 
 Changes to the **distributed artifact** — the shapes and fields a consumer
-reads. Internal pipeline work is in [milestones.md](milestones.md).
+reads. Internal pipeline work is recorded in the project repository's build
+log and is not part of this distribution.
 
 Each published format carries its own schema version, because they move
 independently. Check the version of the format you read, not a corpus
@@ -10,7 +11,8 @@ version.
 | format | version | file |
 |---|---|---|
 | index | `snesmdb.index.v1` | `index.json` |
-| events | `snesmdb.events.v1` | `events/*.json.gz` |
+| events | `snesmdb.events.v2` | `events/*.json.gz` |
+| tracks | `snesmdb.tracks.v1` | `tracks.csv` |
 | intake | `snesmdb.intake.v1` | `intake/*.json.gz` |
 | sample id | `snesmdb.sample.v1` | the `sample_id` field |
 | uniform score | 100 Hz | the `uniform` block in `scores/*.json.gz` |
@@ -110,6 +112,75 @@ held, so the two are not the same sample.
 Use this, not `srcn`, to join across tracks. An SRCN is an ARAM directory
 index and does not name a fixed sample even within one game — Super Turrican's
 8 indices resolve to 48 distinct samples across its 12 tracks.
+
+## `gate5-rc3` — redundancy for the fields you filter on
+
+Prompted by a defect report. A copy of `gate5-rc2` reached an evaluator with
+`index.json` truncated mid-string by a short write at a 768 KiB boundary. The
+corpus data was perfect — every per-track file was byte-identical to its
+frozen hash — but `game` and `track_class` lived in `index.json` and **nowhere
+else**, so 44% of tracks lost both, and `track_class` was unrecoverable from
+any other published file. The only field still available was
+`extraction_status`, which this documentation explicitly tells researchers not
+to use as a proxy for it.
+
+The transfer was at fault, not the release. The design was still wrong: a
+field researchers are instructed to filter on must not have a single point of
+failure.
+
+### `snesmdb.events.v2`
+
+`game`, `game_slug` and `track_class` are now in every event table's header.
+**Purely additive** — nothing renamed, moved or removed. The version is bumped
+anyway, because the version exists so a consumer can tell which fields to
+expect, and two trees both claiming `v1` while carrying different fields is
+the silent incompatibility versioning is meant to prevent.
+
+**What this does and does not break.** Every field a `v1` reader accesses is
+unchanged, so code that reads fields keeps working. But a reader that tests
+the schema string for *equality* with `snesmdb.events.v1` will reject these
+tables — this project's own example script did exactly that and had to be
+fixed. If you pin the version, add `snesmdb.events.v2` to the set you accept;
+accepting every version you know is the more durable pattern.
+
+### `snesmdb.tracks.v1` — `tracks.csv`
+
+The per-track metadata as one line per track: `track_id`, `game_slug`, `game`,
+`title`, `composers`, `track_class`, `extraction_status`, `split`,
+`render_seconds`, `n_notes`, and the four event counts. A truncated CSV loses
+its tail and keeps every complete line; a truncated JSON document is
+unparseable in full.
+
+### `index.json` gained a `games` block
+
+Slug to game name. The slugs are not guessable — `mo2` is Earthbound (Mother
+2), `sd2` is Secret of Mana (Seiken Densetsu 2), `ed2` is Lufia 2, `dkq` is
+Donkey Kong Country 2 — and an evaluator who needed the mapping had to
+reconstruct it by matching per-game track counts, then break a tie between two
+66-track games from their clock rates. It should never have had to be
+inferred.
+
+### Documentation corrections
+
+`DATASET.md`'s microtiming section told researchers to use `records/*.json`
+and `raw/*.jsonl.gz`, describing them as "preserved and published". **Neither
+is in the distribution**: `records/` is intermediate build output and `raw/` is
+the compressed-log form this project's distribution rules exclude. The section
+now points at `events/*.json.gz`, which carries the same onsets in seconds to
+microsecond resolution and was always the right answer. The `axe-03`
+quantisation example pointed at the same two absent trees; both of its notes
+are in `events/axe-03_*.json.gz` as `event_id` 940 and 941, 5.106 ms apart.
+
+References to the project's build log as the authoritative defect list have
+also been removed from the distributed documents, since that log is
+deliberately not distributed.
+
+### A verifier now ships
+
+`verify.py` at the package root re-hashes every file against
+`dist/RELEASE.json`. A recipient previously had no supplied way to tell a
+damaged transfer from a damaged release, and distinguishing those is a
+one-command question.
 
 ## Documentation correction, `gate5-rc2`
 
