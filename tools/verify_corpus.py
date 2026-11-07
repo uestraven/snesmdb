@@ -12,6 +12,10 @@ announced itself; each was found by reading output that looked fine.
     no clock and wrote no scores, without erroring -> clock_on_every_track
     the 100 Hz grid was benchmarked at length and
     publish.py never learned about it             -> dist_uniform_present
+    405,288 events arrived as `midi_note: null`
+    with no reason given                          -> dist_events_pitch_explained
+    73 unpitched tracks were indistinguishable
+    from failed extractions                       -> dist_events_status_consistent
     publish keyed on row["grid"] and would have
     shipped 866 of 1,316 tracks                    -> scores_cover_corpus
     summary.json headlined the onset grid's 866
@@ -43,7 +47,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from snesmdb import scores as scores_mod  # noqa: E402
+from snesmdb import events as events_mod, scores as scores_mod  # noqa: E402
 
 #: The S-DSP has eight voices. Anything above this is arithmetically impossible
 #: and means the note model is double-counting.
@@ -208,6 +212,109 @@ def check_uniform_preservation(out_dir: Path, report: Report, limit: int) -> Non
     )
 
 
+def check_events(dist_dir: Path, report: Report, exhaustive: bool) -> None:
+    """The events.v1 contract, over the published tables.
+
+    Sampled for a build gate, exhaustive for a release -- and sample_id
+    uniqueness is only meaningful exhaustively, since a collision between two
+    tracks outside the sample is exactly the case that would corrupt a join
+    and never be seen.
+    """
+    index_path = dist_dir / "index.json"
+    if not index_path.is_file():
+        return
+    raw = json.loads(index_path.read_text())
+    entries = raw if isinstance(raw, list) else raw.get("tracks", [])
+    with_events = [e for e in entries if e.get("events")]
+    report.check(
+        "dist_events_present",
+        len(with_events) == len(entries) and bool(entries),
+        f"{len(with_events)}/{len(entries)} tracks have an event table",
+    )
+    if not with_events:
+        return
+
+    chosen = with_events if exhaustive else with_events[
+        :: max(1, len(with_events) // 25)
+    ]
+    bad_status = bad_pitch = bad_counts = 0
+    ids: dict[str, str] = {}
+    statuses: dict[str, int] = {}
+    for entry in chosen:
+        path = dist_dir / entry["events"]
+        if not path.is_file():
+            bad_counts += 1
+            continue
+        with gzip.open(path, "rt") as handle:
+            table = json.load(handle)
+        if table.get("schema") != events_mod.SCHEMA:
+            bad_status += 1
+        status = table.get("extraction_status")
+        statuses[status] = statuses.get(status, 0) + 1
+        if status not in events_mod.EXTRACTION_STATES:
+            bad_status += 1
+        evs = table.get("events") or []
+        pitched = sum(
+            1 for e in evs if e.get("pitch_status") == events_mod.PITCH_ESTIMATED
+        )
+        attacks = sum(
+            1 for e in evs if e.get("origin") == events_mod.ORIGIN_KEY_ON
+        )
+        if (
+            table.get("event_count") != len(evs)
+            or table.get("pitched_event_count") != pitched
+            or table.get("unpitched_event_count") != len(evs) - pitched
+            or table.get("attack_count") != attacks
+        ):
+            bad_counts += 1
+        # A status that contradicts the counts is the misclassification this
+        # schema exists to prevent.
+        if events_mod.extraction_status(True, len(evs), pitched) != status:
+            bad_status += 1
+        for event in evs:
+            if event.get("pitch_status") not in events_mod.PITCH_STATES:
+                bad_pitch += 1
+            elif (
+                (event["pitch_status"] == events_mod.PITCH_ESTIMATED)
+                != (event.get("midi_note") is not None)
+            ):
+                bad_pitch += 1
+            sid = event.get("sample_id")
+            if sid:
+                ids.setdefault(sid, entry["track_id"])
+
+    report.check(
+        "dist_events_status_consistent",
+        bad_status == 0,
+        f"{len(chosen)} tables, {bad_status} whose schema or "
+        f"extraction_status is invalid or contradicts its own counts",
+    )
+    report.check(
+        "dist_events_pitch_explained",
+        bad_pitch == 0,
+        f"{len(chosen)} tables, {bad_pitch} events whose pitch_status is "
+        f"invalid or disagrees with whether a pitch is present",
+    )
+    report.check(
+        "dist_events_counts_reconcile",
+        bad_counts == 0,
+        f"{len(chosen)} tables, {bad_counts} whose header counts disagree "
+        f"with the event list",
+    )
+    report.check(
+        "dist_sample_ids_plausible",
+        len(ids) > 100,
+        f"{len(ids)} distinct sample ids across {len(chosen)} tables"
+        + ("" if exhaustive else " (sampled; run --exhaustive for uniqueness)"),
+    )
+    if exhaustive:
+        report.check(
+            "dist_event_status_census",
+            sum(statuses.values()) == len(chosen),
+            ", ".join(f"{k}={v}" for k, v in sorted(statuses.items())),
+        )
+
+
 def check_dist(dist_dir: Path, report: Report, exhaustive: bool = False) -> None:
     index_path = dist_dir / "index.json"
     if not index_path.is_file():
@@ -325,6 +432,7 @@ def main() -> None:
     check_uniform_preservation(args.out_dir, report, args.sample * 4)
     if args.dist_dir and args.dist_dir.exists():
         check_dist(args.dist_dir, report, exhaustive=args.exhaustive)
+        check_events(args.dist_dir, report, exhaustive=args.exhaustive)
     elif args.dist_dir:
         report.check("dist_present", False, f"{args.dist_dir} does not exist")
 

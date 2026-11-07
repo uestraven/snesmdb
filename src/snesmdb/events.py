@@ -71,6 +71,22 @@ EXTRACTION_STATES = (
 ORIGIN_KEY_ON = "key_on"
 ORIGIN_LEGATO_STEP = "legato_step"
 
+#: AN EVENT IS NOT NECESSARILY A NOTE ATTACK, and conflating the two distorts
+#: rhythmic analysis. `key_on` is a new triggered note, observed at a hardware
+#: edge. `legato_step` is a pitch change within a voice that was already
+#: sounding, inferred from a PITCH write with no key-on. How to read the table
+#: depends on the question:
+#:
+#:   how many note attacks?          count origin == key_on
+#:   how many pitch events?          count everything
+#:   how many voices sound at once?  count active voices, not event rows
+#:   how often does pitch change?    count everything
+#:   how long does a note sustain?   follow parent_event_id across steps
+#:
+#: `parent_event_id` makes the last two answerable without hardware knowledge:
+#: a legato step names the key-on event it belongs to, so a continuous phrase
+#: can be reassembled by grouping on it.
+
 
 def pitch_status(note: dict[str, Any]) -> str:
     """Why this event has the pitch it has, or none.
@@ -115,6 +131,8 @@ def _event(
     note: dict[str, Any],
     sample_id: str,
     origin: str = ORIGIN_KEY_ON,
+    event_id: int = 0,
+    parent_event_id: int | None = None,
 ) -> dict[str, Any]:
     status = pitch_status(note)
     start = float(note.get("start_sec") or 0.0)
@@ -145,6 +163,13 @@ def _event(
         "attack_level": int(note.get("_attack_level", 0)),
         "sustain_level": int(note.get("_sustain_level", 0)),
         "origin": origin,
+        "event_id": event_id,
+        # For a key-on, itself. For a legato step, the key-on it continues --
+        # so grouping on this field reassembles a phrase that the driver
+        # expressed as one sounding voice with several pitches.
+        "parent_event_id": (
+            event_id if parent_event_id is None else parent_event_id
+        ),
     }
 
 
@@ -152,7 +177,7 @@ def build(
     track_id: str,
     ok: bool,
     duration_sec: float,
-    notes: Iterable[dict[str, Any]],
+    notes: list[dict[str, Any]],
     sample_ids: dict[int, str],
     legato_steps: Iterable[dict[str, Any]] = (),
     attack_level: Any = None,
@@ -162,46 +187,57 @@ def build(
 
     `sample_ids` maps SRCN to a content hash for THIS track, because an index
     does not name a fixed sample even within one game. `attack_level` and
-    `sustain_level` are callables taking a note, so the amplitude derivation
-    stays with the scoring code that owns it.
+    `sustain_level` are callables, so the amplitude derivation stays with the
+    scoring code that owns it.
     """
-    events: list[dict[str, Any]] = []
-    for note in notes:
+    def levels(note: dict[str, Any]) -> dict[str, Any]:
         enriched = dict(note)
-        if attack_level is not None:
-            enriched["_attack_level"] = attack_level(note)
-        if sustain_level is not None:
-            enriched["_sustain_level"] = sustain_level(note, enriched["_attack_level"])
-        events.append(
-            _event(enriched, sample_ids.get(int(note.get("srcn", -1)), ""))
+        attack = attack_level(note) if attack_level is not None else 0
+        enriched["_attack_level"] = attack
+        enriched["_sustain_level"] = (
+            sustain_level(note, attack) if sustain_level is not None else attack
         )
+        return enriched
 
-    by_id = {n.get("note_id"): n for n in notes} if not isinstance(notes, list) else {
-        n.get("note_id"): n for n in notes
-    }
+    events: list[dict[str, Any]] = []
+    # event_id is the note_id where there is one, so the id is stable against
+    # the source record rather than an artefact of iteration order.
+    by_note_id: dict[Any, int] = {}
+    for index, note in enumerate(notes):
+        event_id = int(note.get("note_id", index))
+        by_note_id[note.get("note_id", index)] = event_id
+        events.append(_event(
+            levels(note),
+            sample_ids.get(int(note.get("srcn", -1)), ""),
+            ORIGIN_KEY_ON,
+            event_id,
+        ))
+
+    parents = {n.get("note_id"): n for n in notes}
     for step in legato_steps:
-        parent = by_id.get(step.get("parent_note_id"))
+        parent = parents.get(step.get("parent_note_id"))
         if parent is None:
             continue
-        enriched = dict(parent)
+        enriched = levels(step if attack_level is not None else parent)
+        enriched["noise"] = parent.get("noise")
+        enriched["pitch_modulated"] = parent.get("pitch_modulated")
+        enriched["pitch_confidence"] = parent.get("pitch_confidence")
+        # A legato step's pitch is the step's own; the sample and envelope are
+        # the parent's, since a step does not re-key.
+        enriched["midi_note"] = step.get("midi_note", parent.get("midi_note"))
         enriched["start_sec"] = step.get("time_sec", 0.0)
         enriched["end_sec"] = None
-        if attack_level is not None:
-            enriched["_attack_level"] = attack_level(step)
-        if sustain_level is not None:
-            enriched["_sustain_level"] = sustain_level(
-                parent, enriched.get("_attack_level", 0)
-            )
-        events.append(
-            _event(
-                enriched,
-                sample_ids.get(int(parent.get("srcn", -1)), ""),
-                ORIGIN_LEGATO_STEP,
-            )
-        )
+        events.append(_event(
+            enriched,
+            sample_ids.get(int(parent.get("srcn", -1)), ""),
+            ORIGIN_LEGATO_STEP,
+            int(step.get("parent_note_id", -1)),
+            by_note_id.get(step.get("parent_note_id")),
+        ))
 
     events.sort(key=lambda e: (e["onset_sec"], e["voice"]))
     pitched = sum(1 for e in events if e["pitch_status"] == PITCH_ESTIMATED)
+    attacks = sum(1 for e in events if e["origin"] == ORIGIN_KEY_ON)
     return {
         "schema": SCHEMA,
         "track_id": track_id,
@@ -210,5 +246,9 @@ def build(
         "event_count": len(events),
         "pitched_event_count": pitched,
         "unpitched_event_count": len(events) - pitched,
+        # An event is not necessarily an attack. Published separately so a
+        # rhythmic analysis does not have to filter to get the right number.
+        "attack_count": attacks,
+        "legato_step_count": len(events) - attacks,
         "events": events,
     }

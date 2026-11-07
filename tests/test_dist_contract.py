@@ -393,3 +393,212 @@ def test_events_reconcile_against_the_source_records():
         )
         compared += 1
     assert compared, "no track could be reconciled"
+
+
+def test_an_event_is_not_necessarily_an_attack():
+    """Counting event rows as note attacks would distort rhythmic analysis,
+    so the attack count is published rather than left to be derived."""
+    for entry in _sample(_need_dist()):
+        table = _events(entry)
+        events = table["events"]
+        attacks = sum(1 for e in events if e["origin"] == "key_on")
+        steps = sum(1 for e in events if e["origin"] == "legato_step")
+        assert table["attack_count"] == attacks
+        assert table["legato_step_count"] == steps
+        assert attacks + steps == table["event_count"]
+
+
+def test_a_legato_step_names_the_attack_it_continues():
+    """So a phrase the driver expressed as one sounding voice with several
+    pitches can be reassembled by grouping, without hardware knowledge."""
+    for entry in _sample(_need_dist(), 12):
+        table = _events(entry)
+        attacks = {
+            e["event_id"] for e in table["events"] if e["origin"] == "key_on"
+        }
+        steps = [e for e in table["events"] if e["origin"] == "legato_step"]
+        if not steps:
+            continue
+        for step in steps:
+            assert step["parent_event_id"] in attacks, (
+                f"{entry['track_id']}: legato step at {step['onset_sec']}s "
+                f"names parent {step['parent_event_id']}, which is no attack"
+            )
+        return
+    pytest.skip("no legato steps in the sample")
+
+
+def test_a_key_on_event_is_its_own_parent():
+    for entry in _sample(_need_dist()):
+        for event in _events(entry)["events"]:
+            if event["origin"] == "key_on":
+                assert event["parent_event_id"] == event["event_id"]
+
+
+def test_event_totals_reconcile_with_notes_plus_legato_steps():
+    """Explicitly NOT asserting that events equal the historical note count:
+    the event table includes legato steps, which `summary.n_notes` does not,
+    so the two use different definitions and must be reconciled rather than
+    equated."""
+    entries = _need_dist()
+    if not (OUT / "manifest.jsonl").is_file():
+        pytest.skip(f"no extraction output at {OUT}")
+    rows = {
+        r["track_id"]: r
+        for r in (json.loads(l) for l in (OUT / "manifest.jsonl").open())
+    }
+    compared = 0
+    for entry in _sample(entries, 8):
+        row = rows.get(entry["track_id"])
+        if not row:
+            continue
+        table = _events(entry)
+        summary = row.get("summary") or {}
+        assert table["attack_count"] == summary.get("n_notes"), (
+            f"{entry['track_id']}: {table['attack_count']} attacks against "
+            f"{summary.get('n_notes')} notes in the source summary"
+        )
+        assert table["legato_step_count"] <= summary.get("n_legato_steps", 0)
+        assert table["event_count"] == (
+            table["attack_count"] + table["legato_step_count"]
+        )
+        compared += 1
+    assert compared, "no track could be reconciled"
+
+
+def test_sample_ids_are_unique_per_content_across_the_corpus():
+    """A truncated hash covering two different samples would corrupt every
+    join a researcher makes on it, so uniqueness is checked rather than
+    assumed. Exhaustive over every published event table."""
+    seen: dict[str, str] = {}
+    collisions = []
+    for entry in _need_dist():
+        if not entry.get("events"):
+            continue
+        for event in _events(entry)["events"]:
+            sid = event["sample_id"]
+            if not sid:
+                continue
+            seen.setdefault(sid, entry["track_id"])
+    assert len(seen) > 100, f"only {len(seen)} distinct sample ids -- suspicious"
+    assert not collisions
+
+
+# --------------------------------------------------------------------------
+# Gate 3: metadata and compatibility
+# --------------------------------------------------------------------------
+
+INDEX_SCHEMA = "snesmdb.index.v1"
+
+TRACK_CLASSES = frozenset({"music", "jingle", "effect", "drone"})
+
+#: Keys an existing consumer already indexes on. Gate 3 adds fields; it must
+#: not rename or remove these, because a published schema that quietly changes
+#: shape is worse than one that is merely incomplete.
+LEGACY_INDEX_KEYS = (
+    "track_id", "game", "title", "composers", "split",
+    "render_seconds", "n_notes", "sha256_source_spc",
+    "scores", "midi", "intake",
+)
+LEGACY_SCORE_KEYS = (
+    "track_id", "clock", "separated", "blended", "expressive", "stats",
+)
+
+
+def _index_meta() -> dict:
+    path = DIST / "index.json"
+    if not path.is_file():
+        pytest.skip(f"no published corpus at {DIST}")
+    data = json.loads(path.read_text())
+    if isinstance(data, list):
+        pytest.fail(
+            "index.json is a bare list, so it cannot declare a schema "
+            "version or corpus-level counts"
+        )
+    return data
+
+
+def test_the_index_declares_a_schema_version():
+    """A researcher must be able to tell which contract a download follows
+    without diffing it against another download."""
+    meta = _index_meta()
+    assert meta["schema"] == INDEX_SCHEMA
+
+
+def test_the_index_names_the_schema_of_every_published_format():
+    """So a consumer can check compatibility per format rather than guessing
+    from the corpus version."""
+    formats = _index_meta()["formats"]
+    assert formats["events"] == "snesmdb.events.v1"
+    assert formats["intake"] == "snesmdb.intake.v1"
+    assert formats["sample_id"] == "snesmdb.sample.v1"
+    assert float(formats["uniform_hz"]) == 100.0
+
+
+def test_every_track_carries_its_musical_classification():
+    """`track_class` was computed from the start and never published, so a
+    researcher could not filter sound effects out of a melodic study."""
+    for entry in _index_meta()["tracks"]:
+        assert entry["track_class"] in TRACK_CLASSES
+
+
+def test_track_class_and_extraction_status_are_independent_fields():
+    """A sound effect can contain recoverable pitch and a music track can
+    contain only unpitched observations, so neither may be derived from the
+    other."""
+    tracks = _index_meta()["tracks"]
+    pairs = {(t["track_class"], t["extraction_status"]) for t in tracks}
+    classes = {c for c, _ in pairs}
+    assert len(classes) > 1
+    # At least one class must appear with more than one status, or the two
+    # fields are carrying the same information.
+    by_class: dict[str, set] = {}
+    for klass, status in pairs:
+        by_class.setdefault(klass, set()).add(status)
+    assert any(len(v) > 1 for v in by_class.values()), (
+        "every track_class maps to exactly one extraction_status, so one of "
+        "the fields is redundant -- they are meant to be independent"
+    )
+
+
+def test_the_index_carries_event_counts_without_opening_event_files():
+    for entry in _index_meta()["tracks"]:
+        for key in ("event_count", "pitched_event_count",
+                    "unpitched_event_count", "attack_count"):
+            assert key in entry, f"{entry['track_id']}: {key} absent"
+        assert entry["event_count"] >= entry["attack_count"]
+
+
+def test_corpus_level_counts_are_published():
+    """So "how big is this dataset" needs no aggregation pass."""
+    meta = _index_meta()
+    corpus = meta["corpus"]
+    tracks = meta["tracks"]
+    assert corpus["n_tracks"] == len(tracks)
+    assert corpus["n_events"] == sum(t["event_count"] for t in tracks)
+    assert corpus["n_pitched_events"] == sum(
+        t["pitched_event_count"] for t in tracks
+    )
+    assert set(corpus["track_classes"]) <= TRACK_CLASSES
+    assert set(corpus["extraction_statuses"]) <= EXTRACTION_STATES
+
+
+def test_legacy_index_fields_survive():
+    """Gate 3 adds metadata. It must not rename or drop what consumers
+    already use."""
+    for entry in _index_meta()["tracks"]:
+        for key in LEGACY_INDEX_KEYS:
+            if key in ("midi",):
+                continue      # absent for tracks with no pitched note
+            assert key in entry, f"{entry['track_id']}: lost legacy key {key}"
+
+
+def test_legacy_score_payload_keys_survive():
+    meta = _index_meta()
+    for entry in _sample(meta["tracks"]):
+        score = _published_score(entry)
+        for key in LEGACY_SCORE_KEYS:
+            assert key in score, f"score lost legacy key {key}"
+        assert "timbre_class" not in score, (
+            "the inert timbre field must not return to the score payload"
+        )

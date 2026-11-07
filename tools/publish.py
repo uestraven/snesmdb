@@ -36,6 +36,7 @@ from snesmdb import (  # noqa: E402
     envelope as envelope_mod,
     events as events_mod,
     provenance as provenance_mod,
+    sampleid,
     spcfile,
     grid as grid_mod,
     midi as midi_mod,
@@ -112,9 +113,11 @@ def _sample_ids(
         except (ValueError, IndexError):
             continue
         if decoded.data:
-            out[srcn] = hashlib.sha256(
-                repr(decoded.data).encode()
-            ).hexdigest()[:16]
+            # Defined in sampleid.py: SHA-256 over a version prefix, the loop
+            # offset, and the decoded PCM as signed 16-bit little-endian,
+            # truncated to 64 bits. The loop offset is PART of the identity --
+            # identical audio with different loop points sustains differently.
+            out[srcn] = sampleid.sample_id(decoded.data, decoded.loop_offset)
     return out
 
 
