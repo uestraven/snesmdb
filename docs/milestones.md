@@ -1242,6 +1242,13 @@ wrong: the vestigial `tick` field turned out to encode it, with a median ratio
 of exactly 1.00 against the register clock. The limitation is real but
 narrower than first stated.
 
+**The 100 Hz uniform grid loses one repeated-note attack.** Among 1,458,211
+pitched events: Axelay `axe-03`, two successive same-pitch attacks about 5.1 ms
+apart, which a 10 ms row cannot separate. Distinguishable at 200 Hz, and both
+notes keep exact timestamps in `records/` and `raw/`. Ordinary quantisation
+rather than a representation limit, and the full statement is in
+[DATASET.md](DATASET.md).
+
 **A modulation that stops mid-note is read as a legato step.** If a driver
 modulates pitch and then holds its final excursion to the key-off, that is
 indistinguishable from a note succession: the pitch moved and did not come

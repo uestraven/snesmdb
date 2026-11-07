@@ -215,11 +215,18 @@ price of the rate is one note: doubling to 200 Hz recovers a single attack, at
 twice the rows and storage. That is the whole argument, and it is now a known
 quantity rather than a bound.
 
-### The one lost event
+### Known quantisation limitation
 
-Worth naming precisely, because a loss that more resolution *cannot* fix would
-mean something different — a representation limit rather than quantisation.
-This one is plain quantisation.
+> The 100 Hz uniform grid loses one repeated-note attack among 1,458,211
+> pitched events in the evaluated corpus. The affected passage occurs in
+> Axelay, track `axe-03`, where two successive same-pitch attacks are separated
+> by approximately 5.1 ms. The second attack merges into the first at 100 Hz
+> but remains distinguishable at 200 Hz. Original event timestamps preserve
+> both.
+
+Named precisely because a loss that more resolution *cannot* fix would mean
+something different — a representation limit rather than quantisation. This one
+is plain quantisation.
 
 | | |
 |---|---|
