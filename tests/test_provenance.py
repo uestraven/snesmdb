@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from snesmdb import provenance
 
@@ -98,12 +99,34 @@ def test_provenance_still_records_what_reproducibility_needs():
 
 
 def test_no_identifying_value_leaks_through_the_parameters_block():
-    """`parameters` carries caller-supplied values and is published verbatim,
-    so a path containing a home directory would reintroduce the disclosure by
-    another route. Callers pass directories, so this is a real risk -- the
-    test documents it rather than pretending the key names are the whole
-    surface."""
-    record = provenance.record(tool="test", out_dir="data/out")
+    """`parameters` is published verbatim, so a path reintroduces the
+    disclosure by another route.
+
+    AND IT DID. The first version of this test passed a RELATIVE path, so it
+    never exercised the case that occurs in practice: `publish.py` records an
+    absolute `dist_dir`, and the published record read
+    `"dist_dir": "/home/<login>/snesmdb-corpus/dist"` while every identifying
+    KEY was gone. The release gate caught what this test had missed. It now
+    passes the absolute paths the real callers pass.
+    """
+    import os
+    login = os.environ.get("USER") or "nobody"
+    record = provenance.record(
+        tool="test",
+        dist_dir=str(Path.home() / "corpus" / "dist"),
+        out_dir=f"/local/home/{login}/workplace/snesmdb/data/out",
+    )
     serialised = json.dumps(record)
-    assert "/home/" not in serialised
+    assert login not in serialised, serialised
     assert "/Users/" not in serialised
+    # The path must stay meaningful, not just anonymous: an earlier scrubber
+    # replaced the home prefix anywhere it appeared and produced `/local~/...`.
+    assert record["parameters"]["dist_dir"] == "~/corpus/dist"
+    assert record["parameters"]["out_dir"].startswith("/local/home/<user>/")
+
+
+def test_scrubbing_leaves_non_strings_and_plain_paths_alone():
+    assert provenance.scrub(42) == 42
+    assert provenance.scrub(None) is None
+    assert provenance.scrub("data/out") == "data/out"
+    assert provenance.scrub({"a": ["data/out", 1]}) == {"a": ["data/out", 1]}

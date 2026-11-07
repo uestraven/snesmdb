@@ -16,6 +16,7 @@ rather than hidden, and a consumer can treat such an artifact as provisional.
 
 from __future__ import annotations
 
+import os
 import platform
 import subprocess
 import sys
@@ -74,12 +75,50 @@ def _dirty_paths(status: str | None) -> list[str] | None:
     return sorted(paths)[:40] or None
 
 
+def scrub(value: Any) -> Any:
+    """Remove operator identity from a value destined for publication.
+
+    REMOVING THE `host` AND `user` KEYS WAS NOT ENOUGH, and the release gate
+    proved it: `parameters` carries caller-supplied paths verbatim, so a
+    published record still read `"dist_dir": "/home/<login>/snesmdb-corpus"`.
+    The login name was gone from where it was named and still present where
+    it was incidental -- which is the usual shape of this kind of leak.
+
+    So paths are rewritten rather than trusted: the home directory becomes
+    `~`, and any remaining occurrence of the login name becomes `<user>`. The
+    useful part of a path -- which directory of the build it was -- survives.
+
+    The login name is read to be removed and is never stored.
+    """
+    if isinstance(value, dict):
+        return {key: scrub(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [scrub(item) for item in value]
+    if not isinstance(value, str):
+        return value
+    text = value
+    # The home prefix is collapsed only at the START of the string. Replacing
+    # it anywhere turned `/local/home/<login>/workspace/...` into
+    # `/local~/workspace/...`, which is not a path at all -- a substitution
+    # that removes the identity and the meaning together.
+    home = str(Path.home())
+    if home and home != "/" and text.startswith(home):
+        text = "~" + text[len(home):]
+    # Anything left is scrubbed by name, which covers the homes that are not
+    # this user's own -- here the repository lives under `/local/home/...`,
+    # not under `Path.home()`, so the prefix rule alone would have missed it.
+    login = os.environ.get("USER") or os.environ.get("LOGNAME") or ""
+    if len(login) > 2:
+        text = text.replace(login, "<user>")
+    return text
+
+
 def record(**extra: Any) -> dict[str, Any]:
     """A provenance block for a corpus artifact.
 
     `extra` carries the parameters of the run that produced it -- the input
     directory, render policy, job count -- because those change the output as
-    surely as the code does.
+    surely as the code does. It is scrubbed: see `scrub`.
     """
     status = _git("status", "--porcelain")
     commit = _git("rev-parse", "HEAD")
@@ -105,5 +144,9 @@ def record(**extra: Any) -> dict[str, Any]:
         # provenance record should describe the code, the inputs and the
         # platform, and nothing about the person.
         "platform": platform.platform(),
-        "parameters": {k: v for k, v in extra.items() if v is not None},
+        # Scrubbed, because these are caller-supplied paths and go out
+        # verbatim otherwise.
+        "parameters": scrub(
+            {k: v for k, v in extra.items() if v is not None}
+        ),
     }
