@@ -139,7 +139,7 @@ def main() -> None:
         "tracks": 0, "with_clock": 0, "scores_written": 0, "midi_written": 0,
         "midi_notes_written": 0, "midi_notes_dropped": 0,
         "expressive_with_timbre": 0, "intake_written": 0,
-        "with_software_divisor": 0,
+        "with_software_divisor": 0, "uniform_written": 0,
     }
     index: list[dict[str, Any]] = []
 
@@ -186,6 +186,17 @@ def main() -> None:
             counts["with_clock"] += 1
             track_grid = track_clock.to_grid(render_ticks)
             built = scores_mod.build(notes, track_grid, render_ticks)
+
+            # THE UNIFORM GRID. This was missing: scores.uniform_grid existed,
+            # was benchmarked, and extract.py wrote a `uniform` block into
+            # data/out -- and publish.py never learned about it, so the
+            # distributable corpus had no 100 Hz scores at all while every
+            # internal measurement passed. Third time this shape of defect
+            # shipped from this pipeline, after dead expressive() code and a
+            # rebuild recipe that omitted a required step.
+            uniform_grid = scores_mod.uniform_grid(render_ticks)
+            uniform_built = scores_mod.build(notes, uniform_grid, render_ticks)
+            counts["uniform_written"] += 1
             timbre_of = timbre_by_game.get(row["tag"]["game"] or "", {})
             expr = scores_mod.expressive(notes, track_grid, timbre_of, render_ticks)
             if timbre_of:
@@ -203,12 +214,30 @@ def main() -> None:
                 "separated": built.separated,
                 "blended": built.blended,
                 "expressive": expr,
+                # The comparable score: the same three formats on a fixed
+                # 100 Hz grid, so a row means the same thing in every track.
+                # Use this for anything that compares games; the primary score
+                # above is this driver's own timer tick and its rate differs
+                # per track.
+                "uniform": {
+                    "hz": scores_mod.UNIFORM_HZ,
+                    "period_ticks": uniform_grid.period_ticks,
+                    "n_rows": uniform_built.n_rows,
+                    "separated": uniform_built.separated,
+                    "blended": uniform_built.blended,
+                    "expressive": scores_mod.expressive(
+                        notes, uniform_grid, timbre_of, render_ticks
+                    ),
+                    "stats": uniform_built.stats(),
+                },
                 "stats": built.stats(),
             }
             with gzip.open(args.dist_dir / "scores" / f"{stem}.json.gz", "wt") as handle:
                 json.dump(payload, handle, separators=(",", ":"))
             counts["scores_written"] += 1
             entry["scores"] = f"scores/{stem}.json.gz"
+            entry["uniform_hz"] = scores_mod.UNIFORM_HZ
+            entry["uniform_n_rows"] = uniform_built.n_rows
 
             # Intake tree. The shape is documented in DATASET.md and is NOT
             # verified against the renderer's `acquire(from_extracted=True)`,
