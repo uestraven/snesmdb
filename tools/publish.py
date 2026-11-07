@@ -51,6 +51,35 @@ TICKS = grid_mod.TICKS_PER_SECOND
 INTAKE_SCHEMA = corpus_mod.INTAKE_SCHEMA
 
 
+def write_json_gz(path: Path, payload: Any) -> None:
+    """Write gzipped JSON whose BYTES depend only on the content.
+
+    `gzip.open` stamps the current time into the member header, so rebuilding
+    an unchanged corpus produced a different hash for every one of its 3,948
+    compressed files. That was measured: between the `gate5-rc1` and
+    `gate5-rc2` trees every events, scores and intake file changed hash while
+    all 3,948 were byte-identical once decompressed.
+
+    The consequence is not cosmetic. The release pin exists so two trees can
+    be compared, and a consumer diffing two downloads by hash would have
+    concluded the whole dataset had changed when only a documentation file
+    had. Making the bytes a function of the content alone means a hash
+    difference means a content difference.
+
+    The header carries TWO pieces of incidental metadata, not one. `mtime=0`
+    handles the timestamp; `filename=""` is also required, because gzip stores
+    the original name and would otherwise make the bytes depend on the track
+    id. The second was caught only because the test compared two files written
+    from the same payload under different names.
+    """
+    raw = json.dumps(payload, separators=(",", ":")).encode()
+    with open(path, "wb") as out:
+        with gzip.GzipFile(
+            filename="", fileobj=out, mode="wb", compresslevel=9, mtime=0
+        ) as handle:
+            handle.write(raw)
+
+
 def _clock_from_dict(info: dict[str, Any]) -> clock_mod.Clock:
     """The row clock a manifest row was scored on.
 
@@ -297,8 +326,7 @@ def main() -> None:
                 },
                 "stats": built.stats(),
             }
-            with gzip.open(args.dist_dir / "scores" / f"{stem}.json.gz", "wt") as handle:
-                json.dump(payload, handle, separators=(",", ":"))
+            write_json_gz(args.dist_dir / "scores" / f"{stem}.json.gz", payload)
             counts["scores_written"] += 1
             entry["scores"] = f"scores/{stem}.json.gz"
             entry["uniform_hz"] = scores_mod.UNIFORM_HZ
@@ -356,8 +384,7 @@ def main() -> None:
                     for v in range(scores_mod.N_VOICES)
                 ],
             }
-            with gzip.open(args.dist_dir / "intake" / f"{stem}.json.gz", "wt") as handle:
-                json.dump(intake, handle, separators=(",", ":"))
+            write_json_gz(args.dist_dir / "intake" / f"{stem}.json.gz", intake)
             counts["intake_written"] += 1
             if _software_divisor(row, track_clock.hz):
                 counts["with_software_divisor"] += 1
@@ -385,10 +412,7 @@ def main() -> None:
             attack_level=scores_mod._velocity,
             sustain_level=scores_mod._sustain,
         )
-        with gzip.open(
-            args.dist_dir / "events" / f"{stem}.json.gz", "wt"
-        ) as handle:
-            json.dump(table, handle, separators=(",", ":"))
+        write_json_gz(args.dist_dir / "events" / f"{stem}.json.gz", table)
         counts["events_written"] += 1
         counts["events_total"] += table["event_count"]
         counts["events_unpitched"] += table["unpitched_event_count"]
