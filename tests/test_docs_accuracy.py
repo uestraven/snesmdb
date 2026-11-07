@@ -168,3 +168,63 @@ def test_the_documented_quantization_loss_matches_the_measured_one():
     for name, text in (("DATASET.md", DATASET), ("CHANGELOG.md", CHANGELOG)):
         assert "1,458,211" in text, f"{name} lost the measured denominator"
         assert "axe-03" in text, f"{name} lost the affected track"
+
+
+#: Paths a reader of the SHIPPED documents can actually open. The research
+#: package carries `README.md`, `docs/DATASET.md`, `docs/CHANGELOG.md`,
+#: `verify.py` and `dist/`, and nothing else.
+SHIPPED_PATHS = frozenset({
+    "README.md", "docs/DATASET.md", "docs/CHANGELOG.md", "verify.py",
+})
+
+
+def _relative_links(text: str) -> list[str]:
+    import re
+    found = []
+    for target in re.findall(r"\]\(([^)]+)\)", text):
+        if target.startswith(("http://", "https://", "#", "mailto:")):
+            continue
+        found.append(target.split("#")[0])
+    return [t for t in found if t]
+
+
+def test_no_shipped_document_links_to_something_that_is_not_shipped():
+    """The defect class an evaluator reported three instances of at once.
+
+    `DATASET.md` described `records/*.json` and `raw/*.jsonl.gz` as "preserved
+    and published" when neither is distributed, pointed at
+    `examples/workflows.py`, and cited the build log as the authoritative
+    defect list while that log was deliberately withheld. A document that
+    ships inside a corpus must not point at files a download does not
+    contain: the reader cannot tell a missing file from a missing feature.
+    """
+    for name, text in (
+        ("README.md", README), ("DATASET.md", DATASET),
+        ("CHANGELOG.md", CHANGELOG),
+    ):
+        for target in _relative_links(text):
+            assert target in SHIPPED_PATHS, (
+                f"{name} links to {target!r}, which is not part of a "
+                f"distribution. Describe it as repository-only instead of "
+                f"linking to it."
+            )
+
+
+def test_dataset_md_states_that_records_and_raw_are_not_distributed():
+    """The `records/`/`raw/` defect, checked positively.
+
+    A first version of this test sniffed prose -- flagging any line naming a
+    withheld tree near the word "published" -- and failed on the CHANGELOG's
+    own correction, which quotes the wrong claim in order to retract it. A
+    heuristic that cannot tell a claim from its retraction is not a test. So
+    this asserts the FIX is present instead: the document must say plainly
+    that these two trees are not in the distribution, and must point
+    microtiming work at the format that is.
+    """
+    section = DATASET[DATASET.index("For microtiming"):][:3000]
+    assert "Not in this distribution" in section
+    assert "records/" in section and "raw/" in section
+    assert "events/*.json.gz" in section
+    # And the axe-03 example must not send the reader to the same two trees.
+    example = DATASET[DATASET.index("Known quantisation limitation"):][:2500]
+    assert "events/axe-03" in example

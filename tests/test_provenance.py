@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from snesmdb import provenance
 
 
@@ -72,3 +74,36 @@ def test_git_returns_empty_string_not_none_for_empty_output():
     out = provenance._git("status", "--porcelain")
     assert out is not None, "git is available here, so this is not unknown"
     assert isinstance(out, str)
+
+
+#: Keys that must never appear in a published provenance record. Not
+#: reproducibility data, and `provenance.json` ships inside every
+#: distribution: `host` and `user` were disclosing an operator's account name
+#: and an internal hostname to everyone who received the corpus.
+IDENTIFYING_KEYS = ("host", "user", "hostname", "username", "home", "cwd")
+
+
+def test_published_provenance_identifies_the_build_not_the_builder():
+    record = provenance.record(tool="test")
+    present = [key for key in IDENTIFYING_KEYS if key in record]
+    assert not present, f"provenance would publish {present}"
+
+
+def test_provenance_still_records_what_reproducibility_needs():
+    """The fix must not throw away the useful part: a reader has to know the
+    commit, whether it was clean, and the interpreter and platform."""
+    record = provenance.record(tool="test")
+    for key in ("git_commit", "dirty", "python", "platform", "built_utc"):
+        assert key in record, key
+
+
+def test_no_identifying_value_leaks_through_the_parameters_block():
+    """`parameters` carries caller-supplied values and is published verbatim,
+    so a path containing a home directory would reintroduce the disclosure by
+    another route. Callers pass directories, so this is a real risk -- the
+    test documents it rather than pretending the key names are the whole
+    surface."""
+    record = provenance.record(tool="test", out_dir="data/out")
+    serialised = json.dumps(record)
+    assert "/home/" not in serialised
+    assert "/Users/" not in serialised

@@ -423,6 +423,21 @@ def check_dist(dist_dir: Path, report: Report, exhaustive: bool = False) -> None
         f"{sum(1 for e in index if e.get('scores'))}/{len(index)} entries "
         f"have a score file",
     )
+    # A published provenance record must describe the build, not the person
+    # who ran it. `host` and `user` were shipping an operator's account name
+    # and an internal hostname inside every distribution.
+    prov_path = dist_dir / "provenance.json"
+    prov_text = prov_path.read_text() if prov_path.is_file() else "{}"
+    leaked = [
+        key for key in ("host", "user", "hostname", "username")
+        if key in json.loads(prov_text)
+    ]
+    report.check(
+        "dist_provenance_identifies_no_operator",
+        not leaked and "/home/" not in prov_text,
+        f"published provenance discloses {leaked or 'nothing'}"
+        + ("; contains a home path" if "/home/" in prov_text else ""),
+    )
     report.check(
         "dist_provenance",
         (dist_dir / "provenance.json").is_file(),

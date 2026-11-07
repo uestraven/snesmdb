@@ -37,10 +37,15 @@ import freeze_release as freeze  # noqa: E402
 
 #: Public documentation, as `(source relative to the repo, name in package)`.
 #: An exact list, because "copy the docs directory" would ship the build log.
+#: The documents keep their REPOSITORY paths, so that the relative links
+#: inside them resolve in the package exactly as they do in the repository.
+#: They were at the package root, which broke `README.md`'s own links to
+#: `docs/DATASET.md` -- the same class of defect as a document pointing at a
+#: tree that is not shipped, introduced while fixing that one.
 DOCS = (
     ("README.md", "README.md"),
-    ("docs/DATASET.md", "DATASET.md"),
-    ("docs/CHANGELOG.md", "CHANGELOG.md"),
+    ("docs/DATASET.md", "docs/DATASET.md"),
+    ("docs/CHANGELOG.md", "docs/CHANGELOG.md"),
 )
 
 #: Development documents that must never enter the package. Named explicitly
@@ -121,11 +126,12 @@ documentation, and they are what the project intends researchers to work from.
 | `verify.py` | **run this first** — checks the copy against its hashes |
 | `dist/` | the complete frozen distribution — {n_files} files |
 | `README.md` | what the project is and how the formats relate |
-| `DATASET.md` | the dataset reference: every format, and where the data is wrong |
-| `CHANGELOG.md` | published format versions and the breaking changes so far |
+| `docs/DATASET.md` | the dataset reference: every format, and where the data is wrong |
+| `docs/CHANGELOG.md` | published format versions and the breaking changes so far |
 
 `DATASET.md` and `CHANGELOG.md` also appear inside `dist/`, as they do in any
-download. The copies at the top level are identical.
+download. The copies under `docs/` are identical, and are placed there so the
+relative links inside the documents resolve.
 
 ## The dataset
 
@@ -282,7 +288,7 @@ def main() -> None:
     print(f"  label        {label}")
     print(f"  built from   {(pin.get('built_from') or {}).get('git_commit')}")
     print(f"  files        {count} ({total / 1e6:.1f} MB)")
-    print(f"  documents    START-HERE.md, " +
+    print(f"  documents    START-HERE.md, {VERIFY_SCRIPT}, " +
           ", ".join(name for _, name in DOCS))
     print("  exclusions   clean: no source, tests, examples, intermediate "
           "output, history or audio")

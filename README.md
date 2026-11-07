@@ -11,7 +11,7 @@ That shielding is harder here than on the NES, and the reasons are worth
 understanding before choosing a format — see the
 [SNES Synthesizer Primer](#snes-synthesizer-primer).
 
-**Status: five of six [milestones](docs/milestones.md) met, one failed;
+**Status: five of six milestones met, one failed;
 publication gates 0–4 closed.**
 **1,316 tracks from 22 games**, composer-disjoint splits (1,049 / 135 / 132),
 every track clocked from its own SPC700 timer register. The corpus publishes
@@ -44,10 +44,11 @@ It remains in the two older formats because removing a field from a published
 shape is a breaking change, and it is flagged there rather than quietly
 carried: each expressive block reports
 `timbre_validated: "tonal_vs_percussive_only"` and
-`timbre_classes_present: [-1]`. See [the analysis](docs/milestones.md).
+`timbre_classes_present: [-1]`. The analysis is in the repository's
+`docs/milestones.md`.
 
 Known defects are listed in one place in
-[milestones.md](docs/milestones.md) rather than scattered: nine of them, all
+the repository's `docs/milestones.md` rather than scattered: nine of them, all
 measured and reproducible.
 
 ## Contents
@@ -64,14 +65,19 @@ measured and reproducible.
 - [Relationship to the renderer](#relationship-to-the-renderer)
 - [Attribution](#attribution)
 
-Docs: [DATASET.md](docs/DATASET.md) is the deliverable — what the corpus
-contains and what it gets wrong. [CHANGELOG.md](docs/CHANGELOG.md) records
-changes to the published formats, including the one breaking change so far.
-[milestones.md](docs/milestones.md) is the
-build log, including the open-defect list and the things that were tried and
-reverted. [design.md](docs/design.md) is the original plan.
-[performance-conventions.md](docs/performance-conventions.md) is the analysis
-the corpus exists to support.
+**Docs that ship with the corpus.** [DATASET.md](docs/DATASET.md) is the
+deliverable — what the corpus contains and what it gets wrong.
+[CHANGELOG.md](docs/CHANGELOG.md) records changes to the published formats,
+including the breaking changes so far. Both are copied into every published
+tree, so a download is self-describing.
+
+**Docs that stay in this repository**, and are *not* part of a distribution:
+`docs/milestones.md` is the build log, including the open-defect list and the
+things that were tried and reverted; `docs/design.md` is the original plan;
+`docs/performance-conventions.md` is the analysis the corpus exists to
+support; `examples/` holds runnable research workflows. If you are reading
+this inside a downloaded corpus, those are absent by design, and nothing in
+the shipped documents depends on them.
 
 ## Dataset information
 
@@ -182,7 +188,7 @@ Python extractor works on an existing log.
 
 ```sh
 make                        # builds build/spc_dump
-make test                   # 414 tests, no skips (bootstraps .venv for pytest)
+make test                   # 419 tests, no skips (bootstraps .venv for pytest)
 make corpus                 # full rebuild: ~80 min on 8 jobs
 make verify                 # 26 checks on an existing corpus and dist tree
 make audit                  # 27 checks, opening EVERY published file

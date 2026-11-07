@@ -16,7 +16,6 @@ rather than hidden, and a consumer can treat such an artifact as provisional.
 
 from __future__ import annotations
 
-import os
 import platform
 import subprocess
 import sys
@@ -95,8 +94,16 @@ def record(**extra: Any) -> dict[str, Any]:
         "dirty": bool(status) if status is not None else None,
         "dirty_paths": _dirty_paths(status),
         "python": sys.version.split()[0],
+        # Kernel and architecture, which affect reproducibility. NOT the
+        # hostname and NOT the user.
+        #
+        # Those two were recorded and published. They are not reproducibility
+        # data -- nothing about the output depends on who ran the build or on
+        # what the machine is called -- and `provenance.json` ships inside
+        # every distribution, so they disclosed an operator's account name and
+        # an internal hostname to anyone who received the corpus. A published
+        # provenance record should describe the code, the inputs and the
+        # platform, and nothing about the person.
         "platform": platform.platform(),
-        "host": platform.node(),
-        "user": os.environ.get("USER"),
         "parameters": {k: v for k, v in extra.items() if v is not None},
     }
