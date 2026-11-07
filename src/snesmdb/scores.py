@@ -56,33 +56,44 @@ N_VOICES = 8
 #: indexing 0..2 is unaffected.
 CHANNELS = ("note", "velocity", "timbre_class", "sustain")
 
-#: A SECOND, UNIFORM row rate, for cross-corpus comparability.
+#: A SECOND, UNIFORM row rate, so games can be compared with each other.
 #:
 #: The primary scores are indexed on each SPC's own timer tick, which is the
 #: honest hardware answer and is useless for comparing games: the rate differs
 #: per track, 78 distinct values from 32.8 to 500 Hz, so "events per row" means
-#: something different in every game. NES-MDB does not have this problem --
-#: every row there is 16.64 ms because every NTSC engine inherits one video
-#: frame rate -- and that uniformity is exactly what makes a corpus of row
-#: arrays comparable at all.
+#: something different in every one. A uniform grid is what makes a corpus of
+#: row arrays comparable at all, so one is emitted alongside.
 #:
-#: So a uniform-rate score is emitted alongside, at the NES-MDB rate. Matching
-#: 60.0988 Hz is not physically meaningful on the SNES -- it is an NTSC video
-#: artifact and the SPC700 has no relationship to it -- but the point is
-#: corpus comparability, not physics: a model can train across both corpora
-#: with one time unit.
+#: 100 HZ, CHOSEN FOR THIS HARDWARE. Three reasons, none of them analogy:
 #:
-#: Measured over 180 music tracks, against the alternatives:
+#:   * it divides the SPC700 clock EXACTLY -- 10,240 ticks -- so the period is
+#:     an integer and no drift can accumulate;
+#:   * it is an ACHIEVABLE SPC700 timer rate, T0/T1 over 80, so it is a rate
+#:     this chip could genuinely have produced rather than a quantum imposed
+#:     from outside;
+#:   * it preserves the music. SNES note durations have a fast tail -- 1% of
+#:     pitched notes are under 26 ms and 5% under 56 ms -- and at 100 Hz only
+#:     0.1% are shorter than a single row.
 #:
-#:     60.0988 Hz   5,619 rows/track   0.002% onsets lost   4.15 ms median err
-#:     100 Hz       9,350              0.000%               2.49 ms
-#:     200 Hz      18,700              0.000%               1.25 ms
-#:     timer tick  16,001              --                   -- (78 rates)
+#: Measured over 369,635 pitched notes in 258 music tracks, with collisions
+#: counted per track:
 #:
-#: It wins on sequence length by a factor of 2.8 over the timer tick and loses
-#: two thousandths of a percent of onsets. The 4.15 ms error IS the 16.64 ms
-#: quantisation, which is the same one NES-MDB carries.
-UNIFORM_HZ = 60.0988
+#:     rate   row ms   rows/track   notes < 1 row   duration lost
+#:       24     41.7        2,196            2.2%            0.9%
+#:       48     20.8        4,392            0.6%            0.2%
+#:       64     15.6        5,856            0.4%            0.1%
+#:      100     10.0        9,150            0.1%            0.0%
+#:      200      5.0       18,300            0.0%            0.0%
+#:
+#: An earlier version of this constant was 60.0988 Hz, justified as "the
+#: NES-MDB row rate". That was wrong twice. NES-MDB's SCORES are 24 Hz --
+#: 60.0988 is its raw register rate -- so it matched nothing; and 60.0988 Hz
+#: is an NTSC *video* frame rate, which on a console whose audio sits on its
+#: own crystal corresponds to no hardware fact at all. It was neither
+#: hardware-grounded nor comparable with the corpus it named. The rate is now
+#: chosen on SNES evidence, and NES-MDB's 24 Hz is reachable by setting this
+#: constant for anyone who wants that comparison instead.
+UNIFORM_HZ = 100.0
 
 #: 0 is silence in both formats, so the usable note range is 1..127.
 MIN_NOTE = 1
@@ -206,19 +217,19 @@ def _velocity(note: dict[str, Any]) -> int:
 def uniform_grid(render_ticks: int, hz: float = UNIFORM_HZ) -> Grid:
     """A fixed-rate row grid, for the comparable score.
 
-    The period is deliberately left as a FLOAT. 1,024,000/60.0988 is 17,038.6
-    ticks, and rounding it to an integer would accumulate about 2.2 ms of
-    drift over a five-minute track -- half the quantisation error, for no
-    reason. `Grid.row_of` rounds per row, so a float period lands every row
-    exactly; a round-trip test asserts it.
+    The period is a float only because the rate is settable. At the default
+    100 Hz it is exactly 10,240 ticks, so nothing rounds and nothing drifts.
+    At a rate that does not divide the clock -- 60.0988 Hz gives 17,038.6 --
+    the float keeps `Grid.row_of` exact per row rather than accumulating
+    error, which a round-trip test asserts.
     """
     period = TICKS_PER_SECOND / hz
     return Grid(
         found=True,
         reason=(
-            f"uniform {hz:g} Hz, the NES-MDB row rate. Not this driver's "
-            f"clock -- see UNIFORM_HZ for why a comparable grid is worth a "
-            f"second score"
+            f"uniform {hz:g} Hz, for comparing games. Not this driver's "
+            f"clock, which is in the primary score -- see UNIFORM_HZ for why "
+            f"this rate"
         ),
         period_ticks=period,
         phase_ticks=0,

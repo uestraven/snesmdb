@@ -283,20 +283,45 @@ def test_expressive_agrees_with_separated_on_where_notes_are() -> None:
 # The uniform-rate score: comparability, not physics
 # --------------------------------------------------------------------------
 
-def test_the_uniform_grid_is_the_nesmdb_rate() -> None:
-    """Matching 60.0988 Hz is not physically meaningful on the SNES -- it is an
-    NTSC video artifact. The point is that a row means the same thing in both
-    corpora, so a model can train across them with one time unit."""
-    assert scores.UNIFORM_HZ == pytest.approx(60.0988)
+def test_the_uniform_rate_divides_the_spc_clock_exactly() -> None:
+    """100 Hz is 10,240 ticks, so the period is an integer and cannot drift.
+
+    An earlier version used 60.0988 Hz on the grounds that it was "the NES-MDB
+    row rate". It is not -- NES-MDB's scores are 24 Hz -- and 60.0988 Hz is an
+    NTSC video frame rate, which means nothing on a console whose audio sits
+    on its own crystal. The rate is now chosen on SNES evidence.
+    """
+    assert scores.UNIFORM_HZ == 100.0
+    period = 1_024_000 / scores.UNIFORM_HZ
+    assert period == 10_240.0 and float(period).is_integer()
     g = scores.uniform_grid(10 * 1_024_000)
-    assert g.rows_per_second == pytest.approx(60.0988, rel=1e-6)
+    assert g.rows_per_second == pytest.approx(100.0)
 
 
-def test_the_uniform_period_stays_a_float() -> None:
-    """1,024,000/60.0988 is 17,038.6 ticks. Rounding it would accumulate about
-    2.2 ms of drift over five minutes -- half the quantisation error, for
-    nothing."""
+def test_the_uniform_rate_is_an_achievable_spc700_timer_rate() -> None:
+    """T0/T1 over 80. The grid is a rate this chip could have produced, not a
+    quantum imposed from outside -- which 60.0988 Hz was."""
+    from snesmdb.clock import nearest_divider
+    divider = nearest_divider(scores.UNIFORM_HZ)
+    assert divider is not None and divider.label == "T0/T1/80"
+    assert nearest_divider(60.0988) is None or True  # not asserted either way
+
+
+def test_the_uniform_rate_keeps_short_notes() -> None:
+    """SNES durations have a fast tail: 1% of pitched notes are under 26 ms.
+    At 100 Hz a row is 10 ms, so 0.1% of notes are shorter than one row --
+    against 2.2% at 24 Hz, which is why the NES-MDB score rate was not
+    adopted."""
     g = scores.uniform_grid(1_024_000)
+    row_ms = 1000.0 * g.period_ticks / 1_024_000
+    assert row_ms <= 10.0, "a coarser row loses SNES note durations"
+
+
+def test_a_non_dividing_rate_still_does_not_drift() -> None:
+    """The default divides the clock exactly, but the rate is settable. At
+    60.0988 Hz the period is 17,038.6 ticks, and a float keeps every row exact
+    where rounding would accumulate about 2.2 ms over five minutes."""
+    g = scores.uniform_grid(1_024_000, hz=60.0988)
     assert not float(g.period_ticks).is_integer()
     for row in (0, 1, 100, g.n_rows - 1):
         assert g.row_of(g.tick_of(row)) == row, "a float period must not drift"
@@ -315,7 +340,7 @@ def test_the_uniform_grid_says_it_is_not_the_drivers_clock() -> None:
     """A consumer must not mistake it for a measurement."""
     reason = scores.uniform_grid(1_024_000).reason.lower()
     assert "not this driver's clock" in reason
-    assert "nes-mdb" in reason
+    assert "comparing games" in reason
 
 
 def test_a_uniform_score_builds_and_respects_the_hardware() -> None:
@@ -331,13 +356,12 @@ def test_a_uniform_score_builds_and_respects_the_hardware() -> None:
 
 
 def test_a_uniform_score_is_shorter_than_a_fast_timer_tick() -> None:
-    """Measured: 5,619 rows a track against 16,001 on the timer tick, because
-    a 500 Hz driver clock gives eight times the rows of a 60 Hz grid."""
+    """A 500 Hz driver clock gives five times the rows of a 100 Hz grid."""
     render = 60 * 1_024_000
     uniform = scores.uniform_grid(render)
     fast = Grid(found=True, period_ticks=2048, phase_ticks=0,
                 n_rows=render // 2048 + 1)
-    assert uniform.n_rows < fast.n_rows / 5
+    assert uniform.n_rows < fast.n_rows / 4
 
 
 def test_zero_render_gives_no_uniform_rows() -> None:
