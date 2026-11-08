@@ -1567,7 +1567,59 @@ that the measurement **corresponds to the musical concept** it is named for,
 and that a conclusion **generalises beyond these 22 games**. Only the first is
 mechanical.
 
-### Gate 5: researcher acceptance
+### Gate 5: CLOSED
+
+Three independent blind evaluations of `gate5-rc3`, `rc5` and `rc6`, each
+returning **READY WITH LIMITATIONS**, 35 findings between them. Researchers
+with no SNES hardware knowledge produced independent analyses of polyphony,
+melodic interval structure and rhythmic quantisation, reconciled their results
+against two published representations, identified a genuine confound, and
+rejected an unsupported interpretation using the corpus's own evidence.
+
+The data survived nearly all of it. The documentation did not: the first round
+found broken musical representations, the second misleading field semantics,
+the third unsupported guidance and stale figures. **Every substantive finding
+came from an outsider recomputing a published number**, including two where a
+previous fix introduced the next defect.
+
+Closed on the standard set at the outset -- a researcher unfamiliar with SNES
+hardware can load a track, examine its events, compare it with another and
+compute meaningful statistics without reading a page of SPC700 documentation
+-- and not on "no independent researcher finds anything wrong", which is
+neither reachable nor a good scientific standard.
+
+### Milestone 6A: audit infrastructure correction, from the F-Zero pilot
+
+Running the release audit on **one game** for the first time failed two checks
+that silently assumed all 1,316 tracks:
+
+| check | why it failed on 17 tracks |
+|---|---|
+| `dist_sample_ids_plausible` | asserts `len(ids) > 100`, an absolute floor for the full corpus. F-Zero resolves 24 distinct samples, plausible for a 1991 launch title |
+| `dist_documented_row_duration_matches` | requires the measured range string to appear in `DATASET.md`. F-Zero measures 2.000-2.000 ms, which is **inside** the documented 2.000-30.500 but not equal to it |
+
+Neither was an extraction defect. `--subset` substitutes exactly those two
+with subset-scoped equivalents -- a track-count-scaled degeneracy floor, and
+**containment** rather than equality -- and keeps every artifact-integrity,
+event-reconciliation, sample-identity and score-validation check. Full-corpus
+verification is unchanged and is still what runs without the flag.
+
+Eleven tests, **seven of them negative**, because a subset mode that stopped
+detecting corruption would be worse than the false failures it replaced: a
+truncated event file, header counts disagreeing with their own rows, a missing
+score, degenerate sample resolution, a row duration outside the documented
+span, filter fields disagreeing with the index, and an absent documented
+range. One test asserts the two modes' failure sets differ by exactly the two
+substituted checks, so subset mode cannot quietly excuse anything else.
+
+**A second scope problem, reported not fixed.** `dist_docs_match_the_repository`
+compares a published tree's documents against the working tree's. That is
+right for a tree you just published and wrong for a deliberately frozen one:
+`gate5-rc9` now fails it because the repository's documents have moved on, as
+instructed. The check should compare against the documents at the tree's
+*pinned commit*. Recorded here rather than changed mid-pilot.
+
+### Gate 5 acceptance protocol (as executed)
 
 The first test of whether this is what was intended, rather than whether the
 code behaves as designed.

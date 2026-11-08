@@ -220,7 +220,10 @@ def check_uniform_preservation(out_dir: Path, report: Report, limit: int) -> Non
     )
 
 
-def check_events(dist_dir: Path, report: Report, exhaustive: bool) -> None:
+def check_events(
+    dist_dir: Path, report: Report, exhaustive: bool,
+    subset: bool = False,
+) -> None:
     """The events.v3 contract, over the published tables.
 
     Sampled for a build gate, exhaustive for a release -- and sample_id
@@ -325,12 +328,26 @@ def check_events(dist_dir: Path, report: Report, exhaustive: bool) -> None:
         f"{len(chosen)} tables, {bad_counts} whose header counts disagree "
         f"with the event list",
     )
-    report.check(
-        "dist_sample_ids_plausible",
-        len(ids) > 100,
-        f"{len(ids)} distinct sample ids across {len(chosen)} tables"
-        + ("" if exhaustive else " (sampled; run --exhaustive for uniqueness)"),
-    )
+    if subset:
+        # `len(ids) > 100` is calibrated for 1,316 tracks and says nothing
+        # about 17: F-Zero resolves 24 distinct samples, which is plausible
+        # for a 1991 launch title with a small ARAM bank. The degenerate case
+        # this guards against -- directory resolution collapsing so every
+        # voice reports one sample -- is still caught, scaled to the subset.
+        report.check(
+            "subset_sample_ids_not_degenerate",
+            len(ids) >= max(2, len(chosen) // 8),
+            f"{len(ids)} distinct sample ids across {len(chosen)} tables "
+            f"(subset floor {max(2, len(chosen) // 8)}; the corpus-wide "
+            f"threshold of 100 does not apply)",
+        )
+    else:
+        report.check(
+            "dist_sample_ids_plausible",
+            len(ids) > 100,
+            f"{len(ids)} distinct sample ids across {len(chosen)} tables"
+            + ("" if exhaustive else " (sampled; run --exhaustive for uniqueness)"),
+        )
     if exhaustive:
         report.check(
             "dist_event_status_census",
@@ -344,7 +361,10 @@ def _sample_entries(index, n=25):
     return index[:: max(1, len(index) // n)] if index else []
 
 
-def check_dist(dist_dir: Path, report: Report, exhaustive: bool = False) -> None:
+def check_dist(
+    dist_dir: Path, report: Report, exhaustive: bool = False,
+    subset: bool = False,
+) -> None:
     index_path = dist_dir / "index.json"
     if not index_path.is_file():
         report.check("dist_index", False, f"no index.json in {dist_dir}")
@@ -471,12 +491,33 @@ def check_dist(dist_dir: Path, report: Report, exhaustive: bool = False) -> None
                 periods.append(1000.0 / float(hz))
         text = doc.read_text()
         stated = f"{min(periods):.3f}\u2013{max(periods):.3f} ms" if periods else ""
-        report.check(
-            "dist_documented_row_duration_matches",
-            bool(periods) and stated in text,
-            f"measured {stated}; documented range "
-            f"{'found' if stated in text else 'NOT found'} in DATASET.md",
-        )
+        if subset:
+            # A SUBSET CANNOT SPAN THE CORPUS RANGE, so demanding the exact
+            # string is wrong here: F-Zero runs one rate and measures
+            # 2.000-2.000 ms, which is inside the documented 2.000-30.500 and
+            # is not equal to it. Containment is the correct relation for a
+            # part of the corpus -- a subset outside the documented span WOULD
+            # be a defect, and that is still caught.
+            documented = re.search(
+                r"(\d+\.\d+)\u2013(\d+\.\d+) ms", text
+            )
+            inside = bool(periods) and documented is not None and (
+                float(documented.group(1)) - 1e-9 <= min(periods)
+                and max(periods) <= float(documented.group(2)) + 1e-9
+            )
+            report.check(
+                "subset_row_duration_within_documented_range",
+                inside,
+                f"measured {stated}; documented "
+                f"{documented.group(0) if documented else 'NOT FOUND'}",
+            )
+        else:
+            report.check(
+                "dist_documented_row_duration_matches",
+                bool(periods) and stated in text,
+                f"measured {stated}; documented range "
+                f"{'found' if stated in text else 'NOT found'} in DATASET.md",
+            )
     # The shipped documents must match the repository's. Three releases went
     # out with a stale doc copy because publish.py copies the docs at the end
     # of its run and I edited one afterwards -- each time caught by hand, and
@@ -625,6 +666,16 @@ def main() -> None:
              "the only mode that catches a single corrupted artifact. Use it "
              "for a release audit; the sampled default is the build gate.",
     )
+    parser.add_argument(
+        "--subset", action="store_true",
+        help="audit a PART of the corpus -- one game, a pilot batch. Keeps "
+             "every artifact-integrity, event-reconciliation, sample-identity "
+             "and score-validation check, and replaces the two assertions "
+             "that are only meaningful corpus-wide: the absolute "
+             "sample-diversity floor and the exact documented row-duration "
+             "range. It does NOT weaken full-corpus verification, which is "
+             "still what runs without this flag.",
+    )
     args = parser.parse_args()
 
     report = Report()
@@ -632,8 +683,10 @@ def main() -> None:
     check_records(args.out_dir, report, args.sample)
     check_uniform_preservation(args.out_dir, report, args.sample * 4)
     if args.dist_dir and args.dist_dir.exists():
-        check_dist(args.dist_dir, report, exhaustive=args.exhaustive)
-        check_events(args.dist_dir, report, exhaustive=args.exhaustive)
+        check_dist(args.dist_dir, report, exhaustive=args.exhaustive,
+                   subset=args.subset)
+        check_events(args.dist_dir, report, exhaustive=args.exhaustive,
+                     subset=args.subset)
     elif args.dist_dir:
         report.check("dist_present", False, f"{args.dist_dir} does not exist")
 
@@ -641,6 +694,12 @@ def main() -> None:
         print(line)
     for line in report.failures:
         print(line, file=sys.stderr)
+    if args.subset:
+        print(
+            "\nSUBSET MODE: corpus-wide sample-diversity and exact "
+            "documentation-range assertions were replaced by subset-scoped "
+            "equivalents. This is not a full-corpus audit."
+        )
     print(
         f"\n{len(report.passes)} passed, {len(report.failures)} failed",
         file=sys.stderr if report.failures else sys.stdout,
