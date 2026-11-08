@@ -185,6 +185,13 @@ whether it describes the music, and it does.
 
 | `stats` field | meaning |
 |---|---|
+| `n_cells_filled` | voice-rows holding a pitched note |
+| `separated_density` | `n_cells_filled / (n_rows × 8)` |
+| `n_rows_sounding` | rows with at least one pitched note |
+| `rows_sounding_fraction` | `n_rows_sounding / n_rows` |
+| `coverage` | `n_notes_represented / n_notes` — the share of notes the grid could place |
+| `n_notes_unpitched` | notes with no recovered pitch, which a piano roll cannot hold |
+| `n_notes_out_of_range` | pitched notes outside the roll's MIDI range |
 | `n_rows`, `n_notes`, `n_notes_represented`, `n_notes_snapped`, `n_notes_unplaced` | placement accounting |
 | `n_cells_contested` | voice-rows where two notes collided; the later won |
 | `max_distinct_pitched_notes_per_row` | **largest number of distinct PITCHES on a row, over pitched notes only.** Renamed from `max_polyphony`, which was read as voice count and is not |
@@ -198,7 +205,20 @@ never-released note to the end of the render** where `events` leaves
 
 ## `intake/*.json.gz` — `snesmdb.intake.v1`
 
-Per-voice note trees with absolute times. Notes carry `start_sec`, `end_sec`,
+Per-voice note trees with absolute times.
+
+Its `timing` block: `ticks_per_second` is the SPC700 clock, 1,024,000.
+`row_period_ticks` and `rows_per_second` describe this track's primary row
+grid, and `row_clock_source` names where the clock came from
+(`timer_register`). `sequencer_timer` names which hardware timer the driver
+drove the sequencer from (`T0/T1` or `T2`). `software_divisor_m` is the
+timer-to-write-cadence ratio — see `DATASET.md`, and note it is **not** ticks
+per musical row. `driver_tick_hz` is the sequencer write-cadence estimate, and
+**`driver_tick_found` says whether it passed its own plausibility check** —
+`driver_tick_hz` is null on the 797 tracks where it did not, so the absence is
+self-describing without opening another file.
+
+Notes carry `start_sec`, `end_sec`,
 `midi_note` (full float precision, unlike `events`' 4 dp), `velocity`,
 `sustain`, `srcn`, `sample_id`, and an inert `timbre_class`. **Flagged as
 proposed**: its shape is not verified against the renderer that is meant to

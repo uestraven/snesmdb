@@ -477,6 +477,24 @@ def check_dist(dist_dir: Path, report: Report, exhaustive: bool = False) -> None
             f"measured {stated}; documented range "
             f"{'found' if stated in text else 'NOT found'} in DATASET.md",
         )
+    # The shipped documents must match the repository's. Three releases went
+    # out with a stale doc copy because publish.py copies the docs at the end
+    # of its run and I edited one afterwards -- each time caught by hand, and
+    # once not caught until an evaluator read the stale text. Documents are
+    # part of the artifact and get checked like the rest of it.
+    repo_docs = Path(__file__).resolve().parent.parent / "docs"
+    stale = []
+    for name in ("DATASET.md", "CHANGELOG.md", "SCHEMA.md"):
+        shipped, source = dist_dir / name, repo_docs / name
+        if source.is_file() and (
+            not shipped.is_file() or shipped.read_text() != source.read_text()
+        ):
+            stale.append(name)
+    report.check(
+        "dist_docs_match_the_repository",
+        not stale,
+        f"stale in dist: {', '.join(stale)}" if stale else "all current",
+    )
     report.check(
         "dist_scores_cover_index",
         all(e.get("scores") for e in index) and bool(index),
