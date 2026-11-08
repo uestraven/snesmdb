@@ -111,3 +111,72 @@ def test_the_documented_top_level_score_keys_all_exist():
     for name in ("onset_grid", "uniform", "clock", "stats", "expressive"):
         assert name in fields["scores"], f"{name} documented but absent"
         assert f"`{name}`" in SCHEMA_DOC, f"{name} published but undocumented"
+
+
+# ---------------------------------------------------------------------------
+# The claim registry
+# ---------------------------------------------------------------------------
+
+CLAIMS = json.loads((ROOT / "docs" / "claims.json").read_text())
+KINDS = frozenset({"measurement", "estimate", "interpretation"})
+
+
+def test_every_registered_claim_is_well_formed():
+    """A registry that lets a claim omit its kind or its evidence would be a
+    list of numbers, which is what it exists to replace."""
+    seen = set()
+    for claim in CLAIMS["claims"]:
+        assert claim["id"] not in seen, f"duplicate id {claim['id']}"
+        seen.add(claim["id"])
+        assert claim["kind"] in KINDS, claim["id"]
+        assert claim["description"] and claim["documented_in"], claim["id"]
+        if claim["kind"] == "interpretation":
+            assert claim.get("not_checkable_because"), (
+                f"{claim['id']}: an unverifiable claim must say why"
+            )
+        else:
+            assert claim.get("method"), claim["id"]
+            assert claim.get("reported"), claim["id"]
+            assert claim.get("reads") and claim.get("independent_of"), claim["id"]
+        if claim["kind"] == "estimate":
+            assert claim.get("assumes"), (
+                f"{claim['id']}: an estimate must name its assumption, or it "
+                f"is being published as a measurement"
+            )
+
+
+def test_every_registered_method_exists_in_the_runner():
+    source = (ROOT / "tools" / "replicate.py").read_text()
+    for claim in CLAIMS["claims"]:
+        if claim.get("method"):
+            assert f"def {claim['method']}(" in source, claim["method"]
+
+
+def test_the_runner_imports_nothing_from_this_project():
+    """It ships to recipients and must not borrow the code under test: a
+    replication that imported the extraction library would be circular."""
+    import ast as ast_mod
+    tree = ast_mod.parse((ROOT / "tools" / "replicate.py").read_text())
+    imported = set()
+    for node in ast_mod.walk(tree):
+        if isinstance(node, ast_mod.Import):
+            imported.update(a.name.split(".")[0] for a in node.names)
+        elif isinstance(node, ast_mod.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0])
+    assert "snesmdb" not in imported, sorted(imported)
+    assert imported <= {
+        "argparse", "gzip", "json", "math", "statistics", "struct",
+        "pathlib", "typing", "__future__",
+    }, sorted(imported)
+
+
+def test_most_checkable_claims_read_a_different_representation():
+    """The property that makes replication worth more than a second opinion:
+    two calculations over one extraction can agree while both are wrong. Not
+    every claim can manage it, so this asserts a majority and requires the
+    exceptions to be declared."""
+    checkable = [c for c in CLAIMS["claims"] if c.get("method")]
+    cross = [c for c in checkable if not c.get("same_representation")]
+    assert len(cross) > len(checkable) / 2, (
+        f"only {len(cross)}/{len(checkable)} claims are cross-representation"
+    )

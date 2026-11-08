@@ -140,6 +140,13 @@ LABEL ?= rc1
 freeze:
 	@$(PYTHON) -I tools/freeze_release.py $(DIST_DIR) --label $(LABEL)
 
+# RESEARCH REPLICATION, distinct from the engineering audit: `audit` checks
+# that the artifact is self-consistent, this checks that the numbers in the
+# documentation are true of it, using independently written methods that
+# import nothing from this project.
+replicate:
+	@$(PYTHON) -I tools/replicate.py $(DIST_DIR) --claims docs/claims.json
+
 check-freeze:
 	@$(PYTHON) -I tools/freeze_release.py $(DIST_DIR) --verify
 
@@ -159,6 +166,7 @@ help:
 	@echo "make freeze          pin the published tree (LABEL=rc1)"
 	@echo "make check-freeze    re-hash the tree against its pin"
 	@echo "make workflows       run the three dist-only research workflows"
+	@echo "make replicate       recompute the documented claims from dist"
 	@echo "make check-data      refuse derived corpus data in the tracked tree"
 	@echo "make check-history   same, across all git history (slow)"
 	@echo "make hooks           install the pre-commit data guard"

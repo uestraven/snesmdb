@@ -1518,6 +1518,55 @@ block exactly — events, pitched events, attacks, legato steps, rendered
 seconds and the status census. The extraction and the data were never in
 question.
 
+### Research replication, institutionalised
+
+Three independent evaluations found 35 defects between them. The data survived
+almost all of it; the documentation did not. **Every substantive finding came
+from an outsider recomputing a published number** — including two where my own
+previous fix introduced the next defect. That mechanism is now part of the
+product rather than an exceptional event.
+
+Three levels of assurance, with different methods, because they establish
+different things:
+
+| level | establishes | method |
+|---|---|---|
+| structural integrity | the data is complete, consistent, correctly serialised | 435 tests, 35 audit checks |
+| documentation integrity | every field is documented, shipped docs are current | field-coverage and freshness checks |
+| scientific validity | fields measure what they claim; conclusions follow | **independent adversarial replication** |
+
+The first two are automated. The third cannot be reduced to tests written by
+whoever designed the representation, which is why `replicate.py` imports
+nothing from this project and reads a different published representation
+wherever one exists.
+
+**Verification by release type**, so independence does not require a research
+project for every change:
+
+| release | verification |
+|---|---|
+| documentation only | coverage, freshness, registered claims |
+| routine rebuild | full audit plus `make replicate` |
+| new score or event schema | independent semantic review |
+| corpus expansion | fresh research questions and adversarial replication |
+| major public release | blind external evaluation |
+
+**The overfitting hazard, recorded because it is the real risk now.** Each
+outside finding becomes a regression test, and the suite gets steadily better
+at the mistakes three evaluators happened to make while staying blind to
+mistakes nobody has imagined. So some independent evaluation must stay pointed
+at *unanticipated* questions rather than re-checking familiar statistics, and
+the release criterion is explicitly **not** "no independent researcher finds
+anything wrong". It is: every important claim is traceable to evidence, every
+known limitation is disclosed, and a researcher can challenge any of it
+without reconstructing the extraction pipeline.
+
+Three claims the kit keeps apart, because conflating them is how a replication
+proves less than it appears to: that a published measurement **reproduces**,
+that the measurement **corresponds to the musical concept** it is named for,
+and that a conclusion **generalises beyond these 22 games**. Only the first is
+mechanical.
+
 ### Gate 5: researcher acceptance
 
 The first test of whether this is what was intended, rather than whether the

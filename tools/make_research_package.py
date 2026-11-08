@@ -47,6 +47,7 @@ DOCS = (
     ("docs/DATASET.md", "docs/DATASET.md"),
     ("docs/CHANGELOG.md", "docs/CHANGELOG.md"),
     ("docs/SCHEMA.md", "docs/SCHEMA.md"),
+    ("docs/claims.json", "docs/claims.json"),
 )
 
 #: Development documents that must never enter the package. Named explicitly
@@ -68,6 +69,14 @@ FORBIDDEN_NAMES = (".git", "src", "tests", "examples", "data", "build",
 #: corrupt. An integrity checker is not the extraction source under
 #: evaluation, and excluding it was over-broad.
 VERIFY_SCRIPT = "verify.py"
+
+#: The replication kit, which ships for the same reason `verify.py` does: a
+#: recipient must be able to challenge the documentation's numbers without
+#: reconstructing the extraction pipeline. Three evaluations found 35 defects
+#: and every substantive one came from an outsider recomputing a published
+#: figure; withholding the means to do that cheaply would be perverse.
+REPLICATE_SCRIPT = "replicate.py"
+CLAIMS_FILE = "docs/claims.json"
 
 FORBIDDEN_SUFFIXES = (
     # Source and test code: the evaluator must read the artifact, not the
@@ -96,7 +105,7 @@ def audit(package: Path) -> list[tuple[str, str]]:
             continue
         if not path.is_file():
             continue
-        if key == VERIFY_SCRIPT:
+        if key in (VERIFY_SCRIPT, REPLICATE_SCRIPT):
             continue
         lowered = path.name.lower()
         for suffix in FORBIDDEN_SUFFIXES:
@@ -125,6 +134,7 @@ documentation, and they are what the project intends researchers to work from.
 | path | contents |
 |---|---|
 | `verify.py` | **run this first** — checks the copy against its hashes |
+| `replicate.py` | recomputes the documentation's numbers from the data, independently |
 | `dist/` | the complete frozen distribution — {n_files} files |
 | `README.md` | what the project is and how the formats relate |
 | `docs/DATASET.md` | the dataset reference: every format, and where the data is wrong |
@@ -134,6 +144,32 @@ documentation, and they are what the project intends researchers to work from.
 `DATASET.md` and `CHANGELOG.md` also appear inside `dist/`, as they do in any
 download. The copies under `docs/` are identical, and are placed there so the
 relative links inside the documents resolve.
+
+## Check the claims, not just the files
+
+```sh
+python3 replicate.py
+```
+
+`verify.py` proves you have the bytes we sent. **`replicate.py` proves the
+numbers in the documentation are true of them.** It reads only `dist/`,
+imports nothing from the project, and where it can it reads a *different*
+published representation from the one a figure came from — the MIDI note-on
+total is recovered by parsing the binary files, which no JSON table touches.
+
+`docs/claims.json` is the registry it works from, and it separates three
+things: a **measurement** that must reproduce, an **estimate** that
+reproduces only under a stated assumption, and an **interpretation** that
+cannot be checked mechanically and is listed so you know which claims rest on
+judgement. On this release 9 measurements and 2 estimates reproduce, and 2
+interpretations are declared uncheckable.
+
+Reproducing a measurement does not establish that it measures the musical
+concept it is named for, nor that a conclusion generalises beyond these 22
+games. **Finding something we got wrong is an expected outcome, not a
+failure** — three previous evaluations found 35 defects between them, and the
+mechanism that found almost all of them was someone recomputing a published
+number.
 
 ## The dataset
 
@@ -271,6 +307,10 @@ def _assemble(
     shutil.copyfile(
         Path(__file__).resolve().parent / "package_verify.py",
         package / VERIFY_SCRIPT,
+    )
+    shutil.copyfile(
+        Path(__file__).resolve().parent / "replicate.py",
+        package / REPLICATE_SCRIPT,
     )
 
     index = json.loads((dist / "index.json").read_text())

@@ -290,7 +290,14 @@ An independent evaluator could not reproduce the 10.67 figure, measured 2.69
 cents by their own method, and found that under a different reading the
 ranking inverted. They were right to report it.
 
-Two cautions on this table. It groups by `sample_id`, so it measures
+**The table is per DRIVER, which pools that driver's games.** Capcom's 2.46
+cents is the median over Mega Man X and Breath of Fire 2 together; computed
+per *game*, the worst in the corpus is **Mega Man X at 4.06 cents** — still
+below the ~5-cent threshold, but a different number, and a replication of
+this table failed on exactly that unstated choice before it was written down
+here. Both figures are registered in `claims.json`.
+
+Three cautions on this table. It groups by `sample_id`, so it measures
 **relative** pitch within one sample and says nothing about absolute tuning,
 which remains unreliable. And it is keyed on `driver`, which is
 [curated external knowledge](SCHEMA.md) rather than anything measured from

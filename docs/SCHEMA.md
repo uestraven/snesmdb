@@ -170,9 +170,12 @@ Published on every track and **not** used to index any row. It carries
 `median_abs_residual_ticks`.
 
 **If you are studying rhythm, start here, not with `clock`.** Onsets
-concentrate on `onset_grid` at R = 0.937 against only 0.262 on the timer
-clock, and a period fitted on half a track and tested on the other half
-reaches 0.853 against the tick's 0.188. `clock` is a hardware fact — one row
+concentrate on `onset_grid` far more than on the timer clock — R = 0.937
+against 0.262 by one estimator, 0.779 against 0.344 by another — and a period
+fitted on half a track and tested on the other half reaches 0.853 against the
+tick's 0.188. **The value is estimator-dependent; the ordering and the size of
+the gap are the finding**, and both are registered in `claims.json` and
+checked by `replicate.py`. `clock` is a hardware fact — one row
 is one timer tick — and the timer runs several times faster than the music: the
 measured onset period is a median 16.5× the tick. An evaluator measured
 quantisation against `clock` first, got R = 0.26, and nearly reported that this
@@ -323,6 +326,34 @@ and say which one you used.
 | `echo.median_feedback` | raw signed register | `EFB`, `-128..127`; negative is normal and not an error |
 | `echo.median_noise_voices` | voices | voices with `NON` set |
 | `echo.median_pitch_mod_voices` | voices | voices with `PMON` set |
+
+## `claims.json` — `snesmdb.claims.v1`
+
+Every quantitative claim in this documentation that could change a
+methodological choice, with its evidence and the method to recompute it. Each
+is one of three kinds, and the distinction is the point:
+
+| kind | meaning |
+|---|---|
+| `measurement` | recomputable from the distribution. A discrepancy is a defect |
+| `estimate` | recomputable only under a named assumption, recorded in `assumes` |
+| `interpretation` | a statement about what a field *means*; not mechanically checkable, listed so you know which claims rest on judgement |
+
+**`replicate.py` at the package root checks them.** It reads only the
+distribution, imports nothing from this project, and where possible reads a
+*different* published representation from the one a claim's own figure came
+from — the MIDI note-on total is recovered by parsing the binary files, which
+no JSON table touches. Claims it cannot check that way are marked
+`same_representation`, and prove correspondingly less.
+
+```sh
+python3 replicate.py              # from the package root
+python3 replicate.py dist --report replication.json
+```
+
+Reproducing a measurement does not establish that it measures the musical
+concept it is named for, nor that a conclusion generalises beyond these 22
+games. Those are separate claims and no runner settles them.
 
 ## `splits.json`, `summary.json`, `provenance.json`, `RELEASE.json`
 
