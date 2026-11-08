@@ -18,13 +18,13 @@
         "max": 30.5
       },
       "unit": "milliseconds",
-      "scope": "all_tracks",
       "method": "replicate_row_duration",
       "reads": "intake/*.json.gz timing.row_period_ticks",
       "independent_of": "scores/*.json.gz clock.hz",
       "tolerance": 0.01,
       "unit_of_analysis": "track",
-      "generalises_beyond_corpus": false
+      "generalises_beyond_corpus": false,
+      "population": "all_indexed_tracks"
     },
     {
       "id": "tracks_coarser_than_uniform",
@@ -36,13 +36,13 @@
         "fraction": 0.259
       },
       "unit": "tracks",
-      "scope": "all_tracks",
       "method": "replicate_coarser_than_uniform",
       "reads": "intake/*.json.gz timing.row_period_ticks",
       "independent_of": "scores/*.json.gz clock.hz",
       "tolerance": 0,
       "unit_of_analysis": "track",
-      "generalises_beyond_corpus": false
+      "generalises_beyond_corpus": false,
+      "population": "all_indexed_tracks"
     },
     {
       "id": "pitched_attacks",
@@ -53,13 +53,13 @@
         "count": 1458211
       },
       "unit": "events",
-      "scope": "all_tracks",
       "method": "replicate_pitched_attacks",
       "reads": "events/*.json.gz rows",
       "independent_of": "index.json corpus block",
       "tolerance": 0,
       "unit_of_analysis": "event",
-      "generalises_beyond_corpus": false
+      "generalises_beyond_corpus": false,
+      "population": "pitched_attacks"
     },
     {
       "id": "legato_steps",
@@ -70,13 +70,13 @@
         "count": 154910
       },
       "unit": "events",
-      "scope": "all_tracks",
       "method": "replicate_legato_steps",
       "reads": "events/*.json.gz rows",
       "independent_of": "index.json per-track legato_step_count",
       "tolerance": 0,
       "unit_of_analysis": "event",
-      "generalises_beyond_corpus": false
+      "generalises_beyond_corpus": false,
+      "population": "legato_steps"
     },
     {
       "id": "midi_notes_written",
@@ -88,14 +88,14 @@
         "files": 1243
       },
       "unit": "note-ons",
-      "scope": "all_tracks",
       "method": "replicate_midi_note_ons",
       "reads": "midi/*.mid, parsed as a Standard MIDI File byte stream",
       "independent_of": "index.json midi_summary and manifest_counts.json",
       "tolerance": 0,
       "note": "The strongest cross-representation check available: a binary format produced by a different code path from the JSON tables, parsed here without reference to either.",
       "unit_of_analysis": "event",
-      "generalises_beyond_corpus": false
+      "generalises_beyond_corpus": false,
+      "population": "midi_files"
     },
     {
       "id": "max_voices_sounding",
@@ -106,14 +106,14 @@
         "max": 8
       },
       "unit": "voices",
-      "scope": "all_tracks",
       "method": "replicate_max_voices",
       "reads": "events/*.json.gz, interval sweep with the documented 1 us remedy",
       "independent_of": "scores/*.json.gz stats.max_voices_sounding_per_row",
       "tolerance": 0,
       "note": "Exercises the documented rounding remedy. Without it a naive sweep reports 9-13, which is the defect the remedy exists for.",
       "unit_of_analysis": "track",
-      "generalises_beyond_corpus": false
+      "generalises_beyond_corpus": false,
+      "population": "all_indexed_tracks"
     },
     {
       "id": "out_of_midi_range_rate",
@@ -124,14 +124,14 @@
         "fraction": 0.0173
       },
       "unit": "fraction",
-      "scope": "pitched_attacks",
       "method": "replicate_out_of_range",
       "reads": "events/*.json.gz rows",
       "independent_of": "none published; this figure exists only in prose",
       "same_representation": true,
       "tolerance": 0.0005,
       "unit_of_analysis": "event",
-      "generalises_beyond_corpus": false
+      "generalises_beyond_corpus": false,
+      "population": "pitched_attacks"
     },
     {
       "id": "saturated_games",
@@ -142,14 +142,14 @@
         "count": 3
       },
       "unit": "games",
-      "scope": "music_tracks",
       "method": "replicate_saturated_games",
       "reads": "events/*.json.gz, recomputing duty from note intervals",
       "independent_of": "performance_music.json voices.gated_duty_cycle, which is computed from the extraction records rather than from the published events",
       "tolerance": 0,
       "note": "The claim this checks was wrong in rc6: the prose named two games where the field flags three.",
       "unit_of_analysis": "game",
-      "generalises_beyond_corpus": false
+      "generalises_beyond_corpus": false,
+      "population": "game_weighted_music"
     },
     {
       "id": "timbre_class_is_inert",
@@ -161,14 +161,14 @@
         "value": -1
       },
       "unit": "values",
-      "scope": "sampled_tracks",
       "method": "replicate_timbre_inert",
       "reads": "scores/*.json.gz and intake/*.json.gz",
       "independent_of": "the prose claim only",
       "same_representation": true,
       "tolerance": 0,
       "unit_of_analysis": "track",
-      "generalises_beyond_corpus": false
+      "generalises_beyond_corpus": false,
+      "population": "sampled_tracks"
     },
     {
       "id": "onset_grid_concentration",
@@ -180,14 +180,14 @@
         "gap_at_least": true
       },
       "unit": "resultant length",
-      "scope": "music_tracks",
       "method": "replicate_onset_concentration",
       "reads": "events/*.json.gz onsets against scores/*.json.gz onset_grid and clock",
       "independent_of": "the prose claim only",
       "assumes": "circular resultant length of onset phase within the period. The VALUE is estimator-dependent -- an independent estimator gave 0.779/0.344 against the documented 0.937/0.262 -- so the registered claim is the ordering and the size of the gap, which any reasonable estimator should reproduce.",
       "tolerance": 0,
       "unit_of_analysis": "track",
-      "generalises_beyond_corpus": false
+      "generalises_beyond_corpus": false,
+      "population": "indexed_music_tracks"
     },
     {
       "id": "per_sample_ladder_deviation",
@@ -199,14 +199,14 @@
         "worst_game_cents": 4.06
       },
       "unit": "cents",
-      "scope": "sample_groups_with_8_or_more_notes",
       "method": "replicate_ladder_deviation",
       "reads": "events/*.json.gz grouped by (game_slug, sample_id)",
       "independent_of": "the prose table only",
       "assumes": "free offset fitted per sample group by scanning in 0.01-semitone steps, over groups of at least 8 pitched attacks, then a median per group aggregated PER DRIVER -- a driver pools its games. Aggregating per GAME instead gives 4.06 (Mega Man X), and the first replication failed purely on that unstated choice. Both figures are now registered.",
       "tolerance": 0.4,
       "unit_of_analysis": "sample_group",
-      "generalises_beyond_corpus": false
+      "generalises_beyond_corpus": false,
+      "population": "dense_sample_groups"
     },
     {
       "id": "gated_is_not_audible",
@@ -240,5 +240,44 @@
   "generalisation": {
     "note": "Whether a figure describes this corpus or SNES music. NO corpus-wide figure here generalises: 22 games of roughly 700 commercial SNES titles, JRPG- and first-party-weighted, 13.8% from one game. A corpus-wide statistic is descriptive of the collected sample and is not a universal SNES musical convention.",
     "sample_composition": "22 games, 1,006 music tracks, 37 credited composers; largest game 13.8%, top three games 28.5%, top three composers 27.4% of credits"
+  },
+  "populations": {
+    "note": "The sampling frame a claim describes. A SELECTION RULE, not a size: the rule is stable across releases and the realised size is not, so replicate.py reports the size it finds and a report from a 22-game release can be compared with one from a 50-game release rule by rule. `generalises_beyond_corpus: false` says a claim does not describe SNES music; this says which subset of the corpus it does describe. Those are different statements, and several distinct populations exist inside one corpus.",
+    "all_indexed_tracks": {
+      "rule": "every track in index.json, any track_class",
+      "unit": "track"
+    },
+    "indexed_music_tracks": {
+      "rule": "index.json tracks with track_class == 'music'",
+      "unit": "track"
+    },
+    "game_weighted_music": {
+      "rule": "music tracks aggregated per game, each game contributing equally",
+      "unit": "game"
+    },
+    "pitched_attacks": {
+      "rule": "events with origin == 'key_on' and pitch_status == 'estimated'",
+      "unit": "event"
+    },
+    "all_published_events": {
+      "rule": "every row of every events table, both origins",
+      "unit": "event"
+    },
+    "legato_steps": {
+      "rule": "events with origin == 'legato_step'",
+      "unit": "event"
+    },
+    "midi_files": {
+      "rule": "the published midi/*.mid files, one per track with a pitched note",
+      "unit": "file"
+    },
+    "dense_sample_groups": {
+      "rule": "(game_slug, sample_id) groups with at least 8 pitched attacks",
+      "unit": "sample_group"
+    },
+    "sampled_tracks": {
+      "rule": "a deterministic spread of tracks, used where an exhaustive pass would cost more than the claim is worth",
+      "unit": "track"
+    }
   }
 }

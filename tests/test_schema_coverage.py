@@ -207,3 +207,35 @@ def test_no_claim_asserts_it_generalises_beyond_the_corpus():
     for claim in CLAIMS["claims"]:
         if claim.get("method"):
             assert claim.get("generalises_beyond_corpus") is False, claim["id"]
+
+
+def test_every_checkable_claim_names_a_registered_population():
+    """Which sampling frame a figure describes.
+
+    `generalises_beyond_corpus: false` says a claim is not about SNES music.
+    This says which subset of the corpus it IS about, and several distinct
+    populations live inside one corpus: all indexed tracks, music tracks,
+    game-weighted music, pitched attacks, dense sample groups. Two figures
+    over different frames are not comparable, and a 22-game report cannot be
+    read against a 50-game one unless both name their frame.
+    """
+    frames = set(CLAIMS["populations"]) - {"note"}
+    for claim in CLAIMS["claims"]:
+        if not claim.get("method"):
+            continue
+        assert claim.get("population") in frames, (
+            f"{claim['id']}: population {claim.get('population')!r} not registered"
+        )
+
+
+def test_every_population_states_a_selection_rule_not_a_size():
+    """A rule survives a corpus expansion; a size does not. Recording sizes
+    here would make the registry stale the moment the corpus grows, which is
+    exactly when it needs to be readable."""
+    for key, frame in CLAIMS["populations"].items():
+        if key == "note":
+            continue
+        assert frame.get("rule") and frame.get("unit"), key
+        assert not any(
+            isinstance(v, (int, float)) for v in frame.values()
+        ), f"{key}: a population must not record a size"

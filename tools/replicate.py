@@ -383,6 +383,34 @@ METHODS: dict[str, Callable[[Path, list], dict[str, Any]]] = {
 # Runner
 # ---------------------------------------------------------------------------
 
+def population_size(dist: Path, tracks: list, key: str) -> int | None:
+    """The realised size of a sampling frame in THIS release.
+
+    The registry records a selection rule, which is stable; this reports what
+    the rule selects here, which is not. Printing both is what makes a
+    22-game report comparable with a 50-game one rule by rule, instead of
+    leaving a reader to guess whether a figure moved because the music
+    differs or because the frame grew.
+    """
+    if key == "all_indexed_tracks":
+        return len(tracks)
+    if key in ("indexed_music_tracks", "game_weighted_music"):
+        music = [t for t in tracks if t.get("track_class") == "music"]
+        if key == "indexed_music_tracks":
+            return len(music)
+        return len({t.get("game") for t in music})
+    if key == "midi_files":
+        return sum(1 for _ in (dist / "midi").glob("*.mid"))
+    if key in ("pitched_attacks", "all_published_events", "legato_steps"):
+        return sum(
+            int(t.get({"pitched_attacks": "pitched_attack_count",
+                       "all_published_events": "event_count",
+                       "legato_steps": "legato_step_count"}[key], 0) or 0)
+            for t in tracks
+        )
+    return None
+
+
 def _compare(reported: dict, got: dict, tolerance: float) -> list[str]:
     problems = []
     for key, want in (reported or {}).items():
@@ -445,6 +473,8 @@ def main() -> None:
             print(f"  ??   {claim['id']}: no method {claim['method']}")
             skipped += 1
             continue
+        frame = claim.get("population")
+        size = population_size(dist, tracks, frame) if frame else None
         got = method(dist, tracks)
         problems = _compare(claim.get("reported", {}), got,
                             float(claim.get("tolerance", 0)))
@@ -456,8 +486,10 @@ def main() -> None:
             for line in problems:
                 print(f"         {line}")
         else:
-            print(f"  ok   {claim['id']} [{kind}, {mark}]")
+            where = f"{frame}" + (f" n={size:,}" if size is not None else "")
+            print(f"  ok   {claim['id']} [{kind}, {mark}] over {where}")
         results.append({**claim, "recomputed": got,
+                        "population_size_in_this_release": size,
                         "outcome": "fail" if problems else "ok",
                         "problems": problems})
 
