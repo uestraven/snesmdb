@@ -195,7 +195,7 @@ Python extractor works on an existing log.
 
 ```sh
 make                        # builds build/spc_dump
-make test                   # 439 tests, no skips (bootstraps .venv for pytest)
+make test                   # 441 tests, no skips (bootstraps .venv for pytest)
 make corpus                 # full rebuild: ~80 min on 8 jobs
 make verify                 # 26 checks on an existing corpus and dist tree
 make audit                  # 27 checks, opening EVERY published file

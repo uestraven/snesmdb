@@ -193,6 +193,55 @@ disjointness would pass on a technicality.
 
 # Limitations
 
+## How to compare across games without flattening them
+
+Three axes get confused, and they do not have the same standing.
+
+| axis | status in this corpus | safe as a covariate? |
+|---|---|---|
+| **game genre** | not published; would be curated external knowledge, like `driver` | yes, once labelled and marked as curated |
+| **musical function** | partly available — `track_class` separates music / jingle / effect / drone, and `title` often names a role | yes, with the caveat that finer roles are judgement |
+| **musical style** | not published, and **not a covariate** | **no** |
+
+**Style is the thing under study, not a control for it.** If style labels come
+from someone listening, then grouping by style and then reporting stylistic
+differences measures the labeller as much as the music. Genre and function are
+properties of the *release* and can be established independently; style is an
+outcome. Classify on the first two, compare the third.
+
+### Choose a statistical unit deliberately
+
+This corpus is not balanced, and pooling over tracks hides that:
+
+| | |
+|---|---|
+| music tracks | 1,006 across 22 games |
+| largest single game | **Earthbound, 13.8%** |
+| top three games | 28.5% |
+| tracks per game | 17 to 139, an **8× spread** |
+| credited composers | 37, **many-to-many** — Earthbound's three each appear on all 139 of its tracks |
+
+A per-track pooled mean therefore weights each game by how many tracks it
+happens to contribute, which is a fact about what was collected rather than
+about SNES music. **Report the unit you used.** `index.json` →
+`composition` publishes the full per-game and per-composer counts so a figure
+can be weighted, recomputed per game, or qualified. `claims.json` records a
+`unit_of_analysis` for every registered claim for the same reason.
+
+Composer-level work needs one further caution: credits are many-to-many and
+truncated at 32 characters by the source tags, so one Earthbound credit
+appears as `Ke`. Composer-pooled counts sum to more than the track total.
+
+### No corpus-wide figure here generalises
+
+22 games out of roughly 700 commercial SNES titles, weighted toward JRPGs and
+first-party releases, with 13.8% from a single game. **Every corpus-wide
+statistic in this documentation is descriptive of the collected sample.** It
+is not a universal SNES musical convention, and `claims.json` marks every
+registered claim `generalises_beyond_corpus: false` rather than leaving that
+to be inferred. Three independent evaluations each reached the same limit
+unprompted; the honest fix is a broader corpus, not a stronger adjective.
+
 ## Known issues, consolidated
 
 Every defect the authors know about, in one place, so a recipient can tell a

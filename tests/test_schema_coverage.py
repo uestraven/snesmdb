@@ -180,3 +180,30 @@ def test_most_checkable_claims_read_a_different_representation():
     assert len(cross) > len(checkable) / 2, (
         f"only {len(cross)}/{len(checkable)} claims are cross-representation"
     )
+
+
+def test_every_checkable_claim_declares_its_statistical_unit():
+    """Pooling over tracks lets one game drive 1 observation in 7.
+
+    Earthbound is 13.8% of music tracks and games range 17 to 139, so a
+    per-track pooled figure is weighted by what was collected rather than by
+    anything musical. A claim that does not say which unit it was computed
+    over cannot be compared with one that used a different unit.
+    """
+    units = set(CLAIMS["units_of_analysis"]) - {"note"}
+    for claim in CLAIMS["claims"]:
+        if not claim.get("method"):
+            continue
+        unit = claim.get("unit_of_analysis")
+        assert unit in units, f"{claim['id']}: unit {unit!r} not registered"
+
+
+def test_no_claim_asserts_it_generalises_beyond_the_corpus():
+    """22 games of roughly 700 commercial SNES titles, JRPG- and
+    first-party-weighted. A corpus-wide figure describes the sample that was
+    collected; calling it an SNES convention would be a claim about a
+    population this corpus does not sample."""
+    assert CLAIMS["generalisation"]["sample_composition"]
+    for claim in CLAIMS["claims"]:
+        if claim.get("method"):
+            assert claim.get("generalises_beyond_corpus") is False, claim["id"]

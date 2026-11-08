@@ -114,6 +114,9 @@ def index_document(tracks: list[dict[str, Any]]) -> dict[str, Any]:
         # Slug to game name. Load-bearing for per-game work and previously
         # inferrable only by counting tracks per game.
         "games": games(tracks),
+        # What was collected, so a pooled figure can be weighted rather than
+        # read as a universal convention.
+        "composition": composition(tracks),
         # The one curated field in the distribution, carrying its own
         # provenance so a consumer reading only JSON learns that it is not
         # measured. Published because DATASET.md conditions advice on the
@@ -157,6 +160,54 @@ def tracks_csv(tracks: list[dict[str, Any]]) -> str:
         row.update(drivers.for_slug(row["game_slug"]))
         writer.writerow([row.get(column, "") for column in TRACKS_CSV_COLUMNS])
     return out.getvalue()
+
+
+def composition(tracks: list[dict[str, Any]]) -> dict[str, Any]:
+    """What was collected, so a pooled figure can be weighted or qualified.
+
+    A corpus-wide mean is a mean over a sample weighted by how many tracks
+    each game happens to contribute, and this corpus is not balanced:
+    Earthbound is 13.8% of music tracks and games range from 17 to 139, an 8x
+    spread. Published so a reader can see that before quoting a global
+    average, and so the choice of statistical unit is theirs rather than
+    implicit in ours.
+
+    Composer credits are MANY-TO-MANY and some are truncated at 32 characters
+    by the source tags, so `tracks_per_composer` sums to more than the track
+    count. That is recorded rather than smoothed over: Earthbound's three
+    credited composers each appear on all 139 of its tracks.
+    """
+    music = [t for t in tracks if t.get("track_class") == "music"]
+    per_game: dict[str, int] = {}
+    per_composer: dict[str, int] = {}
+    for entry in music:
+        per_game[entry.get("game") or "?"] = (
+            per_game.get(entry.get("game") or "?", 0) + 1
+        )
+        for name in entry.get("composers") or []:
+            per_composer[name] = per_composer.get(name, 0) + 1
+    counts = sorted(per_game.values(), reverse=True)
+    total = len(music) or 1
+    credits = sum(per_composer.values()) or 1
+    top_composers = sorted(per_composer.values(), reverse=True)[:3]
+    return {
+        "note": (
+            "Descriptive of the collected sample, NOT of SNES music. 22 games "
+            "of roughly 700 commercial titles, JRPG- and first-party-"
+            "weighted. Weight or qualify any corpus-wide figure accordingly."
+        ),
+        "n_music_tracks": len(music),
+        "n_games": len(per_game),
+        "n_credited_composers": len(per_composer),
+        "largest_game_share": round(counts[0] / total, 4) if counts else 0,
+        "top3_game_share": round(sum(counts[:3]) / total, 4),
+        "top3_composer_credit_share": round(sum(top_composers) / credits, 4),
+        "tracks_per_game_min": min(counts) if counts else 0,
+        "tracks_per_game_max": max(counts) if counts else 0,
+        "tracks_per_game": dict(sorted(per_game.items())),
+        "composer_credits_are_many_to_many": True,
+        "tracks_per_composer": dict(sorted(per_composer.items())),
+    }
 
 
 def tracks_of(raw: Any) -> list[dict[str, Any]]:

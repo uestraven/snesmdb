@@ -22,7 +22,9 @@
       "method": "replicate_row_duration",
       "reads": "intake/*.json.gz timing.row_period_ticks",
       "independent_of": "scores/*.json.gz clock.hz",
-      "tolerance": 0.01
+      "tolerance": 0.01,
+      "unit_of_analysis": "track",
+      "generalises_beyond_corpus": false
     },
     {
       "id": "tracks_coarser_than_uniform",
@@ -38,7 +40,9 @@
       "method": "replicate_coarser_than_uniform",
       "reads": "intake/*.json.gz timing.row_period_ticks",
       "independent_of": "scores/*.json.gz clock.hz",
-      "tolerance": 0
+      "tolerance": 0,
+      "unit_of_analysis": "track",
+      "generalises_beyond_corpus": false
     },
     {
       "id": "pitched_attacks",
@@ -53,7 +57,9 @@
       "method": "replicate_pitched_attacks",
       "reads": "events/*.json.gz rows",
       "independent_of": "index.json corpus block",
-      "tolerance": 0
+      "tolerance": 0,
+      "unit_of_analysis": "event",
+      "generalises_beyond_corpus": false
     },
     {
       "id": "legato_steps",
@@ -68,7 +74,9 @@
       "method": "replicate_legato_steps",
       "reads": "events/*.json.gz rows",
       "independent_of": "index.json per-track legato_step_count",
-      "tolerance": 0
+      "tolerance": 0,
+      "unit_of_analysis": "event",
+      "generalises_beyond_corpus": false
     },
     {
       "id": "midi_notes_written",
@@ -85,7 +93,9 @@
       "reads": "midi/*.mid, parsed as a Standard MIDI File byte stream",
       "independent_of": "index.json midi_summary and manifest_counts.json",
       "tolerance": 0,
-      "note": "The strongest cross-representation check available: a binary format produced by a different code path from the JSON tables, parsed here without reference to either."
+      "note": "The strongest cross-representation check available: a binary format produced by a different code path from the JSON tables, parsed here without reference to either.",
+      "unit_of_analysis": "event",
+      "generalises_beyond_corpus": false
     },
     {
       "id": "max_voices_sounding",
@@ -101,7 +111,9 @@
       "reads": "events/*.json.gz, interval sweep with the documented 1 us remedy",
       "independent_of": "scores/*.json.gz stats.max_voices_sounding_per_row",
       "tolerance": 0,
-      "note": "Exercises the documented rounding remedy. Without it a naive sweep reports 9-13, which is the defect the remedy exists for."
+      "note": "Exercises the documented rounding remedy. Without it a naive sweep reports 9-13, which is the defect the remedy exists for.",
+      "unit_of_analysis": "track",
+      "generalises_beyond_corpus": false
     },
     {
       "id": "out_of_midi_range_rate",
@@ -117,7 +129,9 @@
       "reads": "events/*.json.gz rows",
       "independent_of": "none published; this figure exists only in prose",
       "same_representation": true,
-      "tolerance": 0.0005
+      "tolerance": 0.0005,
+      "unit_of_analysis": "event",
+      "generalises_beyond_corpus": false
     },
     {
       "id": "saturated_games",
@@ -133,7 +147,9 @@
       "reads": "events/*.json.gz, recomputing duty from note intervals",
       "independent_of": "performance_music.json voices.gated_duty_cycle, which is computed from the extraction records rather than from the published events",
       "tolerance": 0,
-      "note": "The claim this checks was wrong in rc6: the prose named two games where the field flags three."
+      "note": "The claim this checks was wrong in rc6: the prose named two games where the field flags three.",
+      "unit_of_analysis": "game",
+      "generalises_beyond_corpus": false
     },
     {
       "id": "timbre_class_is_inert",
@@ -150,7 +166,9 @@
       "reads": "scores/*.json.gz and intake/*.json.gz",
       "independent_of": "the prose claim only",
       "same_representation": true,
-      "tolerance": 0
+      "tolerance": 0,
+      "unit_of_analysis": "track",
+      "generalises_beyond_corpus": false
     },
     {
       "id": "onset_grid_concentration",
@@ -167,7 +185,9 @@
       "reads": "events/*.json.gz onsets against scores/*.json.gz onset_grid and clock",
       "independent_of": "the prose claim only",
       "assumes": "circular resultant length of onset phase within the period. The VALUE is estimator-dependent -- an independent estimator gave 0.779/0.344 against the documented 0.937/0.262 -- so the registered claim is the ordering and the size of the gap, which any reasonable estimator should reproduce.",
-      "tolerance": 0
+      "tolerance": 0,
+      "unit_of_analysis": "track",
+      "generalises_beyond_corpus": false
     },
     {
       "id": "per_sample_ladder_deviation",
@@ -184,7 +204,9 @@
       "reads": "events/*.json.gz grouped by (game_slug, sample_id)",
       "independent_of": "the prose table only",
       "assumes": "free offset fitted per sample group by scanning in 0.01-semitone steps, over groups of at least 8 pitched attacks, then a median per group aggregated PER DRIVER -- a driver pools its games. Aggregating per GAME instead gives 4.06 (Mega Man X), and the first replication failed purely on that unstated choice. Both figures are now registered.",
-      "tolerance": 0.4
+      "tolerance": 0.4,
+      "unit_of_analysis": "sample_group",
+      "generalises_beyond_corpus": false
     },
     {
       "id": "gated_is_not_audible",
@@ -206,5 +228,17 @@
       "method": null,
       "not_checkable_because": "A definitional claim about what the identifier denotes. The corpus can show that one sample is used across a wide pitch span, which is evidence that the distinction matters, but cannot establish the definition."
     }
-  ]
+  ],
+  "units_of_analysis": {
+    "note": "The statistical unit a figure is computed over. Published per claim because pooling over tracks lets one game dominate: Earthbound is 13.8% of music tracks and games range from 17 to 139 tracks, an 8x spread. A per-track pooled mean is a mean over a sample weighted by how many tracks each game happens to contribute, which is an artefact of what was collected.",
+    "track": "every track contributes equally; large games dominate",
+    "game": "every game contributes equally; the usual choice for a cross-game claim",
+    "composer": "credits are MANY-TO-MANY and some are truncated at 32 characters: Earthbound's three credited composers each appear on all 139 of its tracks, so a composer-pooled figure multiply-counts those tracks",
+    "sample_group": "a (game, sample_id) group",
+    "event": "an individual published event"
+  },
+  "generalisation": {
+    "note": "Whether a figure describes this corpus or SNES music. NO corpus-wide figure here generalises: 22 games of roughly 700 commercial SNES titles, JRPG- and first-party-weighted, 13.8% from one game. A corpus-wide statistic is descriptive of the collected sample and is not a universal SNES musical convention.",
+    "sample_composition": "22 games, 1,006 music tracks, 37 credited composers; largest game 13.8%, top three games 28.5%, top three composers 27.4% of credits"
+  }
 }
