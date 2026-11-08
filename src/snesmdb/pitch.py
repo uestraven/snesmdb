@@ -298,6 +298,27 @@ def estimate_f0(
     from the autocorrelation result and the loop is used to refine it. When
     the two cannot be reconciled the result is low confidence.
     """
+    # NO SAMPLE IS NOT A PERCUSSIVE SAMPLE. An absent or unreadable sample
+    # reached the estimator, found no fundamental in nothing, and was
+    # reported as "probably percussive or noise" -- an explanation about the
+    # MUSIC for a failure of the DATA. In Secret of Evermore that
+    # misattributed 28,203 notes across 42 tracks, where the real cause was a
+    # sample directory the driver populates at runtime and this pipeline read
+    # at t=0. A researcher reading those records would have concluded the
+    # game is half percussion.
+    #
+    # Reported separately so the cause is recoverable from the record rather
+    # than inferred from a sentence about timbre.
+    if not samples:
+        return SampleF0(
+            srcn, None, "none", "none",
+            "no sample data was available to analyse -- the directory entry "
+            "resolved to nothing or the BRR block could not be decoded. This "
+            "is a data-availability failure, NOT evidence that the sample is "
+            "percussive or noisy",
+            None, None, None,
+        )
+
     region = samples[loop_offset:] if loop_offset is not None else samples
     if len(region) < 64:
         region = samples
@@ -310,7 +331,8 @@ def estimate_f0(
         return SampleF0(
             srcn, None, "none", "none",
             "neither autocorrelation nor loop length gave a usable "
-            "fundamental; the sample is probably percussive or noise",
+            "fundamental from %d decoded samples; the sample is probably "
+            "percussive or noise" % len(samples),
             None, raw_loop, None,
         )
 

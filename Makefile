@@ -49,6 +49,23 @@ all: $(BUILD)/spc_dump
 $(BUILD)/spc_dump: tools/spc_dump.cpp $(SRCS) src/hook.h | $(BUILD)
 	$(CXX) $(CXXFLAGS) $(HOOK) -o $@ tools/spc_dump.cpp $(SRCS)
 
+# INSTRUMENTED BUILD. Same sources, plus the sample hook that captures the
+# directory entry the DSP actually consumed. Built separately so the ordinary
+# extractor binary stays free of the extra output, and so the two can be
+# compared for bit-identical audio.
+EVT_HOOK = -DSPC_DSP_SAMPLE_HOOK\(v,a,s,l\)=snesmdb_log_sample_start\(v,a,s,l\)
+
+$(BUILD)/spc_dump_evt: tools/spc_dump.cpp $(SRCS) src/hook.h | $(BUILD)
+	$(CXX) $(CXXFLAGS) $(HOOK) $(EVT_HOOK) -o $@ tools/spc_dump.cpp $(SRCS)
+
+# The instrumentation must not change what the chip produces.
+verify-instrumentation: $(BUILD)/spc_dump $(BUILD)/spc_dump_evt
+	@$(PYTHON) -I tools/verify_instrumentation.py
+
+# The one documented modification to the vendored tree.
+verify-vendor:
+	@diff -u /tmp/SPC_DSP.cpp.orig vendor/snes_spc/snes_spc/SPC_DSP.cpp || true
+
 $(BUILD):
 	mkdir -p $(BUILD)
 

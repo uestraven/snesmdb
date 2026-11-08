@@ -301,11 +301,23 @@ class Extraction:
 
 
 def read_log(path: Path) -> Iterator[dict[str, Any]]:
+    """DSP register writes from a dump, and only those.
+
+    The dump carries a second record type: `kind == "dir"`, the sample
+    directory whenever it changes, which `snesmdb.dirtimeline` reads to
+    resolve a sample at key-on time. Those records have no `addr`, so every
+    consumer of the write stream has to skip them -- and when they were first
+    emitted this function did not, which made the extractor raise KeyError on
+    the first directory snapshot of every track.
+    """
     with Path(path).open() as handle:
         for line in handle:
             line = line.strip()
-            if line:
-                yield json.loads(line)
+            if not line:
+                continue
+            record = json.loads(line)
+            if "addr" in record:
+                yield record
 
 
 def _semitones(from_pitch: int, to_pitch: int) -> float:

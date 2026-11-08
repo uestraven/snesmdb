@@ -349,6 +349,52 @@ def process(args: tuple[str, float, bool, str]) -> dict[str, Any]:
     return row
 
 
+def _sample_resolution_census(good: list[dict[str, Any]]) -> dict[str, Any]:
+    """How many notes resolved to a decodable sample, and why the rest did not.
+
+    Absolute counts per cause, not a single pass/fail. The causes have
+    different remedies: a directory entry the driver had not yet written
+    needs runtime-aware resolution, an implausible entry needs a different
+    plausibility rule, and a decode failure needs the decoder looked at.
+    Collapsing them into one percentage hides which one is in play.
+    """
+    causes: dict[str, int] = {}
+    notes = 0
+    for row in good:
+        notes += int((row.get("summary") or {}).get("n_notes") or 0)
+        for srcn, info in (row.get("samples") or {}).items():
+            n = int((row.get("summary") or {}).get("srcn_counts", {}).get(
+                str(srcn), 0
+            ) or 0)
+            start = info.get("start")
+            if start is None:
+                cause = "no_directory_entry"
+            elif start == 0xFFFF:
+                # The 0xFF fill of memory the driver has not written yet.
+                cause = "directory_entry_unwritten"
+            elif start == 0:
+                cause = "directory_entry_implausible"
+            elif not info.get("decoded_samples", 1):
+                cause = "decoded_empty"
+            else:
+                cause = "resolved"
+            causes[cause] = causes.get(cause, 0) + (n or 1)
+    resolved = causes.get("resolved", 0)
+    total = sum(causes.values()) or 1
+    return {
+        "unit": "sample slots referenced by a key-on, per track",
+        "n_slots": total,
+        "causes": dict(sorted(causes.items())),
+        "unresolved_fraction": round(1.0 - resolved / total, 4),
+        "note": (
+            "unresolved_fraction above a few percent means the published "
+            "sample identities and pitches are incomplete for this set, "
+            "whatever the audit checks report. Causes have different "
+            "remedies and are counted separately."
+        ),
+    }
+
+
 def _clock_summary(good: list[dict[str, Any]]) -> dict[str, Any]:
     """The row-clock census.
 
@@ -545,6 +591,16 @@ def main() -> None:
         "n_notes_implausible_register": sum(
             r.get("pitch", {}).get("n_implausible_register", 0) for r in good
         ),
+        # SAMPLE-RESOLUTION COVERAGE, with absolute cause counts.
+        #
+        # Secret of Evermore extracted 72 of 72 tracks, reconciled every
+        # count, and passed 37 of 38 audit checks while HALF its note attacks
+        # resolved to no sample at all -- a directory the driver populates at
+        # runtime, read here at t=0. Nothing in any summary said so. A
+        # coverage figure this large must be visible whether or not other
+        # checks pass, which is why it sits beside the note counts rather
+        # than inside a check that can be satisfied.
+        "sample_resolution": _sample_resolution_census(good),
         "rendered_seconds_total": round(
             sum(r.get("render_seconds", 0.0) for r in good), 1
         ),

@@ -424,6 +424,15 @@ VOICE_CLOCK( V3c )
 		// Get ready to start BRR decoding on next sample
 		if ( v->kon_delay == 5 )
 		{
+			/* snesmdb: the ONLY modification to this vendored file.
+			 * This is the instant the DSP commits a voice's BRR start
+			 * address, read from the sample directory it actually used --
+			 * not the directory as it stood when the CPU wrote KON, which
+			 * is earlier by the key-on delay and can differ. Expands to
+			 * nothing unless SPC_DSP_SAMPLE_HOOK is defined, so the
+			 * uninstrumented build is byte-for-byte the upstream logic. */
+			SPC_DSP_SAMPLE_HOOK( (int)(v - m.voices), m.t_dir_addr,
+					m.t_brr_next_addr, GET_LE16A( &m.ram [(m.t_dir_addr + 2) & 0xFFFF] ) );
 			v->brr_addr    = m.t_brr_next_addr;
 			v->brr_offset  = 1;
 			v->buf_pos     = 0;

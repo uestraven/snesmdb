@@ -31,6 +31,10 @@ namespace {
 
 FILE* g_log = nullptr;
 long g_writes = 0;
+int g_chunk_frames = 2048;
+//: Last emitted directory page and its contents, so only changes are logged.
+int g_last_dir_page = -1;
+std::vector<unsigned char> g_last_dir_page_bytes;
 
 /* Absolute-time base, in SPC700 clocks.
  *
@@ -89,6 +93,18 @@ extern "C" void snesmdb_log_dsp_write(long time, int addr, unsigned char data) {
     ++g_writes;
 }
 
+extern "C" void snesmdb_log_sample_start(int voice, int dir_addr, int start, int loop) {
+    if (!g_log) return;
+    // Matched to note attacks by (voice, ordinal): the nth commit on a voice
+    // is the nth key-on on that voice. No timestamp comparison, so the
+    // chunk-boundary ambiguity that defeated directory snapshots cannot
+    // arise. `t` is emitted only as a cross-check.
+    fprintf(g_log,
+            "{\"t\":%ld,\"kind\":\"sample\",\"voice\":%d,"
+            "\"dir_addr\":%d,\"start\":%d,\"loop\":%d}\n",
+            g_time_base, voice, dir_addr, start, loop);
+}
+
 static std::vector<unsigned char> read_file(const char* path) {
     FILE* f = fopen(path, "rb");
     if (!f) {
@@ -132,7 +148,7 @@ int main(int argc, char** argv) {
     if (argc < 3) {
         fprintf(stderr,
                 "usage: %s <in.spc> <out.jsonl> [seconds] "
-                "[--wav out.wav] [--aram out.bin]\n",
+                "[--wav out.wav] [--aram out.bin] [--chunk frames]\n",
                 argv[0]);
         return 2;
     }
@@ -144,6 +160,7 @@ int main(int argc, char** argv) {
     for (int i = 3; i < argc; ++i) {
         if (!strcmp(argv[i], "--wav") && i + 1 < argc) wav_path = argv[++i];
         else if (!strcmp(argv[i], "--aram") && i + 1 < argc) aram_path = argv[++i];
+        else if (!strcmp(argv[i], "--chunk") && i + 1 < argc) g_chunk_frames = atoi(argv[++i]);
     }
 
     std::vector<unsigned char> spc = read_file(spc_path);
@@ -172,7 +189,10 @@ int main(int argc, char** argv) {
 
     // Play in chunks so the write hook fires interleaved with audio, exactly
     // as it would during real playback.
-    const int chunk_frames = 2048;
+    // Smaller chunks give finer event timestamps, at the cost of speed.
+    // The verifier uses 1 so a sample-start commit can be ordered against
+    // the key-on that caused it; 2048 is the production default.
+    const int chunk_frames = g_chunk_frames;
     std::vector<short> buf((size_t)chunk_frames * 2);
     for (long done = 0; done < frames; done += chunk_frames) {
         const int want = (int)((frames - done < chunk_frames) ? (frames - done) : chunk_frames);
@@ -182,6 +202,48 @@ int main(int argc, char** argv) {
         }
         if (wav_path) pcm.insert(pcm.end(), buf.begin(), buf.begin() + (size_t)want * 2);
         g_time_base += (long)want * CLOCKS_PER_FRAME;
+
+        // THE SAMPLE DIRECTORY AS IT IS, NOT AS IT WAS AT CAPTURE.
+        //
+        // A driver can populate the directory table after the SPC snapshot
+        // was taken: Secret of Evermore leaves all eight entries as $FFFF at
+        // t=0 and writes real addresses within seconds, so resolving every
+        // key-on against the initial ARAM lost the samples under 50.6% of
+        // its note attacks. The driver never writes DIR ($5D), so nothing in
+        // the DSP log revealed it -- the table lives in ARAM and is filled by
+        // CPU writes.
+        //
+        // THE WHOLE TABLE IS 1,024 BYTES, NOT 256. The directory holds up
+        // to 256 entries of four bytes at (DIR << 8) + SRCN * 4, so a
+        // 256-byte snapshot covers only SRCN 0-63. The corpus reaches
+        // SRCN 73 -- 18 tracks in Donkey Kong Country 2 and Kirby Super Star
+        // exceed 63 -- so a short snapshot would have silently lost their
+        // entries while appearing to work on every game tested so far.
+        //
+        // It changes rarely, so it is emitted ONLY when it differs from the
+        // last emission. A full ARAM dump per key-on would be gigabytes;
+        // this is about a kilobyte per change and gives the state effective
+        // at any tick.
+        {
+            std::vector<unsigned char> image(SNES_SPC::spc_file_size);
+            apu->save_spc(image.data());
+            const unsigned char* aram = image.data() + 0x100;
+            // DSP registers follow ARAM in the SPC image; DIR is $5D.
+            const unsigned char dir_page = image[0x100 + 0x10000 + 0x5D];
+            const int base = (int)dir_page << 8;
+            std::vector<unsigned char> page(1024, 0);
+            for (int i = 0; i < 1024 && base + i < 0x10000; ++i)
+                page[i] = aram[base + i];
+            if (dir_page != g_last_dir_page || page != g_last_dir_page_bytes) {
+                g_last_dir_page = dir_page;
+                g_last_dir_page_bytes = page;
+                fprintf(g_log, "{\"t\":%ld,\"kind\":\"dir\",\"page\":%u,\"bytes\":\"",
+                        g_time_base, (unsigned)dir_page);
+                for (size_t i = 0; i < page.size(); ++i)
+                    fprintf(g_log, "%02x", page[i]);
+                fprintf(g_log, "\"}\n");
+            }
+        }
     }
 
     fclose(g_log);

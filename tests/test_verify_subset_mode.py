@@ -382,11 +382,20 @@ def test_independence_is_not_applicable_when_one_status_exists(tmp_path):
     )
 
 
-def test_independence_still_fails_when_two_statuses_exist_but_none_spans(
-    tmp_path
-):
-    """The precondition is met, so the check applies: two statuses exist and
-    each class carries exactly one, which is the defect it is named for."""
+def test_independence_is_never_evaluated_on_a_subset(tmp_path):
+    """SUPERSEDES a test that required a subset failure when two statuses
+    existed and no class spanned them.
+
+    That rule was outcome-shaped: it would have failed Street Fighter II
+    Turbo, which extracted 36 of 36 cleanly with one unpitched effect track,
+    for a property of 36 tracks rather than of the corpus. Independence is
+    demonstrated corpus-wide by 42 pitched effects and 11 pitchless music
+    tracks; a subset's cross-tab is not the corpus's and cannot disprove it.
+
+    So the check is skipped on EVERY subset, decided by scope rather than by
+    result, which is what stops it being used to excuse a particular game.
+    Full-corpus mode keeps the strict assertion -- asserted below.
+    """
     dist = _dist(tmp_path, n_tracks=4)
     index = json.loads((dist / "index.json").read_text())
     for i, entry in enumerate(index["tracks"]):
@@ -401,11 +410,17 @@ def test_independence_still_fails_when_two_statuses_exist_but_none_spans(
         with gzip.open(path, "wt") as handle:
             json.dump(table, handle)
     (dist / "index.json").write_text(json.dumps(index))
+
     report = _report(dist, subset=True)
-    assert any(
-        "dist_class_and_status_independent" in line
-        for line in report.failures
-    )
+    assert any("dist_class_and_status_independent" in line
+               for line in report.not_applicable)
+    assert not any("dist_class_and_status_independent" in line
+                   for line in report.failures)
+    # The same tree in FULL mode must still fail: the strict invariant is
+    # intact, and only its applicability to subsets changed.
+    full = _report(dist, subset=False)
+    assert any("dist_class_and_status_independent" in line
+               for line in full.failures)
 
 
 def test_observed_classifications_are_validated_even_when_independence_is_na(

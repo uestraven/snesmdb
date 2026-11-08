@@ -7,10 +7,27 @@
  * compiler command line to call the function below, and pass this header with
  * `-include` so the declaration is visible wherever the macro expands.
  *
- * Keeping the vendored tree byte-identical to upstream matters here: it is
- * LGPL-2.1, and an unmodified copy used through a documented hook is far
- * easier to reason about than a patched one.
+ * Keeping the vendored tree byte-identical to upstream mattered here, and it
+ * is no longer quite true: SPC_DSP.cpp carries one documented addition for
+ * the sample hook below, inside voice_V3c. It is LGPL-2.1, the change is
+ * marked in place, and `make verify-vendor` shows the diff.
  */
+/* SECOND HOOK: the sample-directory entry the DSP actually consumed.
+ *
+ * Unlike the write hook, snes_spc provides no extension point here, so
+ * SPC_DSP.cpp carries one three-line addition inside voice_V3c -- the only
+ * modification to the vendored tree, and a no-op unless the macro is
+ * defined. It is needed because hooking the CPU's KON write captures the
+ * wrong instant: the DSP reads the directory during voice processing after a
+ * key-on delay, and a driver can rewrite the table in between. Super
+ * Turrican does exactly that, producing 2,952 directory states in one track
+ * and leaving 30% of its notes with an entry that was valid at key-on and
+ * invalid at the next observable boundary.
+ */
+#ifndef SPC_DSP_SAMPLE_HOOK
+#define SPC_DSP_SAMPLE_HOOK( voice, dir_addr, start, loop )
+#endif
+
 #ifndef SNESMDB_HOOK_H
 #define SNESMDB_HOOK_H
 
@@ -20,6 +37,11 @@ extern "C" {
 
 /* time is in SPC700 clocks (1.024 MHz); addr is a DSP register 0x00-0x7F. */
 void snesmdb_log_dsp_write(long time, int addr, unsigned char data);
+
+/* Called when the DSP commits a voice's BRR start address. `dir_addr` is the
+ * directory entry the DSP read, so the SRCN it used is recoverable as
+ * (dir_addr - DIR*0x100) / 4 without trusting a pipelined register copy. */
+void snesmdb_log_sample_start(int voice, int dir_addr, int start, int loop);
 
 #ifdef __cplusplus
 }
