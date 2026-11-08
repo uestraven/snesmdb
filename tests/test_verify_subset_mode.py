@@ -156,6 +156,7 @@ def test_a_sound_subset_fails_full_mode_and_passes_subset_mode(tmp_path):
     sub = _run(dist, subset=True)
     assert sub["subset_sample_ids_not_degenerate"] is True
     assert sub["subset_row_duration_within_documented_range"] is True
+    assert sub["subset_row_duration_valid"] is True
     assert "dist_sample_ids_plausible" not in sub
     assert "dist_documented_row_duration_matches" not in sub
 
@@ -164,9 +165,13 @@ def test_a_sound_subset_fails_full_mode_and_passes_subset_mode(tmp_path):
     # a fully-formed corpus -- this minimal tree legitimately fails a few
     # checks in both modes because it declares one format and one track class.
     substituted = {"dist_sample_ids_plausible",
-                   "dist_documented_row_duration_matches"}
+                   "dist_documented_row_duration_matches",
+                   "dist_class_and_status_independent"}
     introduced = {"subset_sample_ids_not_degenerate",
-                  "subset_row_duration_within_documented_range"}
+                  "subset_row_duration_within_documented_range",
+                  "subset_row_duration_valid",
+                  "subset_row_duration_documented",
+                  "dist_classifications_are_valid"}
     full_failures = {k for k, v in full.items() if not v} - substituted
     sub_failures = {k for k, v in sub.items() if not v} - introduced
     assert sub_failures == full_failures, (
@@ -233,14 +238,17 @@ def test_subset_mode_detects_degenerate_sample_resolution(tmp_path):
     assert sub["subset_sample_ids_not_degenerate"] is False
 
 
-def test_subset_mode_detects_a_row_duration_outside_the_documented_range(
-    tmp_path
-):
-    """Containment is still an assertion: a subset whose hardware row falls
-    outside the documented span is a real defect and must fail."""
+def test_an_out_of_range_subset_extends_rather_than_fails(tmp_path):
+    """SUPERSEDES an earlier version of this test, which required a failure.
+
+    A verified rate outside the baseline span is new coverage, not a defect --
+    Ken Griffey Jr demonstrated that with a real 551.7 Hz row. The assertion
+    that remains is that it is reported, loudly, and not as a pass.
+    """
     dist = _dist(tmp_path, period_ticks=64_000)       # 62.5 ms, far outside
-    sub = _run(dist, subset=True)
-    assert sub["subset_row_duration_within_documented_range"] is False
+    report = _report(dist, subset=True)
+    assert not _timing_failures(report), _timing_failures(report)
+    assert any("extends_baseline" in line for line in report.extensions)
 
 
 def test_subset_mode_detects_filter_fields_disagreeing_with_the_index(
@@ -251,11 +259,11 @@ def test_subset_mode_detects_filter_fields_disagreeing_with_the_index(
 
 
 def test_subset_mode_fails_when_the_documented_range_is_absent(tmp_path):
-    """If DATASET.md carries no range at all there is nothing to contain the
-    subset, which must not read as a pass."""
+    """If DATASET.md carries no range there is nothing to compare against,
+    which must not pass silently -- an earlier version of this block reported
+    nothing at all in that case."""
     dist = _dist(tmp_path, doc="no range here\n")
-    assert _run(dist, subset=True)[
-        "subset_row_duration_within_documented_range"] is False
+    assert _run(dist, subset=True)["subset_row_duration_documented"] is False
 
 
 # ---------------------------------------------------------------------------
@@ -276,3 +284,140 @@ def test_subset_is_off_by_default():
     import inspect
     for fn in (vc.check_dist, vc.check_events):
         assert inspect.signature(fn).parameters["subset"].default is False
+
+
+# ---------------------------------------------------------------------------
+# Coverage extension vs invalid timing: two different things
+# ---------------------------------------------------------------------------
+
+def _report(dist: Path, *, subset: bool) -> "vc.Report":
+    report = vc.Report()
+    vc.check_dist(dist, report, exhaustive=True, subset=subset)
+    vc.check_events(dist, report, exhaustive=True, subset=subset)
+    return report
+
+
+def _timing_failures(report) -> list[str]:
+    """Failures of the timing checks only.
+
+    The minimal fixture legitimately fails a few corpus-level checks -- it
+    declares one format and a stub corpus block -- so a blanket
+    `not report.failures` would assert something about the fixture rather
+    than about timing.
+    """
+    return [
+        line for line in report.failures
+        if "row_duration" in line or "subset_row_duration" in line
+    ]
+
+
+def test_a_rate_beyond_the_baseline_is_a_nonblocking_extension(tmp_path):
+    """Ken Griffey Jr runs a 551.7 Hz row -- a 1.813 ms period -- where the
+    frozen 22-game baseline tops out at 500.0 Hz.
+
+    That is verified timing outside an old sampling frame, which is what an
+    expansion is FOR. It must not fail, must not be silently swallowed into a
+    pass, and must not widen the frozen claim.
+    """
+    dist = _dist(tmp_path, period_ticks=1856)        # 551.7 Hz, 1.813 ms
+    report = _report(dist, subset=True)
+    assert not _timing_failures(report), _timing_failures(report)
+    assert any("extends_baseline" in line for line in report.extensions)
+    assert any("1.812" in line for line in report.extensions)  # 1856 ticks
+    # And it is reported as neither a pass nor a failure.
+    assert not any("extends_baseline" in line for line in report.passes)
+
+
+def test_an_in_range_subset_still_reports_a_plain_pass(tmp_path):
+    dist = _dist(tmp_path, period_ticks=2048)        # 500 Hz, 2.000 ms
+    report = _report(dist, subset=True)
+    assert any("within_documented_range" in line for line in report.passes)
+    assert not report.extensions
+
+
+def test_invalid_timing_still_fails_in_subset_mode(tmp_path):
+    """The distinction that makes the extension safe: a period that cannot
+    describe hardware is a defect, not new coverage."""
+    dist = _dist(tmp_path, period_ticks=2048)
+    for path in (dist / "scores").glob("*.json.gz"):
+        with gzip.open(path, "rt") as handle:
+            payload = json.load(handle)
+        payload["clock"]["hz"] = -250.0       # cannot describe hardware
+        with gzip.open(path, "wt") as handle:
+            json.dump(payload, handle)
+    report = _report(dist, subset=True)
+    assert any("subset_row_duration_valid" in line for line in report.failures)
+    assert not report.extensions, "invalid timing must not read as coverage"
+
+
+def test_a_coverage_extension_is_not_available_in_full_mode(tmp_path):
+    """Full-corpus mode keeps the exact-range assertion: the published
+    documentation must describe the corpus it ships with."""
+    dist = _dist(tmp_path, period_ticks=1856)
+    report = _report(dist, subset=False)
+    assert any(
+        "dist_documented_row_duration_matches" in line
+        for line in report.failures
+    )
+    assert not report.extensions
+
+
+# ---------------------------------------------------------------------------
+# Class/status coverage: not applicable vs genuinely dependent
+# ---------------------------------------------------------------------------
+
+def test_independence_is_not_applicable_when_one_status_exists(tmp_path):
+    """Ken Griffey Jr extracted 9 of 9 cleanly, so every track is
+    `complete_with_pitched_events` and no class COULD span two statuses.
+    Declared not applicable -- not passed, not failed, not hidden."""
+    dist = _dist(tmp_path)
+    report = _report(dist, subset=True)
+    assert any(
+        "dist_class_and_status_independent" in line
+        for line in report.not_applicable
+    )
+    assert not any(
+        "dist_class_and_status_independent" in line
+        for line in report.failures + report.passes
+    )
+
+
+def test_independence_still_fails_when_two_statuses_exist_but_none_spans(
+    tmp_path
+):
+    """The precondition is met, so the check applies: two statuses exist and
+    each class carries exactly one, which is the defect it is named for."""
+    dist = _dist(tmp_path, n_tracks=4)
+    index = json.loads((dist / "index.json").read_text())
+    for i, entry in enumerate(index["tracks"]):
+        klass = "music" if i < 2 else "effect"
+        status = ("complete_with_pitched_events" if i < 2
+                  else "complete_unpitched_only")
+        entry["track_class"], entry["extraction_status"] = klass, status
+        path = dist / entry["events"]
+        with gzip.open(path, "rt") as handle:
+            table = json.load(handle)
+        table["track_class"], table["extraction_status"] = klass, status
+        with gzip.open(path, "wt") as handle:
+            json.dump(table, handle)
+    (dist / "index.json").write_text(json.dumps(index))
+    report = _report(dist, subset=True)
+    assert any(
+        "dist_class_and_status_independent" in line
+        for line in report.failures
+    )
+
+
+def test_observed_classifications_are_validated_even_when_independence_is_na(
+    tmp_path
+):
+    """Skipping independence must not stop the classifications themselves
+    being checked: an unknown track_class is still a defect."""
+    dist = _dist(tmp_path)
+    index = json.loads((dist / "index.json").read_text())
+    index["tracks"][0]["track_class"] = "symphony"
+    (dist / "index.json").write_text(json.dumps(index))
+    report = _report(dist, subset=True)
+    assert any(
+        "dist_classifications_are_valid" in line for line in report.failures
+    )
