@@ -53,7 +53,9 @@ $(BUILD)/spc_dump: tools/spc_dump.cpp $(SRCS) src/hook.h | $(BUILD)
 # directory entry the DSP actually consumed. Built separately so the ordinary
 # extractor binary stays free of the extra output, and so the two can be
 # compared for bit-identical audio.
-EVT_HOOK = -DSPC_DSP_SAMPLE_HOOK\(v,a,s,l\)=snesmdb_log_sample_start\(v,a,s,l\)
+EVT_HOOK = -DSPC_DSP_SAMPLE_HOOK\(v,a,s,l\)=snesmdb_log_sample_start\(v,a,s,l\) \
+           -DSPC_DSP_LOOP_HOOK\(v,d\)=snesmdb_log_loop_taken\(v,d\) \
+           -DSPC_DSP_KON_HOOK\(v\)=snesmdb_log_kon_accepted\(v\)
 
 $(BUILD)/spc_dump_evt: tools/spc_dump.cpp $(SRCS) src/hook.h | $(BUILD)
 	$(CXX) $(CXXFLAGS) $(HOOK) $(EVT_HOOK) -o $@ tools/spc_dump.cpp $(SRCS)

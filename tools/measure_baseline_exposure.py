@@ -129,7 +129,7 @@ def main() -> None:
         extracted = voices.extract(iter(writes))
         outcome = eventmatch.match(
             extracted.notes, commits, spc.dsp[eventmatch.REG_KON],
-            [int(w["t"]) for w in writes
+            [(int(w["t"]), int(w["data"])) for w in writes
              if int(w["addr"]) == eventmatch.REG_KON],
         )
         if not outcome.ok:

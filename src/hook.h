@@ -28,6 +28,17 @@
 #define SPC_DSP_SAMPLE_HOOK( voice, dir_addr, start, loop )
 #endif
 
+/* The loop destination the DSP actually jumps to at a BRR end block, and the
+ * instant it latches a key-on. Both no-ops unless defined. An unobserved
+ * loop means the runtime destination was NOT established -- it must never be
+ * read as a zero loop offset, which would fabricate an identity property. */
+#ifndef SPC_DSP_LOOP_HOOK
+#define SPC_DSP_LOOP_HOOK( voice, dest )
+#endif
+#ifndef SPC_DSP_KON_HOOK
+#define SPC_DSP_KON_HOOK( voice )
+#endif
+
 #ifndef SNESMDB_HOOK_H
 #define SNESMDB_HOOK_H
 
@@ -42,6 +53,8 @@ void snesmdb_log_dsp_write(long time, int addr, unsigned char data);
  * directory entry the DSP read, so the SRCN it used is recoverable as
  * (dir_addr - DIR*0x100) / 4 without trusting a pipelined register copy. */
 void snesmdb_log_sample_start(int voice, int dir_addr, int start, int loop);
+void snesmdb_log_loop_taken(int voice, int dest);
+void snesmdb_log_kon_accepted(int voice);
 
 #ifdef __cplusplus
 }

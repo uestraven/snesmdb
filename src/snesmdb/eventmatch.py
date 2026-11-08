@@ -63,7 +63,7 @@ def match(
     notes: Iterable[Any],
     commits: Iterable[dict[str, Any]],
     kon_byte: int,
-    kon_write_ticks: Iterable[int] = (),
+    kon_writes: Iterable[tuple[int, int]] = (),
 ) -> Match:
     """Pair attacks with commits per voice, after excluding startup events.
 
@@ -85,7 +85,7 @@ def match(
         value.sort(key=lambda c: int(c["t"]))
 
     pending = startup_voices(kon_byte)
-    earliest_write = min(kon_write_ticks, default=None)
+    writes = sorted((int(t), int(v)) for t, v in kon_writes)
 
     # Pending voices are included even when neither stream mentions them: a
     # set KON bit with no observed commit is a gap in the evidence, and
@@ -102,19 +102,25 @@ def match(
                 )
                 continue
             first = events[0]
-            # FAIL CLOSED: a CPU write at or before the first commit could
-            # have replaced the pending snapshot request before the DSP
-            # latched it, which makes the commit's origin unestablished.
-            if earliest_write is not None and earliest_write <= int(first["t"]):
-                result.problems.append(
-                    f"voice {voice}: a CPU KON write at t={earliest_write} "
-                    f"precedes or coincides with the first commit at "
-                    f"t={first['t']}, so it cannot be established whether "
-                    f"that commit came from the snapshot's pending KON or "
-                    f"from the write -- refusing to match"
-                )
-                continue
-            result.excluded_startup.append(events.pop(0))
+            # IS THE FIRST COMMIT ACCOUNTED FOR BY AN OBSERVED WRITE?
+            #
+            # A write to $4C assigns `m.new_kon`, which the DSP latches
+            # afterwards, so a write before the first commit REPLACES the
+            # snapshot's pending request. The question is therefore not
+            # "which request won" but "does an observed CPU key-on account
+            # for this commit": if one does, the commit is a real attack and
+            # must be matched, not excluded.
+            #
+            # An earlier version refused to match whenever any write preceded
+            # the first commit. That fired on three baseline tracks whose
+            # drivers write KON at t=5 -- inside the first DSP frame -- and
+            # produced no verdict for tracks that are in fact decidable.
+            accounted = any(
+                tick <= int(first["t"]) and (value & (1 << voice))
+                for tick, value in writes
+            )
+            if not accounted:
+                result.excluded_startup.append(events.pop(0))
 
         if len(attacks) != len(events):
             result.problems.append(

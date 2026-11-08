@@ -482,6 +482,11 @@ VOICE_CLOCK( V3c )
 		// KON
 		if ( m.kon & v->vbit )
 		{
+			/* snesmdb: KON ACCEPTANCE, which is not the CPU write. A write
+			 * to $4C assigns m.new_kon; the DSP latches it here. Observing
+			 * this makes "the write was accepted before the commit" a
+			 * measurement rather than an inference from timestamps. */
+			SPC_DSP_KON_HOOK( (int)(v - m.voices) );
 			v->kon_delay = 5;
 			v->env_mode  = env_attack;
 		}
@@ -522,6 +527,11 @@ VOICE_CLOCK( V4 )
 			v->brr_addr = (v->brr_addr + brr_block_size) & 0xFFFF;
 			if ( m.t_brr_header & 1 )
 			{
+				/* snesmdb: the loop destination ACTUALLY TAKEN. Not the
+				 * directory's second word read at sample start -- a driver
+				 * can rewrite the entry while the voice sustains, and those
+				 * two values then differ. No-op unless defined. */
+				SPC_DSP_LOOP_HOOK( (int)(v - m.voices), m.t_brr_next_addr );
 				v->brr_addr = m.t_brr_next_addr;
 				m.t_looped = v->vbit;
 			}

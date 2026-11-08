@@ -146,7 +146,7 @@ def check(name: str, spc_path: Path, why: str, seconds: int) -> list[str]:
         spc = spcfile.load(spc_path)
         outcome = eventmatch.match(
             extracted.notes, fine, spc.dsp[eventmatch.REG_KON],
-            [int(w["t"]) for w in writes
+            [(int(w["t"]), int(w["data"])) for w in writes
              if int(w["addr"]) == eventmatch.REG_KON],
         )
         problems.extend(outcome.problems)

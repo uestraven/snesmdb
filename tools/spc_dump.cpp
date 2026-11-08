@@ -105,6 +105,18 @@ extern "C" void snesmdb_log_sample_start(int voice, int dir_addr, int start, int
             g_time_base, voice, dir_addr, start, loop);
 }
 
+extern "C" void snesmdb_log_loop_taken(int voice, int dest) {
+    if (!g_log) return;
+    fprintf(g_log, "{\"t\":%ld,\"kind\":\"loop\",\"voice\":%d,\"dest\":%d}\n",
+            g_time_base, voice, dest);
+}
+
+extern "C" void snesmdb_log_kon_accepted(int voice) {
+    if (!g_log) return;
+    fprintf(g_log, "{\"t\":%ld,\"kind\":\"kon\",\"voice\":%d}\n",
+            g_time_base, voice);
+}
+
 static std::vector<unsigned char> read_file(const char* path) {
     FILE* f = fopen(path, "rb");
     if (!f) {
