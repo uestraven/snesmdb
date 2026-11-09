@@ -20,6 +20,77 @@ version.
 
 ---
 
+## Secret of Evermore accepted — native `events.v4` extraction
+
+The first game published by resolving sample identity **during** extraction
+rather than correcting it afterwards. 72 tracks, 55,744 attacks.
+
+| | corrections path | native v4 |
+|---|---|---|
+| attacks with an identity | 99.71% | **99.71%** |
+| attacks with a pitch | 40.63% | **91.72%** |
+| tracks with pitched events | 25 / 72 | **69 / 72** |
+
+Identity was already good through the transitional correction mechanism.
+Pitch was not, and could not be: the fundamental is estimated from the
+sample's decoded audio, so an attack whose sample was unknown at extraction
+time has no pitch at all. On this game that was **100.0%** of the 28,973
+attacks the capture-time directory could not resolve, with no exceptions —
+its capture-time table resolves nothing, because the driver populates the
+directory at runtime.
+
+**Evermore's apparent lack of pitched music was a reconstruction artifact,
+not a property of its soundtrack.** Resolving identity early enough recovers
+a substantially more complete musical representation of the same audio.
+
+### A verifier contract correction, not a threshold change
+
+`srcn_not_degenerate` bounds the share of notes reporting SRCN 0 at 6%. It
+was written for a real defect — unseeded voice state put 10.8% of notes on
+the wrong sample — and SRCN was the right quantity while identity came from
+the capture-time directory via that index.
+
+Under v4 identity comes from the entry the DSP committed per attack, so SRCN
+determines nothing. A driver may hold every voice on one index and rewrite
+its directory entry continuously; Evermore does, putting 20.8% of notes on
+SRCN 0 while those 11,587 attacks resolve to 36 distinct identities, every
+one established.
+
+So which check applies is now decided by the record, not the game:
+
+- records **without** per-attack identity keep `srcn_not_degenerate` at the
+  unchanged 6% limit
+- records **with** it report that check `n/a` with the reason, and assert
+  instead on `identity_resolution_not_degenerate` (at least 2 distinct
+  identities, no more than 90% on one) and `identity_resolved_at_key_on`
+  (every track's DSP commits paired with its attacks)
+
+No game-specific exemption was granted and no threshold was raised. The
+bound is set clear of real data rather than tuned to it: Evermore's most
+common identity holds 30.0% of its resolved attacks. Negative tests require
+the replacement to fail on total collapse, on 95% concentration, on
+all-null identities, and on any track whose commits could not be matched —
+a failed match falls back to capture-time identities silently, which is the
+quiet failure that check exists to make loud.
+
+### `gate5-rc10` is unaffected, and its figures stay release-specific
+
+rc10's identities were corrected through the transitional mechanism, which
+did **not** recompute pitch from the newly identified samples. Native v4
+extraction would therefore be expected to change rc10's pitch-related
+figures while leaving event timing, counts and ids unchanged.
+
+That comparison is worth making as a future versioned release. Until it is
+made and published, **rc10's research claims are specific to rc10** and
+native-v4 statistics must not be substituted for them.
+
+The runtime BRR-byte stability limitation stands unchanged: a confirmed
+directory address does not establish that a sample's bytes were constant
+during playback. No new evidence bears on it, and it is not specific to this
+game.
+
+---
+
 ## `gate5-rc10` — sample identity corrected per attack
 
 **Breaking.** `snesmdb.events.v4`. Read the compatibility section before

@@ -38,6 +38,7 @@ Exit code is the number of failed checks, so `make` stops on any of them.
 from __future__ import annotations
 
 import argparse
+import collections
 import glob
 import gzip
 import json
@@ -71,6 +72,26 @@ MAX_UNIFORM_EVENTS_LOST = 50
 #: not being seeded from the SPC's DSP block. The real figure is 2.8%; it was
 #: 10.8% before the fix.
 MAX_SRCN_ZERO_FRACTION = 0.06
+
+#: Degeneracy bound for records that resolve identity AT KEY-ON.
+#:
+#: `srcn_not_degenerate` exists to catch sample resolution collapsing onto
+#: one entry. It measured that through SRCN, which was the right proxy while
+#: identity came from the capture-time directory via the SRCN index. Under
+#: `events.v4` identity comes from the directory entry the DSP committed for
+#: each attack, so SRCN determines nothing: a driver may legitimately keep
+#: every voice on SRCN 0 and rewrite that entry continuously. Secret of
+#: Evermore does exactly that -- 20.8% of its notes report SRCN 0, and those
+#: 11,587 attacks resolve to 36 distinct identities, every one established.
+#:
+#: So for v4 records the assertion moves to the quantity that actually
+#: identifies a sample. Collapse means one identity for everything: 100% on
+#: a single id, one distinct id. The bound is set well clear of real data
+#: rather than tuned to admit a game -- Evermore's most common identity holds
+#: 30.0% of its resolved attacks, and the 22-game baseline is sampled at
+#: 2.9% on the SRCN measure.
+MAX_IDENTITY_CONCENTRATION = 0.90
+MIN_DISTINCT_IDENTITIES = 2
 
 
 class Report:
@@ -172,14 +193,22 @@ def check_records(out_dir: Path, report: Report, limit: int) -> None:
     """Per-track record checks, on a sample so `make` stays quick."""
     rows = [r for r in _rows(out_dir) if r.get("ok") and r.get("record_path")]
     sample = rows[:: max(1, len(rows) // limit)] if rows else []
-    notes = zeros = orphans = steps = 0
+    notes = zeros = orphans = steps = unmatched = 0
+    native_ids = False
+    identities: collections.Counter = collections.Counter()
     for row in sample:
         record = json.loads((out_dir / row["record_path"]).read_text())
         ids = {n.get("note_id") for n in record.get("notes") or []}
+        if (row.get("identity") or {}).get("matched") is False:
+            unmatched += 1
         for note in record.get("notes") or []:
             notes += 1
             if int(note.get("srcn") or 0) == 0:
                 zeros += 1
+            if "sample_id" in note:
+                native_ids = True
+                if note["sample_id"]:
+                    identities[note["sample_id"]] += 1
         for step in record.get("legato_steps") or []:
             steps += 1
             if step.get("parent_note_id") not in ids:
@@ -187,12 +216,57 @@ def check_records(out_dir: Path, report: Report, limit: int) -> None:
     if not notes:
         return
     fraction = zeros / notes
-    report.check(
-        "srcn_not_degenerate",
-        fraction <= MAX_SRCN_ZERO_FRACTION,
-        f"{fraction:.1%} of sampled notes report sample 0"
-        f" (limit {MAX_SRCN_ZERO_FRACTION:.0%})",
-    )
+
+    # WHICH DEGENERACY CHECK APPLIES DEPENDS ON THE RECORD, NOT THE GAME.
+    #
+    # A record that carries `sample_id` per note resolved identity at
+    # key-on, so SRCN is metadata there and cannot indicate collapse. One
+    # that does not carries identity through the SRCN index, where a pile-up
+    # on index 0 is exactly the unseeded-voice-state defect this check was
+    # written for. The threshold is unchanged in both cases; what changes is
+    # which quantity is asserted on, and the inapplicable one is reported
+    # rather than passed or skipped silently.
+    if native_ids:
+        report.skip(
+            "srcn_not_degenerate",
+            f"{fraction:.1%} of notes report SRCN 0, but these records "
+            f"resolve identity at key-on, so SRCN does not determine the "
+            f"sample -- a driver may hold every voice on one index and "
+            f"rewrite its directory entry. Asserted on sample identity "
+            f"instead",
+        )
+        total = sum(identities.values())
+        top = identities.most_common(1)[0][1] / total if total else 1.0
+        report.check(
+            "identity_resolution_not_degenerate",
+            len(identities) >= MIN_DISTINCT_IDENTITIES
+            and top <= MAX_IDENTITY_CONCENTRATION,
+            f"{len(identities)} distinct identities across {total:,} "
+            f"resolved attacks, most common holds {top:.1%} "
+            f"(limits: >={MIN_DISTINCT_IDENTITIES} distinct, "
+            f"<={MAX_IDENTITY_CONCENTRATION:.0%} concentration)",
+        )
+        report.check(
+            "identity_resolved_at_key_on",
+            unmatched == 0,
+            f"{len(sample)} tracks sampled, {unmatched} where the "
+            f"extractor could not pair the DSP's sample commits to its "
+            f"attacks -- those fall back to capture-time identities "
+            f"silently",
+        )
+    else:
+        report.check(
+            "srcn_not_degenerate",
+            fraction <= MAX_SRCN_ZERO_FRACTION,
+            f"{fraction:.1%} of sampled notes report sample 0"
+            f" (limit {MAX_SRCN_ZERO_FRACTION:.0%})",
+        )
+        report.skip(
+            "identity_resolution_not_degenerate",
+            "these records carry no per-attack identity, so identity "
+            "resolution cannot be assessed; SRCN degeneracy was asserted "
+            "instead",
+        )
     report.check(
         "legato_parents_resolve",
         orphans == 0,
