@@ -638,6 +638,64 @@ The five-game expansion alone is worse and should not be used as a benchmark
 at all: its validation split is one racing soundtrack and its test split is
 nine tracks of one baseball soundtrack.
 
+### A reproducible baseline, and what it shows
+
+`tools/baseline_interval_ngram.py` answers one question on the published
+artifacts alone: **can a smoothed interval n-gram predict the next melodic
+interval in an unseen SNES game better than a frequency-only baseline?**
+Results are in `docs/baseline_interval_ngram_results.json`, measured against
+release `snesmdb-27game-rc1`.
+
+**Yes, by a clear margin.**
+
+| model | test accuracy | test NLL (bits) |
+|---|---|---|
+| interval 3-gram | **0.4309** | **3.2799** |
+| frequency only | 0.3223 | 4.0150 |
+
++0.1086 accuracy, 0.735 bits lower NLL. The n-gram wins on **all five test
+games** — Axelay, Batman Returns, F-Zero, Super Castlevania 4, Super Metroid
+— so the result is not carried by one soundtrack.
+
+**The learning population, stated exactly.** 1,112 music-class tracks,
+7,099 voices, 1,584,465 intervals, from 882 / 111 / 119 tracks across
+train / valid / test. Excluded by definition and counted rather than
+dropped: 353 non-music tracks, 12 tracks with no usable sequence, 160,852
+legato steps, 429,458 attacks with no pitch estimate.
+
+**A melody is voice-local.** Sequences are built per `(track, voice)` from
+pitched key-ons. A global time-sorted stream would place adjacent events in
+different voices or inside one chord, so its "intervals" would describe the
+arrangement rather than a melody. Legato steps are excluded: a step is a
+pitch change inside a sounding note, derived from a register ratio rather
+than re-keyed. Intervals beyond two octaves collapse into one bucket per
+direction, giving a 51-symbol closed vocabulary.
+
+**The duplicate exclusion did NOT fire, and that is reported as such.** The
+confirmed cross-split duplicate is jingle-class; music-class filtering
+removes its training copies, so the condition is not met. The experiment is
+**not** described as corrected for leakage, because no correction was
+exercised.
+
+**The cohort confound is visible in the result, not normalised away.** On
+test, the expansion cohort scores 0.5349 accuracy / 2.4014 bits against the
+baseline cohort's 0.4159 / 3.4069 — but the expansion cohort here is F-Zero
+alone, 14 tracks, so that gap confounds game with production path and cannot
+be read as either.
+
+**Selection touched validation only**, over a grid declared in the source
+before any evaluation. It chose order 3, alpha 1.0 — **both at the grid
+maximum**, so the optimum may lie outside it and these figures are a lower
+bound for this model family. The grid was deliberately not widened after
+test was evaluated: selection would still have been clean, but re-running
+test after seeing a result is how a held-out set stops being held out.
+
+**What this does not show.** Held-out-*game* interval prediction only. Not
+composer generalisation, not musical quality, not generation. The splits are
+not interchangeable samples: pitched share runs 77.49% / 81.75% / 85.48%
+across the three, validation is 43% expansion-cohort against train's 6.8%,
+and test median max polyphony is 6 against 8.
+
 ### What the splits support, and what they do not
 
 The claim the evidence supports:

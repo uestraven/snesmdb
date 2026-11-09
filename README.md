@@ -53,7 +53,7 @@ build of vendored `snes_spc`.
 ```sh
 git clone <repo> && cd snesmdb
 make                  # builds build/spc_dump
-make test             # 586 tests, no skips
+make test             # 600 tests, no skips
 ```
 
 You only need the C++ tool to process SPC files yourself; the Python
@@ -211,7 +211,7 @@ and reports it rather than substituting a sample.
 
 ```sh
 make                        # build build/spc_dump
-make test                   # 586 tests, no skips (bootstraps .venv for pytest)
+make test                   # 600 tests, no skips (bootstraps .venv for pytest)
 make corpus                 # full rebuild: ~80 min on 8 jobs
 make verify                 # 37 checks on an existing corpus and dist tree
 make audit                  # 39 checks, opening EVERY published file

@@ -1,0 +1,1215 @@
+{
+ "schema": "snesmdb.interval_baseline.v1",
+ "release": "snesmdb-27game-rc1",
+ "dist": "/tmp/dist-combined-final",
+ "research_question": "Can a smoothed interval n-gram predict the next melodic interval in an unseen SNES game better than a frequency-only baseline?",
+ "outcome": "N-GRAM OUTPERFORMS THE FREQUENCY BASELINE: local melodic context carries predictive information on held-out games.",
+ "melody_definition": {
+  "scope": "per (track, voice)",
+  "events_used": "key_on with pitch_status == 'estimated'",
+  "legato_steps": "excluded by definition, not dropped silently",
+  "gap_splitting": "none",
+  "interval_clip": 24,
+  "vocabulary_size": 51
+ },
+ "population": {
+  "tracks_total": 1477,
+  "legato_steps_excluded_by_definition": 160852,
+  "attacks_without_a_pitch_estimate": 429458,
+  "tracks_eligible": 1112,
+  "voices": 7099,
+  "intervals": 1584465,
+  "dropped_not_music_class": 353,
+  "dropped_no_usable_sequence": 12
+ },
+ "tracks_per_split": {
+  "train": 882,
+  "valid": 111,
+  "test": 119
+ },
+ "exclusion_policy": {
+  "applied": [],
+  "tracks_removed": {
+   "valid": 0,
+   "test": 0
+  },
+  "note": "The confirmed cross-split duplicate is jingle-class material. Music-class filtering removes its training copies, so the conditional exclusion does NOT fire for this population. Reported as not-applied rather than claimed as a leakage correction."
+ },
+ "selection": {
+  "grid": {
+   "orders": [
+    1,
+    2,
+    3
+   ],
+   "alphas": [
+    0.01,
+    0.1,
+    1.0
+   ]
+  },
+  "validation_results": [
+   {
+    "order": 1,
+    "alpha": 0.01,
+    "valid_accuracy": 0.485152,
+    "valid_nll_bits": 2.706963
+   },
+   {
+    "order": 1,
+    "alpha": 0.1,
+    "valid_accuracy": 0.485152,
+    "valid_nll_bits": 2.705862
+   },
+   {
+    "order": 1,
+    "alpha": 1.0,
+    "valid_accuracy": 0.485152,
+    "valid_nll_bits": 2.70528
+   },
+   {
+    "order": 2,
+    "alpha": 0.01,
+    "valid_accuracy": 0.5235,
+    "valid_nll_bits": 2.545287
+   },
+   {
+    "order": 2,
+    "alpha": 0.1,
+    "valid_accuracy": 0.5235,
+    "valid_nll_bits": 2.506132
+   },
+   {
+    "order": 2,
+    "alpha": 1.0,
+    "valid_accuracy": 0.5235,
+    "valid_nll_bits": 2.486976
+   },
+   {
+    "order": 3,
+    "alpha": 0.01,
+    "valid_accuracy": 0.546424,
+    "valid_nll_bits": 2.63877
+   },
+   {
+    "order": 3,
+    "alpha": 0.1,
+    "valid_accuracy": 0.546424,
+    "valid_nll_bits": 2.482005
+   },
+   {
+    "order": 3,
+    "alpha": 1.0,
+    "valid_accuracy": 0.546424,
+    "valid_nll_bits": 2.453568
+   }
+  ],
+  "chosen": {
+   "order": 3,
+   "alpha": 1.0,
+   "criterion": "lowest validation NLL in bits",
+   "selected_at_grid_boundary": [
+    "order=3 is the grid maximum",
+    "alpha=1.0 is the grid maximum"
+   ],
+   "boundary_note": "Validation selected a setting at the edge of the pre-declared grid, so the optimum may lie outside it and these numbers are a lower bound on what this model family can do. The grid is NOT being widened now: selection would be clean, but test has already been evaluated once and re-running it after seeing the result is how a held-out set stops being held out. A wider grid belongs to a separately declared experiment."
+  }
+ },
+ "validation": {
+  "ngram": {
+   "intervals": 155211,
+   "micro_accuracy": 0.546424,
+   "micro_nll_bits": 2.453568,
+   "macro_accuracy_per_track": 0.525433,
+   "macro_nll_bits_per_track": 2.55625,
+   "tracks": 111
+  },
+  "frequency": {
+   "intervals": 155211,
+   "micro_accuracy": 0.440504,
+   "micro_nll_bits": 3.396967,
+   "macro_accuracy_per_track": 0.401964,
+   "macro_nll_bits_per_track": 3.492481,
+   "tracks": 111
+  }
+ },
+ "test": {
+  "ngram": {
+   "intervals": 177501,
+   "micro_accuracy": 0.430922,
+   "micro_nll_bits": 3.279914,
+   "macro_accuracy_per_track": 0.430015,
+   "macro_nll_bits_per_track": 3.304689,
+   "tracks": 119
+  },
+  "frequency": {
+   "intervals": 177501,
+   "micro_accuracy": 0.322325,
+   "micro_nll_bits": 4.014998,
+   "macro_accuracy_per_track": 0.315708,
+   "macro_nll_bits_per_track": 4.031913,
+   "tracks": 119
+  },
+  "delta_accuracy": 0.108597,
+  "delta_nll_bits_improvement": 0.735084,
+  "by_game": {
+   "ngram": {
+    "Axelay": {
+     "tracks": 19,
+     "intervals": 35142,
+     "micro_accuracy": 0.4119,
+     "micro_nll_bits": 3.434482
+    },
+    "Batman Returns": {
+     "tracks": 29,
+     "intervals": 42669,
+     "micro_accuracy": 0.474255,
+     "micro_nll_bits": 3.147429
+    },
+    "F-Zero": {
+     "tracks": 14,
+     "intervals": 22419,
+     "micro_accuracy": 0.534859,
+     "micro_nll_bits": 2.401356
+    },
+    "Super Castlevania 4": {
+     "tracks": 31,
+     "intervals": 52331,
+     "micro_accuracy": 0.348646,
+     "micro_nll_bits": 3.724663
+    },
+    "Super Metroid": {
+     "tracks": 26,
+     "intervals": 24940,
+     "micro_accuracy": 0.462791,
+     "micro_nll_bits": 3.145329
+    }
+   },
+   "frequency": {
+    "Axelay": {
+     "tracks": 19,
+     "intervals": 35142,
+     "micro_accuracy": 0.317711,
+     "micro_nll_bits": 4.197361
+    },
+    "Batman Returns": {
+     "tracks": 29,
+     "intervals": 42669,
+     "micro_accuracy": 0.405447,
+     "micro_nll_bits": 3.580185
+    },
+    "F-Zero": {
+     "tracks": 14,
+     "intervals": 22419,
+     "micro_accuracy": 0.414648,
+     "micro_nll_bits": 3.515176
+    },
+    "Super Castlevania 4": {
+     "tracks": 31,
+     "intervals": 52331,
+     "micro_accuracy": 0.222889,
+     "micro_nll_bits": 4.432817
+    },
+    "Super Metroid": {
+     "tracks": 26,
+     "intervals": 24940,
+     "micro_accuracy": 0.312269,
+     "micro_nll_bits": 4.074544
+    }
+   }
+  },
+  "by_cohort": {
+   "ngram": {
+    "baseline": {
+     "tracks": 105,
+     "intervals": 155082,
+     "micro_accuracy": 0.415896,
+     "micro_nll_bits": 3.406921
+    },
+    "expansion": {
+     "tracks": 14,
+     "intervals": 22419,
+     "micro_accuracy": 0.534859,
+     "micro_nll_bits": 2.401356
+    }
+   },
+   "frequency": {
+    "baseline": {
+     "tracks": 105,
+     "intervals": 155082,
+     "micro_accuracy": 0.308978,
+     "micro_nll_bits": 4.087253
+    },
+    "expansion": {
+     "tracks": 14,
+     "intervals": 22419,
+     "micro_accuracy": 0.414648,
+     "micro_nll_bits": 3.515176
+    }
+   }
+  },
+  "per_track_ngram": [
+   {
+    "track_id": "axe-01:c3384a044258",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 802,
+    "accuracy": 0.5773067331670823,
+    "nll_bits": 2.3117088660014757
+   },
+   {
+    "track_id": "axe-02:9f28b8ea701a",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 366,
+    "accuracy": 0.41530054644808745,
+    "nll_bits": 2.971220314159936
+   },
+   {
+    "track_id": "axe-03:4c6acf8446c4",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 3977,
+    "accuracy": 0.5843600704048277,
+    "nll_bits": 2.548554918315938
+   },
+   {
+    "track_id": "axe-04:b87efdf0fbd7",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 949,
+    "accuracy": 0.5648050579557429,
+    "nll_bits": 2.9712424226077707
+   },
+   {
+    "track_id": "axe-06:c82b80eca0ac",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 2762,
+    "accuracy": 0.3269370021723389,
+    "nll_bits": 3.7154059952039735
+   },
+   {
+    "track_id": "axe-07:dccb84be28da",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 1288,
+    "accuracy": 0.6940993788819876,
+    "nll_bits": 2.016330492071701
+   },
+   {
+    "track_id": "axe-08:99d57a0dfe33",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 4629,
+    "accuracy": 0.36876215165262477,
+    "nll_bits": 3.671797355941995
+   },
+   {
+    "track_id": "axe-09:438a085fe06c",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 901,
+    "accuracy": 0.3362930077691454,
+    "nll_bits": 3.847748939741799
+   },
+   {
+    "track_id": "axe-10:589905686f12",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 2587,
+    "accuracy": 0.2562814070351759,
+    "nll_bits": 4.3558808628248515
+   },
+   {
+    "track_id": "axe-11:ef33e5966230",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 662,
+    "accuracy": 0.37462235649546827,
+    "nll_bits": 3.7431919336306705
+   },
+   {
+    "track_id": "axe-12:c090b20027a5",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 3398,
+    "accuracy": 0.37698646262507357,
+    "nll_bits": 3.5929261566074815
+   },
+   {
+    "track_id": "axe-13:f4598b3b725b",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 879,
+    "accuracy": 0.42093287827076226,
+    "nll_bits": 3.335588917031986
+   },
+   {
+    "track_id": "axe-14:f6627035dc40",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 2256,
+    "accuracy": 0.32180851063829785,
+    "nll_bits": 3.889513947682859
+   },
+   {
+    "track_id": "axe-15:a690696325a8",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 2536,
+    "accuracy": 0.4664826498422713,
+    "nll_bits": 3.2044181666355973
+   },
+   {
+    "track_id": "axe-16:087f9dd3e8c2",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 715,
+    "accuracy": 0.4195804195804196,
+    "nll_bits": 3.7657091407581103
+   },
+   {
+    "track_id": "axe-17a:3acaab516536",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 2311,
+    "accuracy": 0.13024664647338816,
+    "nll_bits": 5.054014851910535
+   },
+   {
+    "track_id": "axe-17c:ba1ccb3b9a40",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 844,
+    "accuracy": 0.48104265402843605,
+    "nll_bits": 3.5478938518519927
+   },
+   {
+    "track_id": "axe-18:d1f9889888ac",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 862,
+    "accuracy": 0.5,
+    "nll_bits": 2.100408070985617
+   },
+   {
+    "track_id": "axe-19:b4778e8f39c5",
+    "game": "Axelay",
+    "cohort": "baseline",
+    "intervals": 2418,
+    "accuracy": 0.5310173697270472,
+    "nll_bits": 2.6920623500527476
+   },
+   {
+    "track_id": "br-02:505894c97847",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 1109,
+    "accuracy": 0.4733994589720469,
+    "nll_bits": 3.0606651569702112
+   },
+   {
+    "track_id": "br-03:5266fbf9f6e0",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 2077,
+    "accuracy": 0.6620125180548868,
+    "nll_bits": 2.1530105424457924
+   },
+   {
+    "track_id": "br-04:b7d0ac40ee78",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 200,
+    "accuracy": 0.78,
+    "nll_bits": 1.5858971172269305
+   },
+   {
+    "track_id": "br-06:306b452a96ee",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 1223,
+    "accuracy": 0.4922322158626329,
+    "nll_bits": 2.9878966594104783
+   },
+   {
+    "track_id": "br-07:2fdffd072429",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 2759,
+    "accuracy": 0.49111997100398697,
+    "nll_bits": 3.0555576980361185
+   },
+   {
+    "track_id": "br-08:c1ae539b7e90",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 1886,
+    "accuracy": 0.5259809119830329,
+    "nll_bits": 2.7288755083600504
+   },
+   {
+    "track_id": "br-10:fb6da7b1b837",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 326,
+    "accuracy": 0.30368098159509205,
+    "nll_bits": 4.132305135591201
+   },
+   {
+    "track_id": "br-11:d525d85852dd",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 4080,
+    "accuracy": 0.46348039215686276,
+    "nll_bits": 3.1229224281493604
+   },
+   {
+    "track_id": "br-12:6a4d3d5593f4",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 1668,
+    "accuracy": 0.4952038369304556,
+    "nll_bits": 3.061246504499631
+   },
+   {
+    "track_id": "br-13:0a2dea967f0d",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 790,
+    "accuracy": 0.1848101265822785,
+    "nll_bits": 4.890809471950154
+   },
+   {
+    "track_id": "br-14:85f61564662d",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 2443,
+    "accuracy": 0.4666393778141629,
+    "nll_bits": 3.3461605288936993
+   },
+   {
+    "track_id": "br-15:fd29f4c7e3a0",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 339,
+    "accuracy": 0.3333333333333333,
+    "nll_bits": 4.03292993917514
+   },
+   {
+    "track_id": "br-16:fad83b58a62a",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 2498,
+    "accuracy": 0.4299439551641313,
+    "nll_bits": 3.3692030067008973
+   },
+   {
+    "track_id": "br-17:858899b6914d",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 1692,
+    "accuracy": 0.38416075650118203,
+    "nll_bits": 3.401990454559911
+   },
+   {
+    "track_id": "br-18:039b5c1786c6",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 1625,
+    "accuracy": 0.4867692307692308,
+    "nll_bits": 3.060332875530273
+   },
+   {
+    "track_id": "br-19:43250d253690",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 139,
+    "accuracy": 0.07194244604316546,
+    "nll_bits": 5.6614120372378185
+   },
+   {
+    "track_id": "br-20:9a127c3c30e0",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 2656,
+    "accuracy": 0.36332831325301207,
+    "nll_bits": 3.5822056832146942
+   },
+   {
+    "track_id": "br-21:3febad048831",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 26,
+    "accuracy": 0.07692307692307693,
+    "nll_bits": 5.338182236115966
+   },
+   {
+    "track_id": "br-22:2fc2d9b2045a",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 3929,
+    "accuracy": 0.5171799440061084,
+    "nll_bits": 2.7686067410695783
+   },
+   {
+    "track_id": "br-23:9a8e348d04a8",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 176,
+    "accuracy": 0.375,
+    "nll_bits": 4.121090111202888
+   },
+   {
+    "track_id": "br-24:e1c1e6b6923d",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 196,
+    "accuracy": 0.6887755102040817,
+    "nll_bits": 2.2180023550941255
+   },
+   {
+    "track_id": "br-25:c1844ff7c89c",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 2272,
+    "accuracy": 0.42077464788732394,
+    "nll_bits": 3.3996424631163276
+   },
+   {
+    "track_id": "br-26:9492e96b5933",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 150,
+    "accuracy": 0.3,
+    "nll_bits": 3.6769250462912852
+   },
+   {
+    "track_id": "br-27:1271775fd098",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 2849,
+    "accuracy": 0.404001404001404,
+    "nll_bits": 3.8536376305435858
+   },
+   {
+    "track_id": "br-28:755a4385a229",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 258,
+    "accuracy": 0.49612403100775193,
+    "nll_bits": 2.904323448588567
+   },
+   {
+    "track_id": "br-29:b90c5fed3958",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 2928,
+    "accuracy": 0.6024590163934426,
+    "nll_bits": 2.37837930320863
+   },
+   {
+    "track_id": "br-30:6dabcefdb46a",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 2032,
+    "accuracy": 0.5103346456692913,
+    "nll_bits": 3.423781208727865
+   },
+   {
+    "track_id": "br-31:74068ec17334",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 319,
+    "accuracy": 0.6489028213166145,
+    "nll_bits": 1.9117069790160686
+   },
+   {
+    "track_id": "br-32:ef0531e1e5ab",
+    "game": "Batman Returns",
+    "cohort": "baseline",
+    "intervals": 24,
+    "accuracy": 0.125,
+    "nll_bits": 5.19668974611507
+   },
+   {
+    "track_id": "fz-01:cb1a88acfddb",
+    "game": "F-Zero",
+    "cohort": "expansion",
+    "intervals": 924,
+    "accuracy": 0.7997835497835498,
+    "nll_bits": 1.2738558112901848
+   },
+   {
+    "track_id": "fz-02:ed45f46e5b13",
+    "game": "F-Zero",
+    "cohort": "expansion",
+    "intervals": 1572,
+    "accuracy": 0.5795165394402035,
+    "nll_bits": 2.249291215914019
+   },
+   {
+    "track_id": "fz-03:7a0f42190687",
+    "game": "F-Zero",
+    "cohort": "expansion",
+    "intervals": 1846,
+    "accuracy": 0.5276273022751896,
+    "nll_bits": 2.5501012700521515
+   },
+   {
+    "track_id": "fz-04:acf300d5db33",
+    "game": "F-Zero",
+    "cohort": "expansion",
+    "intervals": 4637,
+    "accuracy": 0.45956437351736035,
+    "nll_bits": 2.34139530961459
+   },
+   {
+    "track_id": "fz-05:5b7dec262d40",
+    "game": "F-Zero",
+    "cohort": "expansion",
+    "intervals": 704,
+    "accuracy": 0.39488636363636365,
+    "nll_bits": 3.309631702000101
+   },
+   {
+    "track_id": "fz-06a:53acfb3fabc5",
+    "game": "F-Zero",
+    "cohort": "expansion",
+    "intervals": 1630,
+    "accuracy": 0.4294478527607362,
+    "nll_bits": 3.0155373866566806
+   },
+   {
+    "track_id": "fz-06b:e2227b35a62a",
+    "game": "F-Zero",
+    "cohort": "expansion",
+    "intervals": 1210,
+    "accuracy": 0.45950413223140496,
+    "nll_bits": 2.899473583929671
+   },
+   {
+    "track_id": "fz-07:fadea7dc1fd7",
+    "game": "F-Zero",
+    "cohort": "expansion",
+    "intervals": 2239,
+    "accuracy": 0.6368914694059848,
+    "nll_bits": 1.9497756976594944
+   },
+   {
+    "track_id": "fz-08:211cd2afbdcd",
+    "game": "F-Zero",
+    "cohort": "expansion",
+    "intervals": 96,
+    "accuracy": 0.65625,
+    "nll_bits": 1.1195594811827414
+   },
+   {
+    "track_id": "fz-09:2b5238430b72",
+    "game": "F-Zero",
+    "cohort": "expansion",
+    "intervals": 1055,
+    "accuracy": 0.5071090047393365,
+    "nll_bits": 2.4621277852332466
+   },
+   {
+    "track_id": "fz-10:ae2cddf97818",
+    "game": "F-Zero",
+    "cohort": "expansion",
+    "intervals": 2200,
+    "accuracy": 0.5159090909090909,
+    "nll_bits": 2.82095094360119
+   },
+   {
+    "track_id": "fz-11a:3d07a6239c3d",
+    "game": "F-Zero",
+    "cohort": "expansion",
+    "intervals": 1735,
+    "accuracy": 0.6495677233429394,
+    "nll_bits": 1.8934327924307826
+   },
+   {
+    "track_id": "fz-11b:ca4b8491ce7b",
+    "game": "F-Zero",
+    "cohort": "expansion",
+    "intervals": 1735,
+    "accuracy": 0.6495677233429394,
+    "nll_bits": 1.8934327924307826
+   },
+   {
+    "track_id": "fz-12:788bdfbf0b82",
+    "game": "F-Zero",
+    "cohort": "expansion",
+    "intervals": 836,
+    "accuracy": 0.3456937799043062,
+    "nll_bits": 3.5382643864182213
+   },
+   {
+    "track_id": "scv4-02:a00f8d142b7c",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 90,
+    "accuracy": 0.34444444444444444,
+    "nll_bits": 3.7497384754067924
+   },
+   {
+    "track_id": "scv4-03:f8bbaa8580f7",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 997,
+    "accuracy": 0.11534603811434303,
+    "nll_bits": 5.432149487882612
+   },
+   {
+    "track_id": "scv4-04:ff7151f73b70",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 236,
+    "accuracy": 0.19491525423728814,
+    "nll_bits": 3.9560582547511847
+   },
+   {
+    "track_id": "scv4-05:363a8c9b9444",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 22,
+    "accuracy": 0.45454545454545453,
+    "nll_bits": 2.4193518315005664
+   },
+   {
+    "track_id": "scv4-06:7033d6b7df92",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 3560,
+    "accuracy": 0.38707865168539324,
+    "nll_bits": 3.382910323140189
+   },
+   {
+    "track_id": "scv4-07:567fb49708f1",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 2450,
+    "accuracy": 0.3906122448979592,
+    "nll_bits": 3.1791215386901706
+   },
+   {
+    "track_id": "scv4-08:9ee88bd7cf9f",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 1145,
+    "accuracy": 0.3318777292576419,
+    "nll_bits": 3.894184443843524
+   },
+   {
+    "track_id": "scv4-09:8aaff8800b6a",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 509,
+    "accuracy": 0.4715127701375246,
+    "nll_bits": 2.708355113560388
+   },
+   {
+    "track_id": "scv4-10:b6100f629804",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 3808,
+    "accuracy": 0.21008403361344538,
+    "nll_bits": 4.641811600747226
+   },
+   {
+    "track_id": "scv4-11:e4a7f4e3730f",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 2279,
+    "accuracy": 0.4243089074155331,
+    "nll_bits": 3.176677731018517
+   },
+   {
+    "track_id": "scv4-12:36bbc3d83142",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 1875,
+    "accuracy": 0.49706666666666666,
+    "nll_bits": 3.0578103703657624
+   },
+   {
+    "track_id": "scv4-13:1e17a2420aa0",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 1513,
+    "accuracy": 0.5809649702577661,
+    "nll_bits": 3.0156173381257707
+   },
+   {
+    "track_id": "scv4-15:1329aa410bec",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 189,
+    "accuracy": 0.21693121693121692,
+    "nll_bits": 4.521423560580417
+   },
+   {
+    "track_id": "scv4-16:be3c23a3d302",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 826,
+    "accuracy": 0.45883777239709445,
+    "nll_bits": 2.7831305011347296
+   },
+   {
+    "track_id": "scv4-18:2c9adb7f72d3",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 1200,
+    "accuracy": 0.18583333333333332,
+    "nll_bits": 4.300685066008119
+   },
+   {
+    "track_id": "scv4-19:775febfc7456",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 2340,
+    "accuracy": 0.3803418803418803,
+    "nll_bits": 3.864401636868328
+   },
+   {
+    "track_id": "scv4-20:44b22d1ea2d4",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 4076,
+    "accuracy": 0.31648675171736995,
+    "nll_bits": 3.6349594608363507
+   },
+   {
+    "track_id": "scv4-21:a5871cb60b46",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 3012,
+    "accuracy": 0.44721115537848605,
+    "nll_bits": 3.1781286937658906
+   },
+   {
+    "track_id": "scv4-22:f7b329ba6e35",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 286,
+    "accuracy": 0.34265734265734266,
+    "nll_bits": 3.908829867108329
+   },
+   {
+    "track_id": "scv4-23:c3ccf74b4bcb",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 5480,
+    "accuracy": 0.27773722627737224,
+    "nll_bits": 4.171120704184018
+   },
+   {
+    "track_id": "scv4-24:4152ccf40e2f",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 1492,
+    "accuracy": 0.4785522788203753,
+    "nll_bits": 2.960375220574413
+   },
+   {
+    "track_id": "scv4-25:aac1763d1f59",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 49,
+    "accuracy": 0.40816326530612246,
+    "nll_bits": 3.048196562011416
+   },
+   {
+    "track_id": "scv4-26:0845610b187a",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 2089,
+    "accuracy": 0.389181426519866,
+    "nll_bits": 3.164142662502733
+   },
+   {
+    "track_id": "scv4-27:95ab90f52556",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 156,
+    "accuracy": 0.4166666666666667,
+    "nll_bits": 3.8290659060845487
+   },
+   {
+    "track_id": "scv4-28:7921d1aef059",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 1155,
+    "accuracy": 0.31341991341991343,
+    "nll_bits": 3.8628615791959864
+   },
+   {
+    "track_id": "scv4-29:18333d0d26ae",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 2590,
+    "accuracy": 0.416988416988417,
+    "nll_bits": 3.370735391545462
+   },
+   {
+    "track_id": "scv4-30:99b829aa9e63",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 2769,
+    "accuracy": 0.37016973636691947,
+    "nll_bits": 3.6165947622065455
+   },
+   {
+    "track_id": "scv4-31:633574d55f62",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 2176,
+    "accuracy": 0.11259191176470588,
+    "nll_bits": 5.604708447844786
+   },
+   {
+    "track_id": "scv4-32:b67db4251477",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 52,
+    "accuracy": 0.38461538461538464,
+    "nll_bits": 3.941475637386638
+   },
+   {
+    "track_id": "scv4-33:ea244a207a92",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 1820,
+    "accuracy": 0.371978021978022,
+    "nll_bits": 3.6291970120598815
+   },
+   {
+    "track_id": "scv4-34:20d3e4d7700c",
+    "game": "Super Castlevania 4",
+    "cohort": "baseline",
+    "intervals": 2090,
+    "accuracy": 0.3344497607655502,
+    "nll_bits": 3.630266422554273
+   },
+   {
+    "track_id": "sm-15:12fdf2567ec5",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 227,
+    "accuracy": 0.6343612334801763,
+    "nll_bits": 2.4095068512396955
+   },
+   {
+    "track_id": "sm-16:b015e14bc1ea",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 1468,
+    "accuracy": 0.35490463215258855,
+    "nll_bits": 3.4516813836163704
+   },
+   {
+    "track_id": "sm-17:93ad488988c2",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 175,
+    "accuracy": 0.13714285714285715,
+    "nll_bits": 5.140805474877253
+   },
+   {
+    "track_id": "sm-18:c98b0d4fc3f6",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 1294,
+    "accuracy": 0.6468315301391035,
+    "nll_bits": 2.2704174306090366
+   },
+   {
+    "track_id": "sm-19:102db9fa7d56",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 1820,
+    "accuracy": 0.42032967032967034,
+    "nll_bits": 3.295341832847753
+   },
+   {
+    "track_id": "sm-20:0608d9c3c4bf",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 1093,
+    "accuracy": 0.5315645013723697,
+    "nll_bits": 2.813647091679344
+   },
+   {
+    "track_id": "sm-21:d2d922bfabb9",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 303,
+    "accuracy": 0.900990099009901,
+    "nll_bits": 0.7200607932771498
+   },
+   {
+    "track_id": "sm-22:2f637785e99c",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 3143,
+    "accuracy": 0.41361756283805284,
+    "nll_bits": 3.0594451074003484
+   },
+   {
+    "track_id": "sm-23:fbfadb52b2a6",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 659,
+    "accuracy": 0.716236722306525,
+    "nll_bits": 1.7162715404974216
+   },
+   {
+    "track_id": "sm-24:575ab18ca3b4",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 474,
+    "accuracy": 0.29535864978902954,
+    "nll_bits": 4.105772186242975
+   },
+   {
+    "track_id": "sm-25:8d16be699050",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 1738,
+    "accuracy": 0.48043728423475257,
+    "nll_bits": 3.4082600093210753
+   },
+   {
+    "track_id": "sm-26:9cab6b4ec077",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 2685,
+    "accuracy": 0.548975791433892,
+    "nll_bits": 2.30417653484786
+   },
+   {
+    "track_id": "sm-27:5d298c89a126",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 911,
+    "accuracy": 0.145993413830955,
+    "nll_bits": 3.605051570778891
+   },
+   {
+    "track_id": "sm-28:0bffb9c25938",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 1517,
+    "accuracy": 0.40936058009228743,
+    "nll_bits": 4.1280785173905885
+   },
+   {
+    "track_id": "sm-29:5d147978d5d3",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 643,
+    "accuracy": 0.4758942457231726,
+    "nll_bits": 3.5106149535315194
+   },
+   {
+    "track_id": "sm-33:b60e10672996",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 183,
+    "accuracy": 0.4207650273224044,
+    "nll_bits": 3.0975827706254835
+   },
+   {
+    "track_id": "sm-34:348d6f151ace",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 1711,
+    "accuracy": 0.15020455873758037,
+    "nll_bits": 5.22355796026587
+   },
+   {
+    "track_id": "sm-35:af1c73275044",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 1027,
+    "accuracy": 0.6436222005842259,
+    "nll_bits": 1.9827910502879968
+   },
+   {
+    "track_id": "sm-36:f2e1905270a6",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 1272,
+    "accuracy": 0.4992138364779874,
+    "nll_bits": 3.767935643236023
+   },
+   {
+    "track_id": "sm-37:bac04f5d3705",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 11,
+    "accuracy": 0.09090909090909091,
+    "nll_bits": 3.9252544731494123
+   },
+   {
+    "track_id": "sm-38:c965ea14590c",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 1649,
+    "accuracy": 0.5463917525773195,
+    "nll_bits": 2.8318474824443514
+   },
+   {
+    "track_id": "sm-b02:973f51d9e35a",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 672,
+    "accuracy": 0.7217261904761905,
+    "nll_bits": 1.7209239060202515
+   },
+   {
+    "track_id": "sm-s01:8cb1c31de735",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 4,
+    "accuracy": 0.0,
+    "nll_bits": 8.332228816097864
+   },
+   {
+    "track_id": "sm-s04:fbb215593905",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 93,
+    "accuracy": 0.16129032258064516,
+    "nll_bits": 4.811464630439472
+   },
+   {
+    "track_id": "sm-s05:371f2e0a074e",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 10,
+    "accuracy": 1.0,
+    "nll_bits": 0.333221887709972
+   },
+   {
+    "track_id": "sm-s06:d8d31355acd1",
+    "game": "Super Metroid",
+    "cohort": "baseline",
+    "intervals": 158,
+    "accuracy": 0.46835443037974683,
+    "nll_bits": 2.581184661534506
+   }
+  ]
+ },
+ "limitations": [
+  "Held-out-GAME evaluation. Composer generalisation is NOT established: 287 of 1,477 tracks carry an incomplete credit, and one possible authorship overlap covering 206 tracks is unresolved.",
+  "Splits are not interchangeable samples. Pitched share is 77.49% / 81.75% / 85.48% across train/valid/test, validation is 43% expansion-cohort against train's 6.8%, and test median max polyphony is 6 against 8. These are reported as measured and were NOT normalised away.",
+  "Sample identities barely overlap between splits, so nothing here conditions on timbre and `sample_id` is unusable as a categorical feature across splits.",
+  "Legato steps are excluded, so pitch movement inside a sounding note is outside the task.",
+  "No gap splitting: two phrases either side of a rest are joined into one sequence.",
+  "Says nothing about musical quality or full-song generation.",
+  "The selected n-gram order and smoothing sat at the edge of the pre-declared search grid, so the reported figures are a lower bound for this model family rather than its best achievable result."
+ ]
+}
