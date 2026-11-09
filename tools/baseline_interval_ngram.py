@@ -50,8 +50,14 @@ import math
 import sys
 from pathlib import Path
 
+# Import `snesmdb` from a source checkout OR from a standalone release,
+# without either layout being special-cased. A release places the package
+# beside this script; a checkout keeps it under `src`.
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "src"))
+for _candidate in (Path(__file__).resolve().parent, ROOT / "src", ROOT):
+    if (_candidate / "snesmdb" / "__init__.py").is_file():
+        sys.path.insert(0, str(_candidate))
+        break
 
 from snesmdb import exclusions as exclusions_mod  # noqa: E402
 

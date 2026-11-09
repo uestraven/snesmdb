@@ -27,10 +27,35 @@ from typing import Iterable
 
 SCHEMA = "snesmdb.evaluation_exclusions.v1"
 
-DEFAULT_PATH = (
-    Path(__file__).resolve().parent.parent.parent
-    / "docs" / "evaluation_exclusions.json"
-)
+def _find_record() -> Path:
+    """Locate the exclusion record without assuming a repository layout.
+
+    This used to be `parent.parent.parent / "docs" / ...`, which is the
+    source checkout's shape and nothing else. In a standalone release the
+    module sits beside the record rather than three levels under a `docs`
+    directory, so the hard-coded path pointed outside the archive and the
+    published experiment could not run from a download at all.
+
+    Candidates are tried in order and the first that exists wins, so the
+    same module works in a checkout and in a release without either being
+    special-cased.
+    """
+    here = Path(__file__).resolve()
+    candidates = (
+        here.parent / "evaluation_exclusions.json",            # packaged
+        here.parent.parent / "evaluation_exclusions.json",     # toolkit root
+        here.parent.parent.parent / "evaluation_exclusions.json",
+        here.parent.parent.parent / "docs" / "evaluation_exclusions.json",
+    )
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    # Nothing found: return the checkout location so the error names a real
+    # path rather than a guess.
+    return candidates[-1]
+
+
+DEFAULT_PATH = _find_record()
 
 
 @dataclass(frozen=True)

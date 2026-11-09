@@ -519,6 +519,28 @@ Each score file carries **two** sets of the three formats.
 | what it is | a hardware measurement | a convention, stated as one |
 | use it for | anything about this driver | comparing tracks or games |
 
+### A known MIDI discrepancy, preserved rather than silently corrected
+
+MIDI note numbers span 0–127. The exporter that produced the MIDI files in
+these releases gated on `1..127`, an off-by-one that discarded **note 0 — a
+valid note** — for **four attacks** in Earthbound `mo2-133:dbaac376f5db`
+(`midi_note: -0.0595`, which rounds to 0).
+
+The bound is fixed in the toolkit, and the frozen MIDI files are **not**
+re-exported. The published `mo2-133` file contains 472 note-ons; the
+corrected rule would write 476.
+
+| | |
+|---|---|
+| in `events/*.json.gz` | **present** — all four attacks, with their pitch |
+| in `midi/*.mid` | **absent** — this release ships the superseded export |
+| corrected behaviour | available in `toolkit/`; applies to any re-export |
+
+Replacing the MIDI files here would change the dataset under cover of a
+packaging release. The discrepancy is bounded, attributed and now stated, so
+a researcher comparing `events` against `midi` can account for it. Any
+re-export belongs to an explicitly versioned data release, not to this one.
+
 ### MIDI is a fixed-pitch projection of the authoritative events
 
 `events/*.json.gz` is authoritative. `midi/*.mid` is a **projection of the
