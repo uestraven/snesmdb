@@ -136,6 +136,16 @@ its own artifacts, not combined from the two cohorts it contains.
 Per-population figures, including the frozen cohort's, are in
 [DATASET.md](docs/DATASET.md).
 
+**This is a union of two validated populations, not a demonstration that
+their extraction paths agree.** The 22-game cohort's identities were
+corrected after extraction, so its pitch estimates come from the
+capture-time sample directory; the 5-game expansion resolved identity at
+key-on, so its pitch comes from the sample actually used. Because pitch is
+estimated from a sample's audio, the cohort half's pitched share may
+understate what the newer path would recover — on one game the same audio
+yielded 40.63% versus 91.72%. Quantifying that for the cohort is a separate
+versioned study, not part of this release.
+
 **Absolute pitch is recoverable for 78.71% of attacks.** No SNES field records
 a sample's base frequency, so pitch requires estimating each sample's
 fundamental from its decoded audio. The remainder are unpitched or

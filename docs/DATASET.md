@@ -541,6 +541,36 @@ both Mega Man X and Breath of Fire 2. Adding the two figures would have
 overstated sample diversity by ten and quietly asserted that no sample is
 shared across cohorts, which is false.
 
+### The combined release mixes two production paths
+
+This is a union of two validated populations. It is **not** evidence that
+the two paths produce equivalent pitch statistics, and the combined pitch
+figure should not be read as though it were a single method's result.
+
+| half | tracks | how identity was produced | how pitch was produced |
+|---|---|---|---|
+| 22-game cohort | 1,316 | corrected after extraction, from DSP observations | estimated during extraction from the **capture-time** directory |
+| 5-game expansion | 161 | resolved at key-on during extraction | estimated from the sample resolved **at key-on** |
+
+The asymmetry matters because pitch is estimated from a sample's decoded
+audio. Correcting an identity afterwards replaces a `sample_id`; it cannot
+retroactively give the pitch estimator a sample it did not have. On Secret
+of Evermore, whose capture-time directory resolves nothing, that difference
+was **40.63% versus 91.72%** pitched attacks over the same audio — so the
+timing of identity resolution can dominate pitch recovery.
+
+What follows, stated plainly because it bounds what the combined figure
+means: the cohort half's **78.25% pitched may understate what native v4
+would recover from the same records**, by an amount nobody has measured.
+That measurement is deliberately not in this release. It would change
+published figures for 1,316 tracks and deserves its own versioned study
+with its own comparison, rather than arriving as a side effect of adding
+five games.
+
+Until then, read the 78.71% combined figure as what it is: the pitched share
+of a corpus assembled from two cohorts, one of which was produced by a path
+now superseded.
+
 ### Splits are a property of the population, and this one limits evaluation
 
 Splits are composer-disjoint and recomputed for each population; they are
