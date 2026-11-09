@@ -83,6 +83,36 @@ gated-voice statistics ship the two numbers that reveal their own confound.
 | `sample_id_unresolved_reason` | string or null | — | non-null **exactly when `sample_id` is null**. `directory_entry_unwritten` (the entry is `$FFFF` fill or address 0 — it still *decodes*, which is why earlier releases published a hash of unwritten memory), `not_established`, or `no_directory_entry_at_capture`. An uncertain identity is published as null and **never** backfilled with a plausible-looking substitute |
 | `pitch_register` | int or null | raw | the **14-bit PITCH register value this event wrote**, alongside the derived `midi_note`. Published so a surprising pitch can be checked against the hardware value instead of taken on trust. A step's `midi_note` is derived as `parent.midi_note + 12·log2(step.pitch_register / parent.pitch_register)` |
 | `attack_level` | int | — | `0..127`. `VOL` rescaled. **A register value, not perceived loudness** |
+
+> **`midi_note` is an estimate, and its calibration is per sample.**
+>
+> No SNES field records a sample's base frequency, so `midi_note` is derived
+> from the 14-bit `pitch_register` ratio and a fundamental **estimated from
+> that sample's own decoded audio**. Each sample therefore carries its own
+> tuning offset, and the offsets are independent across samples and games.
+>
+> What that means in practice:
+>
+> - **Relative intervals within one voice on one sample are reliable** — the
+>   register ratio is exact and the sample's offset cancels. This is why the
+>   published interval-prediction baseline works on intervals rather than
+>   absolute pitches.
+> - **Absolute pitch and key analyses inherit the per-sample offset.** Two
+>   voices playing the same concert pitch from different samples can report
+>   different `midi_note` values, so a key estimate pooled across samples
+>   mixes several calibrations.
+> - **Cross-game absolute comparisons are the weakest case**, since no two
+>   games share a sample bank.
+>
+> The corpus measures `midi_note` from −34.2 to 131.1, outside MIDI's domain
+> at both ends, and 1.73% of pitched attacks fall outside a musical register
+> — residual octave errors in fundamental estimation rather than notated
+> extremes. `pitch_confidence` describes confidence in the *estimate*, not in
+> the note.
+>
+> This is a property of the published estimates, not a defect to be
+> corrected here: SNES-MDB publishes pitch estimates, not guaranteed
+> concert-pitch transcription.
 | `sustain_level` | int | — | `0..127`. Where the envelope settles; differs from `attack_level` on 19.4% of notes |
 
 ### Reading it correctly
@@ -332,7 +362,28 @@ and say which one you used.
 | `echo.median_noise_voices` | voices | voices with `NON` set |
 | `echo.median_pitch_mod_voices` | voices | voices with `PMON` set |
 
-## `claims.json` — `snesmdb.claims.v1`
+## Claim verification — a repository tool, not a distribution artifact
+
+`claims.json` and `replicate.py` are **not included in a published
+distribution**, and earlier revisions of this document described them as if
+they were. They live in the source repository (`docs/claims.json`,
+`tools/replicate.py`).
+
+They are also **scoped to the 22-game frozen cohort**: every `reported`
+figure in the registry was measured on `gate5-rc10` (1,316 tracks), and each
+claim now records that in a `measured_on` block. Run against that release,
+11 of 11 applicable claims reproduce. Run against the 27-game corpus, all 11
+report **not applicable** — recomputing a 22-game figure over 1,477 tracks
+and calling the difference a defect would be a sampling-frame error, not a
+replication failure.
+
+There is **no claims registry for the 27-game corpus yet**. Until there is,
+the reproducible artifact shipped with a release is the interval baseline in
+`toolkit/` (see `REPRODUCE.md`), not the claim runner.
+
+The registry's own structure, for reference:
+
+## `claims.json` — `snesmdb.claims.v1` (repository only)
 
 Every quantitative claim in this documentation that could change a
 methodological choice, with its evidence and the method to recompute it. Each
@@ -344,7 +395,7 @@ is one of three kinds, and the distinction is the point:
 | `estimate` | recomputable only under a named assumption, recorded in `assumes` |
 | `interpretation` | a statement about what a field *means*; not mechanically checkable, listed so you know which claims rest on judgement |
 
-**`replicate.py` at the package root checks them.** It reads only the
+**`replicate.py` in the repository checks them.** It reads only the
 distribution, imports nothing from this project, and where possible reads a
 *different* published representation from the one a claim's own figure came
 from — the MIDI note-on total is recovered by parsing the binary files, which
@@ -352,8 +403,8 @@ no JSON table touches. Claims it cannot check that way are marked
 `same_representation`, and prove correspondingly less.
 
 ```sh
-python3 replicate.py              # from the package root
-python3 replicate.py dist --report replication.json
+# From a source checkout, against the release the claims were measured on:
+python3 tools/replicate.py /path/to/gate5-rc10
 ```
 
 Reproducing a measurement does not establish that it measures the musical
@@ -367,5 +418,12 @@ games. Those are separate claims and no runner settles them.
 census. Its `scores.max_distinct_pitched_notes_per_row` was published as
 `max_polyphony` before `events.v3`; see the note it carries. `provenance.json` records the commit, cleanliness, interpreter and
 platform that built the tree — and deliberately **no hostname or user**.
-`RELEASE.json` pins a SHA-256 and byte count for every file; `verify.py`
-checks the tree against it.
+`RELEASE.json` pins a SHA-256 and byte count for every file. There is no
+`verify.py`; the checker is `tools/freeze_release.py --verify` in the source
+repository. Generated bytecode (`__pycache__`) is deliberately excluded from
+the pin, so running the packaged toolkit does not make the archive report
+itself as modified.
+
+`summary.json` is present in single-cohort releases and **absent from the
+combined 27-game distribution**, whose out-tree is assembled from two
+cohorts rather than produced by one extraction run.

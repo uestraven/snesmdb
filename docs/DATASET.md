@@ -405,7 +405,7 @@ cannot quietly rot as the corpus grows.
 
 ### What the benchmark measured
 
-Full corpus: **1,458,211 pitched notes across all 1,243 tracks that contain
+22-game cohort: **1,458,211 pitched notes across the 1,243 cohort tracks that contain
 one**, of 1,316. The 405,288 unpitched notes are excluded, and that is the
 exact coverage of the claim — an unpitched note carries no note number and so
 never enters a piano roll in any format, at any rate.

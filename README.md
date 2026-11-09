@@ -104,9 +104,16 @@ the object of study.
 
 ### MIDI
 
-`midi/*.mid`, for 1,243 tracks. Only notes with a recovered pitch can be
-written, so 402,635 of 1,863,499 attacks are absent — unpitched percussion
-and noise mostly. MIDI is a lossy convenience view, not the dataset.
+`midi/*.mid`, for **1,399 of the 1,477 tracks**. Only attacks carrying a
+usable fixed-pitch estimate can be written, so **434,574 of 2,041,091
+attacks are absent** — see the MIDI section of
+[DATASET.md](DATASET.md) for the full reconciliation, including the 87
+omissions that *do* carry a pitch estimate. MIDI is a lossy projection, not
+the dataset.
+
+The 78 tracks without a MIDI file are all `complete_unpitched_only` (59) or
+`complete_no_events` (19); none has a pitched attack, so no exportable
+musical content is missing.
 
 ### Raw format
 
@@ -116,8 +123,10 @@ derived from this.
 
 ## Verified research results
 
-Figures below are measured from the published release and re-checked by
-`make audit`, which opens every file.
+Figures below are measured from the published release. In a source checkout
+they are re-checked by `make audit`, which opens every published file; from
+a release archive alone, the reproducible check is the interval baseline in
+`toolkit/` (see `REPRODUCE.md`).
 
 All figures are for the **27-game combined release** and are measured from
 its own artifacts, not combined from the two cohorts it contains.
@@ -285,7 +294,8 @@ Stated here because they bound what the data supports, not as caveats to skim:
 - **No cross-game instrument vocabulary.** See
   [Verified research results](#verified-research-results).
 - **21.7% of attacks have no recovered pitch.** Filter on `pitch_status`.
-- **15,343 attacks have no sample identity.** Their directory entry was
+- **15,504 attacks have no sample identity** across the 27-game corpus
+  (15,343 of them in the 22-game cohort alone). Their directory entry was
   unwritten memory at key-on, or no entry existed. Published as `null`.
 - **Sample bytes are read from the capture-time ARAM.** A confirmed directory
   address does not establish that the sample's bytes were unchanged during

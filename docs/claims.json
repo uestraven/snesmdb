@@ -1,283 +1,349 @@
 {
-  "schema": "snesmdb.claims.v1",
-  "purpose": "Every quantitative claim in the published documentation that could change a researcher's methodological choices, with the evidence and the method needed to recompute it. Read by replicate.py, which ships with the distribution so a recipient can challenge these without reconstructing the extraction pipeline.",
-  "kinds": {
-    "measurement": "Recomputable from the distribution by independent code. A discrepancy is a defect in the claim or the data.",
-    "estimate": "Recomputable only under a stated assumption. A discrepancy may mean the assumption differs, not that either side is wrong. The assumption is named in `assumes`.",
-    "interpretation": "A statement about what a field MEANS or what a measurement licenses. Not mechanically checkable, recorded so a reader knows which claims rest on judgement rather than arithmetic."
+ "schema": "snesmdb.claims.v1",
+ "purpose": "Every quantitative claim in the published documentation that could change a researcher's methodological choices, with the evidence and the method needed to recompute it. Read by replicate.py, which ships with the distribution so a recipient can challenge these without reconstructing the extraction pipeline.",
+ "kinds": {
+  "measurement": "Recomputable from the distribution by independent code. A discrepancy is a defect in the claim or the data.",
+  "estimate": "Recomputable only under a stated assumption. A discrepancy may mean the assumption differs, not that either side is wrong. The assumption is named in `assumes`.",
+  "interpretation": "A statement about what a field MEANS or what a measurement licenses. Not mechanically checkable, recorded so a reader knows which claims rest on judgement rather than arithmetic."
+ },
+ "cross_representation": "`independent_of` names the published representation the claim's own figure came from. Where the replication reads a DIFFERENT representation the check is genuinely independent; where it reads the same one, `same_representation: true` says so, because two calculations over one extraction can agree while both are wrong.",
+ "claims": [
+  {
+   "id": "primary_row_duration_ms",
+   "kind": "measurement",
+   "description": "Span of the primary (hardware timer) row duration across all tracks",
+   "documented_in": "DATASET.md, Two row grids table",
+   "reported": {
+    "min": 2.0,
+    "max": 30.5
+   },
+   "unit": "milliseconds",
+   "method": "replicate_row_duration",
+   "reads": "intake/*.json.gz timing.row_period_ticks",
+   "independent_of": "scores/*.json.gz clock.hz",
+   "tolerance": 0.01,
+   "unit_of_analysis": "track",
+   "generalises_beyond_corpus": false,
+   "population": "all_indexed_tracks",
+   "measured_on": {
+    "data_release": "gate5-rc10",
+    "games": 22,
+    "tracks": 1316
+   }
   },
-  "cross_representation": "`independent_of` names the published representation the claim's own figure came from. Where the replication reads a DIFFERENT representation the check is genuinely independent; where it reads the same one, `same_representation: true` says so, because two calculations over one extraction can agree while both are wrong.",
-  "claims": [
-    {
-      "id": "primary_row_duration_ms",
-      "kind": "measurement",
-      "description": "Span of the primary (hardware timer) row duration across all tracks",
-      "documented_in": "DATASET.md, Two row grids table",
-      "reported": {
-        "min": 2.0,
-        "max": 30.5
-      },
-      "unit": "milliseconds",
-      "method": "replicate_row_duration",
-      "reads": "intake/*.json.gz timing.row_period_ticks",
-      "independent_of": "scores/*.json.gz clock.hz",
-      "tolerance": 0.01,
-      "unit_of_analysis": "track",
-      "generalises_beyond_corpus": false,
-      "population": "all_indexed_tracks"
-    },
-    {
-      "id": "tracks_coarser_than_uniform",
-      "kind": "measurement",
-      "description": "Tracks whose hardware row is coarser than the 10 ms uniform row",
-      "documented_in": "DATASET.md, Two row grids section",
-      "reported": {
-        "count": 341,
-        "fraction": 0.259
-      },
-      "unit": "tracks",
-      "method": "replicate_coarser_than_uniform",
-      "reads": "intake/*.json.gz timing.row_period_ticks",
-      "independent_of": "scores/*.json.gz clock.hz",
-      "tolerance": 0,
-      "unit_of_analysis": "track",
-      "generalises_beyond_corpus": false,
-      "population": "all_indexed_tracks"
-    },
-    {
-      "id": "pitched_attacks",
-      "kind": "measurement",
-      "description": "Note attacks carrying a recovered pitch",
-      "documented_in": "DATASET.md, SCHEMA.md, index.json corpus.n_pitched_attacks",
-      "reported": {
-        "count": 1458211
-      },
-      "unit": "events",
-      "method": "replicate_pitched_attacks",
-      "reads": "events/*.json.gz rows",
-      "independent_of": "index.json corpus block",
-      "tolerance": 0,
-      "unit_of_analysis": "event",
-      "generalises_beyond_corpus": false,
-      "population": "pitched_attacks"
-    },
-    {
-      "id": "legato_steps",
-      "kind": "measurement",
-      "description": "Published legato-step events",
-      "documented_in": "README.md, DATASET.md, SCHEMA.md",
-      "reported": {
-        "count": 154910
-      },
-      "unit": "events",
-      "method": "replicate_legato_steps",
-      "reads": "events/*.json.gz rows",
-      "independent_of": "index.json per-track legato_step_count",
-      "tolerance": 0,
-      "unit_of_analysis": "event",
-      "generalises_beyond_corpus": false,
-      "population": "legato_steps"
-    },
-    {
-      "id": "midi_notes_written",
-      "kind": "measurement",
-      "description": "Note-on events in the published MIDI tree",
-      "documented_in": "DATASET.md MIDI section, SCHEMA.md",
-      "reported": {
-        "count": 1458120,
-        "files": 1243
-      },
-      "unit": "note-ons",
-      "method": "replicate_midi_note_ons",
-      "reads": "midi/*.mid, parsed as a Standard MIDI File byte stream",
-      "independent_of": "index.json midi_summary and manifest_counts.json",
-      "tolerance": 0,
-      "note": "The strongest cross-representation check available: a binary format produced by a different code path from the JSON tables, parsed here without reference to either.",
-      "unit_of_analysis": "event",
-      "generalises_beyond_corpus": false,
-      "population": "midi_files"
-    },
-    {
-      "id": "max_voices_sounding",
-      "kind": "measurement",
-      "description": "Largest number of voices sounding at once anywhere in the corpus",
-      "documented_in": "DATASET.md, SCHEMA.md (hardware limit 8)",
-      "reported": {
-        "max": 8
-      },
-      "unit": "voices",
-      "method": "replicate_max_voices",
-      "reads": "events/*.json.gz, interval sweep with the documented 1 us remedy",
-      "independent_of": "scores/*.json.gz stats.max_voices_sounding_per_row",
-      "tolerance": 0,
-      "note": "Exercises the documented rounding remedy. Without it a naive sweep reports 9-13, which is the defect the remedy exists for.",
-      "unit_of_analysis": "track",
-      "generalises_beyond_corpus": false,
-      "population": "all_indexed_tracks"
-    },
-    {
-      "id": "out_of_midi_range_rate",
-      "kind": "measurement",
-      "description": "Pitched attacks outside MIDI 12-108",
-      "documented_in": "DATASET.md, Pitch is usable in bulk",
-      "reported": {
-        "fraction": 0.0173
-      },
-      "unit": "fraction",
-      "method": "replicate_out_of_range",
-      "reads": "events/*.json.gz rows",
-      "independent_of": "none published; this figure exists only in prose",
-      "same_representation": true,
-      "tolerance": 0.0005,
-      "unit_of_analysis": "event",
-      "generalises_beyond_corpus": false,
-      "population": "pitched_attacks"
-    },
-    {
-      "id": "saturated_games",
-      "kind": "measurement",
-      "description": "Games whose gated-voice measure is saturated (duty cycle >= 0.95)",
-      "documented_in": "SCHEMA.md, performance.json table",
-      "reported": {
-        "count": 3
-      },
-      "unit": "games",
-      "method": "replicate_saturated_games",
-      "reads": "events/*.json.gz, recomputing duty from note intervals",
-      "independent_of": "performance_music.json voices.gated_duty_cycle, which is computed from the extraction records rather than from the published events",
-      "tolerance": 0,
-      "note": "The claim this checks was wrong in rc6: the prose named two games where the field flags three.",
-      "unit_of_analysis": "game",
-      "generalises_beyond_corpus": false,
-      "population": "game_weighted_music"
-    },
-    {
-      "id": "timbre_class_is_inert",
-      "kind": "measurement",
-      "description": "timbre_class is the constant -1 wherever it appears",
-      "documented_in": "README.md, DATASET.md, CHANGELOG.md",
-      "reported": {
-        "distinct_values": 1,
-        "value": -1
-      },
-      "unit": "values",
-      "method": "replicate_timbre_inert",
-      "reads": "scores/*.json.gz and intake/*.json.gz",
-      "independent_of": "the prose claim only",
-      "same_representation": true,
-      "tolerance": 0,
-      "unit_of_analysis": "track",
-      "generalises_beyond_corpus": false,
-      "population": "sampled_tracks"
-    },
-    {
-      "id": "onset_grid_concentration",
-      "kind": "estimate",
-      "description": "Onsets concentrate far more on onset_grid than on the timer clock (ordering and a gap of at least 0.3)",
-      "documented_in": "DATASET.md, SCHEMA.md",
-      "reported": {
-        "grid_beats_clock": true,
-        "gap_at_least": true
-      },
-      "unit": "resultant length",
-      "method": "replicate_onset_concentration",
-      "reads": "events/*.json.gz onsets against scores/*.json.gz onset_grid and clock",
-      "independent_of": "the prose claim only",
-      "assumes": "circular resultant length of onset phase within the period. The VALUE is estimator-dependent -- an independent estimator gave 0.779/0.344 against the documented 0.937/0.262 -- so the registered claim is the ordering and the size of the gap, which any reasonable estimator should reproduce.",
-      "tolerance": 0,
-      "unit_of_analysis": "track",
-      "generalises_beyond_corpus": false,
-      "population": "indexed_music_tracks"
-    },
-    {
-      "id": "per_sample_ladder_deviation",
-      "kind": "estimate",
-      "description": "Median per-sample deviation from an exact semitone ladder, worst driver",
-      "documented_in": "DATASET.md, per-driver table",
-      "reported": {
-        "worst_driver_cents": 2.46,
-        "worst_game_cents": 4.06
-      },
-      "unit": "cents",
-      "method": "replicate_ladder_deviation",
-      "reads": "events/*.json.gz grouped by (game_slug, sample_id)",
-      "independent_of": "the prose table only",
-      "assumes": "free offset fitted per sample group by scanning in 0.01-semitone steps, over groups of at least 8 pitched attacks, then a median per group aggregated PER DRIVER -- a driver pools its games. Aggregating per GAME instead gives 4.06 (Mega Man X), and the first replication failed purely on that unstated choice. Both figures are now registered.",
-      "tolerance": 0.4,
-      "unit_of_analysis": "sample_group",
-      "generalises_beyond_corpus": false,
-      "population": "dense_sample_groups"
-    },
-    {
-      "id": "gated_is_not_audible",
-      "kind": "interpretation",
-      "description": "A gated voice is not an audible voice; gated concurrency partly measures driver gating habit rather than musical density",
-      "documented_in": "SCHEMA.md, Reading it correctly",
-      "unit": null,
-      "scope": "all_tracks",
-      "method": null,
-      "not_checkable_because": "Deciding when a voice became inaudible needs ADSR release rates, which are not published. The supporting measurements (release gap, duty cycle, the 0.703 correlation) are registered separately or published as fields; the inference from them is judgement."
-    },
-    {
-      "id": "sample_id_is_not_an_instrument",
-      "kind": "interpretation",
-      "description": "sample_id identifies decoded audio content, not an instrument or a musical role",
-      "documented_in": "SCHEMA.md, CHANGELOG.md, DATASET.md",
-      "unit": null,
-      "scope": "all_tracks",
-      "method": null,
-      "not_checkable_because": "A definitional claim about what the identifier denotes. The corpus can show that one sample is used across a wide pitch span, which is evidence that the distinction matters, but cannot establish the definition."
-    }
-  ],
-  "units_of_analysis": {
-    "note": "The statistical unit a figure is computed over. Published per claim because pooling over tracks lets one game dominate: Earthbound is 13.8% of music tracks and games range from 17 to 139 tracks, an 8x spread. A per-track pooled mean is a mean over a sample weighted by how many tracks each game happens to contribute, which is an artefact of what was collected.",
-    "track": "every track contributes equally; large games dominate",
-    "game": "every game contributes equally; the usual choice for a cross-game claim",
-    "composer": "credits are MANY-TO-MANY and some are truncated at 32 characters: Earthbound's three credited composers each appear on all 139 of its tracks, so a composer-pooled figure multiply-counts those tracks",
-    "sample_group": "a (game, sample_id) group",
-    "event": "an individual published event"
+  {
+   "id": "tracks_coarser_than_uniform",
+   "kind": "measurement",
+   "description": "Tracks whose hardware row is coarser than the 10 ms uniform row",
+   "documented_in": "DATASET.md, Two row grids section",
+   "reported": {
+    "count": 341,
+    "fraction": 0.259
+   },
+   "unit": "tracks",
+   "method": "replicate_coarser_than_uniform",
+   "reads": "intake/*.json.gz timing.row_period_ticks",
+   "independent_of": "scores/*.json.gz clock.hz",
+   "tolerance": 0,
+   "unit_of_analysis": "track",
+   "generalises_beyond_corpus": false,
+   "population": "all_indexed_tracks",
+   "measured_on": {
+    "data_release": "gate5-rc10",
+    "games": 22,
+    "tracks": 1316
+   }
   },
-  "generalisation": {
-    "note": "Whether a figure describes this corpus or SNES music. NO corpus-wide figure here generalises: 22 games of roughly 700 commercial SNES titles, JRPG- and first-party-weighted, 13.8% from one game. A corpus-wide statistic is descriptive of the collected sample and is not a universal SNES musical convention.",
-    "sample_composition": "22 games, 1,006 music tracks, 37 credited composers; largest game 13.8%, top three games 28.5%, top three composers 27.4% of credits"
+  {
+   "id": "pitched_attacks",
+   "kind": "measurement",
+   "description": "Note attacks carrying a recovered pitch",
+   "documented_in": "DATASET.md, SCHEMA.md, index.json corpus.n_pitched_attacks",
+   "reported": {
+    "count": 1458211
+   },
+   "unit": "events",
+   "method": "replicate_pitched_attacks",
+   "reads": "events/*.json.gz rows",
+   "independent_of": "index.json corpus block",
+   "tolerance": 0,
+   "unit_of_analysis": "event",
+   "generalises_beyond_corpus": false,
+   "population": "pitched_attacks",
+   "measured_on": {
+    "data_release": "gate5-rc10",
+    "games": 22,
+    "tracks": 1316
+   }
   },
-  "populations": {
-    "note": "The sampling frame a claim describes. A SELECTION RULE, not a size: the rule is stable across releases and the realised size is not, so replicate.py reports the size it finds and a report from a 22-game release can be compared with one from a 50-game release rule by rule. `generalises_beyond_corpus: false` says a claim does not describe SNES music; this says which subset of the corpus it does describe. Those are different statements, and several distinct populations exist inside one corpus.",
-    "all_indexed_tracks": {
-      "rule": "every track in index.json, any track_class",
-      "unit": "track"
-    },
-    "indexed_music_tracks": {
-      "rule": "index.json tracks with track_class == 'music'",
-      "unit": "track"
-    },
-    "game_weighted_music": {
-      "rule": "music tracks aggregated per game, each game contributing equally",
-      "unit": "game"
-    },
-    "pitched_attacks": {
-      "rule": "events with origin == 'key_on' and pitch_status == 'estimated'",
-      "unit": "event"
-    },
-    "all_published_events": {
-      "rule": "every row of every events table, both origins",
-      "unit": "event"
-    },
-    "legato_steps": {
-      "rule": "events with origin == 'legato_step'",
-      "unit": "event"
-    },
-    "midi_files": {
-      "rule": "the published midi/*.mid files, one per track with a pitched note",
-      "unit": "file"
-    },
-    "dense_sample_groups": {
-      "rule": "(game_slug, sample_id) groups with at least 8 pitched attacks",
-      "unit": "sample_group"
-    },
-    "sampled_tracks": {
-      "rule": "a deterministic spread of tracks, used where an exhaustive pass would cost more than the claim is worth",
-      "unit": "track"
-    }
+  {
+   "id": "legato_steps",
+   "kind": "measurement",
+   "description": "Published legato-step events",
+   "documented_in": "README.md, DATASET.md, SCHEMA.md",
+   "reported": {
+    "count": 154910
+   },
+   "unit": "events",
+   "method": "replicate_legato_steps",
+   "reads": "events/*.json.gz rows",
+   "independent_of": "index.json per-track legato_step_count",
+   "tolerance": 0,
+   "unit_of_analysis": "event",
+   "generalises_beyond_corpus": false,
+   "population": "legato_steps",
+   "measured_on": {
+    "data_release": "gate5-rc10",
+    "games": 22,
+    "tracks": 1316
+   }
+  },
+  {
+   "id": "midi_notes_written",
+   "kind": "measurement",
+   "description": "Note-on events in the published MIDI tree",
+   "documented_in": "DATASET.md MIDI section, SCHEMA.md",
+   "reported": {
+    "count": 1458120,
+    "files": 1243
+   },
+   "unit": "note-ons",
+   "method": "replicate_midi_note_ons",
+   "reads": "midi/*.mid, parsed as a Standard MIDI File byte stream",
+   "independent_of": "index.json midi_summary and manifest_counts.json",
+   "tolerance": 0,
+   "note": "The strongest cross-representation check available: a binary format produced by a different code path from the JSON tables, parsed here without reference to either.",
+   "unit_of_analysis": "event",
+   "generalises_beyond_corpus": false,
+   "population": "midi_files",
+   "measured_on": {
+    "data_release": "gate5-rc10",
+    "games": 22,
+    "tracks": 1316
+   }
+  },
+  {
+   "id": "max_voices_sounding",
+   "kind": "measurement",
+   "description": "Largest number of voices sounding at once anywhere in the corpus",
+   "documented_in": "DATASET.md, SCHEMA.md (hardware limit 8)",
+   "reported": {
+    "max": 8
+   },
+   "unit": "voices",
+   "method": "replicate_max_voices",
+   "reads": "events/*.json.gz, interval sweep with the documented 1 us remedy",
+   "independent_of": "scores/*.json.gz stats.max_voices_sounding_per_row",
+   "tolerance": 0,
+   "note": "Exercises the documented rounding remedy. Without it a naive sweep reports 9-13, which is the defect the remedy exists for.",
+   "unit_of_analysis": "track",
+   "generalises_beyond_corpus": false,
+   "population": "all_indexed_tracks",
+   "measured_on": {
+    "data_release": "gate5-rc10",
+    "games": 22,
+    "tracks": 1316
+   }
+  },
+  {
+   "id": "out_of_midi_range_rate",
+   "kind": "measurement",
+   "description": "Pitched attacks outside MIDI 12-108",
+   "documented_in": "DATASET.md, Pitch is usable in bulk",
+   "reported": {
+    "fraction": 0.0173
+   },
+   "unit": "fraction",
+   "method": "replicate_out_of_range",
+   "reads": "events/*.json.gz rows",
+   "independent_of": "none published; this figure exists only in prose",
+   "same_representation": true,
+   "tolerance": 0.0005,
+   "unit_of_analysis": "event",
+   "generalises_beyond_corpus": false,
+   "population": "pitched_attacks",
+   "measured_on": {
+    "data_release": "gate5-rc10",
+    "games": 22,
+    "tracks": 1316
+   }
+  },
+  {
+   "id": "saturated_games",
+   "kind": "measurement",
+   "description": "Games whose gated-voice measure is saturated (duty cycle >= 0.95)",
+   "documented_in": "SCHEMA.md, performance.json table",
+   "reported": {
+    "count": 3
+   },
+   "unit": "games",
+   "method": "replicate_saturated_games",
+   "reads": "events/*.json.gz, recomputing duty from note intervals",
+   "independent_of": "performance_music.json voices.gated_duty_cycle, which is computed from the extraction records rather than from the published events",
+   "tolerance": 0,
+   "note": "The claim this checks was wrong in rc6: the prose named two games where the field flags three.",
+   "unit_of_analysis": "game",
+   "generalises_beyond_corpus": false,
+   "population": "game_weighted_music",
+   "measured_on": {
+    "data_release": "gate5-rc10",
+    "games": 22,
+    "tracks": 1316
+   }
+  },
+  {
+   "id": "timbre_class_is_inert",
+   "kind": "measurement",
+   "description": "timbre_class is the constant -1 wherever it appears",
+   "documented_in": "README.md, DATASET.md, CHANGELOG.md",
+   "reported": {
+    "distinct_values": 1,
+    "value": -1
+   },
+   "unit": "values",
+   "method": "replicate_timbre_inert",
+   "reads": "scores/*.json.gz and intake/*.json.gz",
+   "independent_of": "the prose claim only",
+   "same_representation": true,
+   "tolerance": 0,
+   "unit_of_analysis": "track",
+   "generalises_beyond_corpus": false,
+   "population": "sampled_tracks",
+   "measured_on": {
+    "data_release": "gate5-rc10",
+    "games": 22,
+    "tracks": 1316
+   }
+  },
+  {
+   "id": "onset_grid_concentration",
+   "kind": "estimate",
+   "description": "Onsets concentrate far more on onset_grid than on the timer clock (ordering and a gap of at least 0.3)",
+   "documented_in": "DATASET.md, SCHEMA.md",
+   "reported": {
+    "grid_beats_clock": true,
+    "gap_at_least": true
+   },
+   "unit": "resultant length",
+   "method": "replicate_onset_concentration",
+   "reads": "events/*.json.gz onsets against scores/*.json.gz onset_grid and clock",
+   "independent_of": "the prose claim only",
+   "assumes": "circular resultant length of onset phase within the period. The VALUE is estimator-dependent -- an independent estimator gave 0.779/0.344 against the documented 0.937/0.262 -- so the registered claim is the ordering and the size of the gap, which any reasonable estimator should reproduce.",
+   "tolerance": 0,
+   "unit_of_analysis": "track",
+   "generalises_beyond_corpus": false,
+   "population": "indexed_music_tracks",
+   "measured_on": {
+    "data_release": "gate5-rc10",
+    "games": 22,
+    "tracks": 1316
+   }
+  },
+  {
+   "id": "per_sample_ladder_deviation",
+   "kind": "estimate",
+   "description": "Median per-sample deviation from an exact semitone ladder, worst driver",
+   "documented_in": "DATASET.md, per-driver table",
+   "reported": {
+    "worst_driver_cents": 2.46,
+    "worst_game_cents": 4.06
+   },
+   "unit": "cents",
+   "method": "replicate_ladder_deviation",
+   "reads": "events/*.json.gz grouped by (game_slug, sample_id)",
+   "independent_of": "the prose table only",
+   "assumes": "free offset fitted per sample group by scanning in 0.01-semitone steps, over groups of at least 8 pitched attacks, then a median per group aggregated PER DRIVER -- a driver pools its games. Aggregating per GAME instead gives 4.06 (Mega Man X), and the first replication failed purely on that unstated choice. Both figures are now registered.",
+   "tolerance": 0.4,
+   "unit_of_analysis": "sample_group",
+   "generalises_beyond_corpus": false,
+   "population": "dense_sample_groups",
+   "measured_on": {
+    "data_release": "gate5-rc10",
+    "games": 22,
+    "tracks": 1316
+   }
+  },
+  {
+   "id": "gated_is_not_audible",
+   "kind": "interpretation",
+   "description": "A gated voice is not an audible voice; gated concurrency partly measures driver gating habit rather than musical density",
+   "documented_in": "SCHEMA.md, Reading it correctly",
+   "unit": null,
+   "scope": "all_tracks",
+   "method": null,
+   "not_checkable_because": "Deciding when a voice became inaudible needs ADSR release rates, which are not published. The supporting measurements (release gap, duty cycle, the 0.703 correlation) are registered separately or published as fields; the inference from them is judgement.",
+   "measured_on": {
+    "data_release": "gate5-rc10",
+    "games": 22,
+    "tracks": 1316
+   }
+  },
+  {
+   "id": "sample_id_is_not_an_instrument",
+   "kind": "interpretation",
+   "description": "sample_id identifies decoded audio content, not an instrument or a musical role",
+   "documented_in": "SCHEMA.md, CHANGELOG.md, DATASET.md",
+   "unit": null,
+   "scope": "all_tracks",
+   "method": null,
+   "not_checkable_because": "A definitional claim about what the identifier denotes. The corpus can show that one sample is used across a wide pitch span, which is evidence that the distinction matters, but cannot establish the definition.",
+   "measured_on": {
+    "data_release": "gate5-rc10",
+    "games": 22,
+    "tracks": 1316
+   }
   }
+ ],
+ "units_of_analysis": {
+  "note": "The statistical unit a figure is computed over. Published per claim because pooling over tracks lets one game dominate: Earthbound is 13.8% of music tracks and games range from 17 to 139 tracks, an 8x spread. A per-track pooled mean is a mean over a sample weighted by how many tracks each game happens to contribute, which is an artefact of what was collected.",
+  "track": "every track contributes equally; large games dominate",
+  "game": "every game contributes equally; the usual choice for a cross-game claim",
+  "composer": "credits are MANY-TO-MANY and some are truncated at 32 characters: Earthbound's three credited composers each appear on all 139 of its tracks, so a composer-pooled figure multiply-counts those tracks",
+  "sample_group": "a (game, sample_id) group",
+  "event": "an individual published event"
+ },
+ "generalisation": {
+  "note": "Whether a figure describes this corpus or SNES music. NO corpus-wide figure here generalises: 22 games of roughly 700 commercial SNES titles, JRPG- and first-party-weighted, 13.8% from one game. A corpus-wide statistic is descriptive of the collected sample and is not a universal SNES musical convention.",
+  "sample_composition": "22 games, 1,006 music tracks, 37 credited composers; largest game 13.8%, top three games 28.5%, top three composers 27.4% of credits"
+ },
+ "populations": {
+  "note": "The sampling frame a claim describes. A SELECTION RULE, not a size: the rule is stable across releases and the realised size is not, so replicate.py reports the size it finds and a report from a 22-game release can be compared with one from a 50-game release rule by rule. `generalises_beyond_corpus: false` says a claim does not describe SNES music; this says which subset of the corpus it does describe. Those are different statements, and several distinct populations exist inside one corpus.",
+  "all_indexed_tracks": {
+   "rule": "every track in index.json, any track_class",
+   "unit": "track"
+  },
+  "indexed_music_tracks": {
+   "rule": "index.json tracks with track_class == 'music'",
+   "unit": "track"
+  },
+  "game_weighted_music": {
+   "rule": "music tracks aggregated per game, each game contributing equally",
+   "unit": "game"
+  },
+  "pitched_attacks": {
+   "rule": "events with origin == 'key_on' and pitch_status == 'estimated'",
+   "unit": "event"
+  },
+  "all_published_events": {
+   "rule": "every row of every events table, both origins",
+   "unit": "event"
+  },
+  "legato_steps": {
+   "rule": "events with origin == 'legato_step'",
+   "unit": "event"
+  },
+  "midi_files": {
+   "rule": "the published midi/*.mid files, one per track with a pitched note",
+   "unit": "file"
+  },
+  "dense_sample_groups": {
+   "rule": "(game_slug, sample_id) groups with at least 8 pitched attacks",
+   "unit": "sample_group"
+  },
+  "sampled_tracks": {
+   "rule": "a deterministic spread of tracks, used where an exhaustive pass would cost more than the claim is worth",
+   "unit": "track"
+  }
+ },
+ "measured_on_note": "Each claim's `reported` figure was measured on the data release named in its `measured_on` block. A claim is NOT APPLICABLE to a release with a different population: recomputing a 22-game figure over 27 games and calling the difference a defect is a sampling-frame error, not a replication failure."
 }

@@ -128,6 +128,72 @@ lossy by design -- see the MIDI section of `DATASET.md`.
 '''
 
 
+#: Sections of the repository README that describe a source checkout and do
+#: not apply to an archive. Replaced rather than deleted, so a reader is
+#: told where those instructions went instead of finding a gap.
+CHECKOUT_SECTIONS = ("## Installation", "## Tools")
+
+ARCHIVE_INSTALLATION = """## Using this release
+
+**No installation, and no third-party dependencies.** Python 3.11 or newer
+and its standard library are enough. Everything below runs against the data
+in this directory.
+
+```sh
+python3 toolkit/baseline_interval_ngram.py . my_results.json
+python3 toolkit/workflows.py . discover --game "Chrono Trigger"
+```
+
+See [REPRODUCE.md](REPRODUCE.md) for the full commands, the figures they
+should produce, and what those figures do and do not establish.
+
+The `make` targets described in the source repository — `make test`,
+`make corpus`, `make verify`, `make audit` — require a developer checkout
+and the C++ emulator build. They are **not** part of this archive and
+cannot be run from it. Rebuilding the corpus additionally requires SPC
+files, which are copyrighted and are never distributed.
+
+"""
+
+
+def rewrite_readme(text: str) -> str:
+    """Make the repository README correct for an archive.
+
+    Two things break when the file is copied verbatim, and the independent
+    usability test hit both: every `docs/...` link points at a directory
+    that does not exist in the release, and the install and tooling
+    sections describe `make` targets that need a checkout. Rewriting here
+    keeps ONE README in the repository rather than a second copy that
+    drifts.
+    """
+    # Links: docs/X.md sits at the archive root.
+    for name in ("DATASET.md", "SCHEMA.md", "CHANGELOG.md"):
+        text = text.replace(f"](docs/{name})", f"]({name})")
+    # Anything still pointing into the repository tree is not resolvable
+    # from the archive and must not look like a link.
+    for prefix in ("docs/", "examples/", "tools/", "src/", "tests/"):
+        text = text.replace(f"]({prefix}", f"](# ")
+
+    # Replace checkout-only sections with archive instructions.
+    lines = text.splitlines(keepends=True)
+    out, skip, inserted = [], False, False
+    for line in lines:
+        if line.startswith("## "):
+            if line.strip() in CHECKOUT_SECTIONS:
+                # Insert the archive instructions ONCE, however many
+                # checkout-only sections are replaced. Inserting per section
+                # duplicated the whole block.
+                if not inserted:
+                    out.append(ARCHIVE_INSTALLATION)
+                    inserted = True
+                skip = True
+                continue
+            skip = False
+        if not skip:
+            out.append(line)
+    return "".join(out)
+
+
 def assemble(dist: Path) -> list[str]:
     written = []
     (dist / "toolkit" / "snesmdb").mkdir(parents=True, exist_ok=True)
@@ -137,11 +203,16 @@ def assemble(dist: Path) -> list[str]:
             raise SystemExit(f"inventory names a missing file: {source}")
         dest = dist / target
         dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dest)
+        if source == "README.md":
+            dest.write_text(rewrite_readme(src.read_text()))
+        else:
+            shutil.copy2(src, dest)
         written.append(target)
     init = dist / "toolkit" / "snesmdb" / "__init__.py"
     init.write_text(PACKAGE_INIT)
     written.append("toolkit/snesmdb/__init__.py")
+    write_identity(dist)
+    written.append("RELEASE_IDENTITY.json")
     (dist / "REPRODUCE.md").write_text(REPRODUCE)
     written.append("REPRODUCE.md")
     return written
@@ -162,6 +233,45 @@ def sweep_bytecode(dist: Path) -> list[str]:
             removed.append(str(cache.relative_to(dist)))
             shutil.rmtree(cache)
     return removed
+
+
+def write_identity(dist: Path) -> dict:
+    """Record DATA identity and TOOLKIT identity as separate facts.
+
+    The independent tester found the exclusion policy and the experiment
+    report naming a different release label than the archive, and read that
+    as an inconsistency. It is not: the data in this tree was built for one
+    release and the toolkit was added for another, so one label cannot
+    describe both.
+
+    Collapsing them -- rewriting every reference to the newest label --
+    would hide that the data is byte-identical to an earlier release, which
+    is the single most useful thing a researcher can know when comparing
+    results across versions. So both are recorded, and policy applicability
+    is keyed to the DATA identity, which is what a measurement depends on.
+    """
+    inherited = sorted((dist / "releases").glob("inherited-*.json"))
+    data_label = None
+    if inherited:
+        data_label = json.loads(inherited[0].read_text()).get("label")
+    index = json.loads((dist / "index.json").read_text())
+    identity = {
+        "schema": "snesmdb.release_identity.v1",
+        "data_release": data_label,
+        "data_tracks": len(index["tracks"]),
+        "data_games": len({e.get("game") for e in index["tracks"]}),
+        "toolkit_release": None,      # filled by freeze_release's label
+        "note": (
+            "`data_release` names the release whose event, score, intake and "
+            "MIDI trees this archive carries, byte-identical. "
+            "`toolkit_release` names this distribution, which adds "
+            "documentation and the research toolkit and changes no data. A "
+            "policy or result keyed to a population should be matched "
+            "against `data_release`, not against the toolkit label."
+        ),
+    }
+    (dist / "RELEASE_IDENTITY.json").write_text(json.dumps(identity, indent=1))
+    return identity
 
 
 def verify(dist: Path) -> list[str]:

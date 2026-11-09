@@ -109,5 +109,9 @@
   "Sequences are built per voice, so material split across voices in one arrangement and merged in another will not match.",
   "A NEGATIVE RESULT BOUNDS THE METHOD'S COVERAGE AND DOES NOT ESTABLISH THAT NO SHARED COMPOSITION EXISTS."
  ],
- "supported_research_claim": "SNES-MDB provides game-disjoint, recorded-credit-disjoint research splits for held-out-game symbolic music evaluation. Composer-level generalisation is not established, because 287 of 1,477 tracks carry an incomplete credit and one possible authorship overlap affecting 206 tracks is unresolved. One cross-split duplicated composition has been identified; an evaluation protocol must exclude the affected validation material or otherwise control for it. The symbolic leakage search has documented coverage limitations."
+ "supported_research_claim": "SNES-MDB provides game-disjoint, recorded-credit-disjoint research splits for held-out-game symbolic music evaluation. Composer-level generalisation is not established, because 287 of 1,477 tracks carry an incomplete credit and one possible authorship overlap affecting 206 tracks is unresolved. One cross-split duplicated composition has been identified; an evaluation protocol must exclude the affected validation material or otherwise control for it. The symbolic leakage search has documented coverage limitations.",
+ "applies_to_data_release": [
+  "snesmdb-27game-rc1"
+ ],
+ "applies_to_note": "Keyed to the DATA release, not a toolkit label. A toolkit distribution that adds documentation and scripts without changing the event trees carries the same data identity, so this policy applies to it unchanged. Match against `RELEASE_IDENTITY.json`'s `data_release` or against the data digest, never against the archive's own label."
 }

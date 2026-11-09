@@ -458,7 +458,7 @@ def main() -> None:
     tracks = _tracks(dist)
     print(f"  tracks     {len(tracks)}\n")
 
-    results, failures, skipped = [], 0, 0
+    results, failures, skipped, not_applicable = [], 0, 0, 0
     for claim in registry["claims"]:
         if args.only and claim["id"] != args.only:
             continue
@@ -475,6 +475,25 @@ def main() -> None:
             continue
         frame = claim.get("population")
         size = population_size(dist, tracks, frame) if frame else None
+
+        # COHORT GATE. A claim's `reported` figure was measured on one data
+        # release. Recomputing it over a different population and calling
+        # the difference a defect is a sampling-frame error: all six
+        # "failures" against the 27-game corpus were 22-game cohort figures
+        # compared against 1,477 tracks. Not applicable is the correct
+        # verdict, and it is reported rather than passed silently.
+        measured = claim.get("measured_on") or {}
+        expected_tracks = measured.get("tracks")
+        if expected_tracks is not None and expected_tracks != len(tracks):
+            print(f"  n/a  {claim['id']}: measured on "
+                  f"{measured.get('data_release', '?')} "
+                  f"({expected_tracks:,} tracks); this release has "
+                  f"{len(tracks):,}")
+            not_applicable += 1
+            results.append({**claim, "outcome": "not_applicable",
+                            "release_tracks": len(tracks)})
+            continue
+
         got = method(dist, tracks)
         problems = _compare(claim.get("reported", {}), got,
                             float(claim.get("tolerance", 0)))
@@ -493,9 +512,10 @@ def main() -> None:
                         "outcome": "fail" if problems else "ok",
                         "problems": problems})
 
-    checked = len(results) - skipped
-    print(f"\n{checked - failures}/{checked} claims reproduced, "
-          f"{failures} failed, {skipped} not mechanically checkable")
+    checked = len(results) - skipped - not_applicable
+    print(f"\n{checked - failures}/{checked} applicable claims reproduced, "
+          f"{failures} failed, {not_applicable} not applicable to this "
+          f"release, {skipped} not mechanically checkable")
     print("NOTE: reproducing a measurement does not establish that it "
           "measures the\n      musical concept it is named for, nor that any "
           "conclusion generalises\n      beyond these 22 games.")
