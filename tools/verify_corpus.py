@@ -189,12 +189,33 @@ def check_out_dir(out_dir: Path, report: Report) -> None:
         )
 
 
-def check_records(out_dir: Path, report: Report, limit: int) -> None:
-    """Per-track record checks, on a sample so `make` stays quick."""
+def check_records(
+    out_dir: Path, report: Report, limit: int, exhaustive: bool = False
+) -> None:
+    """Per-track record checks, on a sample so `make` stays quick.
+
+    `--exhaustive` opens EVERY record. It used to sample even there, which
+    left `identity_resolved_at_key_on` -- the check that catches a track
+    silently falling back to capture-time identities -- covering 62 of 1,477
+    tracks on a release audit. A quiet failure on one track is exactly what
+    that check exists for, so a release cannot afford to sample it.
+    """
     rows = [r for r in _rows(out_dir) if r.get("ok") and r.get("record_path")]
-    sample = rows[:: max(1, len(rows) // limit)] if rows else []
+    if exhaustive:
+        sample = rows
+    else:
+        sample = rows[:: max(1, len(rows) // limit)] if rows else []
+    # COUNTED PER RECORD, NOT PER CORPUS.
+    #
+    # A combined cohort mixes pre-v4 records with native ones, and a single
+    # global `native_ids` flag skipped the SRCN check for ALL of them -- so
+    # on the 27-game release the 1,316 baseline tracks got neither check:
+    # SRCN was skipped because some records had identities, and the identity
+    # check only saw the 161 records that did. Each population is now
+    # measured on its own terms and both checks report when both are
+    # present.
     notes = zeros = orphans = steps = unmatched = 0
-    native_ids = False
+    notes_pre_v4 = zeros_pre_v4 = notes_native = 0
     identities: collections.Counter = collections.Counter()
     for row in sample:
         record = json.loads((out_dir / row["record_path"]).read_text())
@@ -203,12 +224,17 @@ def check_records(out_dir: Path, report: Report, limit: int) -> None:
             unmatched += 1
         for note in record.get("notes") or []:
             notes += 1
-            if int(note.get("srcn") or 0) == 0:
+            zero = int(note.get("srcn") or 0) == 0
+            if zero:
                 zeros += 1
             if "sample_id" in note:
-                native_ids = True
+                notes_native += 1
                 if note["sample_id"]:
                     identities[note["sample_id"]] += 1
+            else:
+                notes_pre_v4 += 1
+                if zero:
+                    zeros_pre_v4 += 1
         for step in record.get("legato_steps") or []:
             steps += 1
             if step.get("parent_note_id") not in ids:
@@ -226,15 +252,28 @@ def check_records(out_dir: Path, report: Report, limit: int) -> None:
     # written for. The threshold is unchanged in both cases; what changes is
     # which quantity is asserted on, and the inapplicable one is reported
     # rather than passed or skipped silently.
-    if native_ids:
+    if notes_pre_v4:
+        # Asserted over the pre-v4 notes ONLY, at the unchanged limit. In a
+        # mixed cohort this is the baseline half and it is still judged on
+        # the quantity that identifies its samples.
+        pre = zeros_pre_v4 / notes_pre_v4
+        report.check(
+            "srcn_not_degenerate",
+            pre <= MAX_SRCN_ZERO_FRACTION,
+            f"{pre:.1%} of {notes_pre_v4:,} notes WITHOUT a per-attack "
+            f"identity report sample 0 (limit "
+            f"{MAX_SRCN_ZERO_FRACTION:.0%})",
+        )
+    else:
         report.skip(
             "srcn_not_degenerate",
-            f"{fraction:.1%} of notes report SRCN 0, but these records "
-            f"resolve identity at key-on, so SRCN does not determine the "
+            f"{fraction:.1%} of notes report SRCN 0, but every record here "
+            f"resolves identity at key-on, so SRCN does not determine the "
             f"sample -- a driver may hold every voice on one index and "
             f"rewrite its directory entry. Asserted on sample identity "
             f"instead",
         )
+    if notes_native:
         total = sum(identities.values())
         top = identities.most_common(1)[0][1] / total if total else 1.0
         report.check(
@@ -255,15 +294,9 @@ def check_records(out_dir: Path, report: Report, limit: int) -> None:
             f"silently",
         )
     else:
-        report.check(
-            "srcn_not_degenerate",
-            fraction <= MAX_SRCN_ZERO_FRACTION,
-            f"{fraction:.1%} of sampled notes report sample 0"
-            f" (limit {MAX_SRCN_ZERO_FRACTION:.0%})",
-        )
         report.skip(
             "identity_resolution_not_degenerate",
-            "these records carry no per-attack identity, so identity "
+            "no record here carries a per-attack identity, so identity "
             "resolution cannot be assessed; SRCN degeneracy was asserted "
             "instead",
         )
@@ -884,7 +917,7 @@ def main() -> None:
 
     report = Report()
     check_out_dir(args.out_dir, report)
-    check_records(args.out_dir, report, args.sample)
+    check_records(args.out_dir, report, args.sample, args.exhaustive)
     check_uniform_preservation(args.out_dir, report, args.sample * 4)
     if args.dist_dir and args.dist_dir.exists():
         check_dist(args.dist_dir, report, exhaustive=args.exhaustive,

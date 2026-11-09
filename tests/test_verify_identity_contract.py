@@ -161,3 +161,50 @@ def test_an_unresolved_identity_is_not_counted_as_a_distinct_sample(tmp_path):
     notes = [_note(i, srcn=0, sample_id=None) for i in range(200)]
     _write(tmp_path, [notes])
     assert _run(tmp_path)["identity_resolution_not_degenerate"] == "fail"
+
+
+# ---------------------------------------------------------------------------
+# A MIXED cohort: both populations judged, neither skipped
+# ---------------------------------------------------------------------------
+
+def test_a_mixed_cohort_asserts_both_populations(tmp_path):
+    """The 27-game release mixes 1,316 pre-v4 records with 161 native ones.
+
+    A single global "are there native identities" flag skipped the SRCN
+    check for ALL of them, so the baseline half was judged by neither check:
+    SRCN was skipped because some records had identities, and the identity
+    check only ever saw the records that did. Each population is measured on
+    its own notes.
+    """
+    pre = [_note(i, srcn=1 + i % 7) for i in range(200)]
+    native = [_note(1000 + i, srcn=0, sample_id=f"id{i % 40:014d}")
+              for i in range(200)]
+    _write(tmp_path, [pre, native], matched=True)
+    got = _run(tmp_path)
+    assert got["srcn_not_degenerate"] == "ok"
+    assert got["identity_resolution_not_degenerate"] == "ok"
+
+
+def test_a_mixed_cohort_still_catches_srcn_pile_up_in_the_pre_v4_half(tmp_path):
+    """The negative case that the global flag hid: a degenerate pre-v4
+    record must fail even when native records are present and healthy."""
+    pre = [_note(i, srcn=0) for i in range(200)]
+    native = [_note(1000 + i, srcn=3, sample_id=f"id{i % 40:014d}")
+              for i in range(200)]
+    _write(tmp_path, [pre, native], matched=True)
+    got = _run(tmp_path)
+    assert got["srcn_not_degenerate"] == "fail", (
+        "healthy native records must not rescue a degenerate pre-v4 half"
+    )
+    assert got["identity_resolution_not_degenerate"] == "ok"
+
+
+def test_a_mixed_cohort_still_catches_identity_collapse_in_the_native_half(
+        tmp_path):
+    pre = [_note(i, srcn=1 + i % 7) for i in range(200)]
+    native = [_note(1000 + i, srcn=2, sample_id="same" + "0" * 12)
+              for i in range(200)]
+    _write(tmp_path, [pre, native], matched=True)
+    got = _run(tmp_path)
+    assert got["srcn_not_degenerate"] == "ok"
+    assert got["identity_resolution_not_degenerate"] == "fail"

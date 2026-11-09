@@ -11,9 +11,17 @@ That shielding is harder on the SNES than on the NES, and the reasons shape
 every format choice here — see the
 [SNES Synthesizer Primer](#snes-synthesizer-primer).
 
-**1,316 tracks from 22 games.** 2,018,409 events, composer-disjoint splits,
-every track clocked from its own SPC700 timer register. Current release
-`gate5-rc10`, event schema `snesmdb.events.v4`.
+**1,477 tracks from 27 games.** 2,216,554 events, composer-disjoint splits,
+every track clocked from its own SPC700 timer register. Event schema
+`snesmdb.events.v4`.
+
+The corpus ships as three populations, and a figure belongs to one of them:
+the **22-game frozen cohort** (1,316 tracks), the **5-game expansion** (161
+tracks), and the **27-game combined release** (1,477 tracks). Each
+population's statistics are measured from its own artifacts — see
+[DATASET.md](docs/DATASET.md). Do not add figures across them; ten sample
+identities occur in both cohorts, so even the distinct-sample count is not a
+sum.
 
 **If you are here to do research, start with `events/*.json.gz`** — the flat
 event table in seconds, described in [DATASET.md](docs/DATASET.md). The score,
@@ -45,7 +53,7 @@ build of vendored `snes_spc`.
 ```sh
 git clone <repo> && cd snesmdb
 make                  # builds build/spc_dump
-make test             # 552 tests, no skips
+make test             # 555 tests, no skips
 ```
 
 You only need the C++ tool to process SPC files yourself; the Python
@@ -111,18 +119,24 @@ derived from this.
 Figures below are measured from the published release and re-checked by
 `make audit`, which opens every file.
 
+All figures are for the **27-game combined release** and are measured from
+its own artifacts, not combined from the two cohorts it contains.
+
 | | |
 |---|---|
-| tracks / games | 1,316 / 22 |
-| splits (train / valid / test) | 1,049 / 135 / 132, composer-disjoint |
-| events | 2,018,409 — 1,863,499 attacks + 154,910 legato steps |
-| attacks with a recovered pitch | 1,458,211 (**78.3%**) |
-| attacks with an established sample identity | 1,848,156 (**99.177%**) |
-| attacks published with `sample_id: null` | 15,343 |
-| distinct sample identities | 1,132 |
-| tracks with a clock read from hardware | 1,316 (**100%**) |
+| tracks / games | 1,477 / 27 |
+| splits (train / valid / test) | 1,186 / 145 / 146 tracks over 18 / 4 / 5 games, composer-disjoint |
+| events | 2,216,554 — 2,041,091 attacks + 175,463 legato steps |
+| attacks with a recovered pitch | 1,606,604 (**78.71%**) |
+| attacks with an established sample identity | 2,025,587 (**99.24%**) |
+| attacks published with `sample_id: null` | 15,504 |
+| distinct sample identities | 1,288 |
+| tracks with a clock read from hardware | 1,477 (**100%**) |
 
-**Absolute pitch is recoverable for 78.3% of attacks.** No SNES field records
+Per-population figures, including the frozen cohort's, are in
+[DATASET.md](docs/DATASET.md).
+
+**Absolute pitch is recoverable for 78.71% of attacks.** No SNES field records
 a sample's base frequency, so pitch requires estimating each sample's
 fundamental from its decoded audio. The remainder are unpitched or
 unrecoverable and are marked as such — `pitch_status` is the field to filter
@@ -187,7 +201,7 @@ and reports it rather than substituting a sample.
 
 ```sh
 make                        # build build/spc_dump
-make test                   # 552 tests, no skips (bootstraps .venv for pytest)
+make test                   # 555 tests, no skips (bootstraps .venv for pytest)
 make corpus                 # full rebuild: ~80 min on 8 jobs
 make verify                 # 37 checks on an existing corpus and dist tree
 make audit                  # 39 checks, opening EVERY published file
@@ -249,6 +263,15 @@ directly, not inferred from note onsets.
 
 Stated here because they bound what the data supports, not as caveats to skim:
 
+- **The splits are assigned by game, so held-out evaluation confounds
+  several factors.** Composer credits attach to games in the source
+  metadata, so a held-out score differs from training data in composer *and*
+  in genre, sound driver and instrument bank at once. A model scoring poorly
+  on `test` does not isolate composer generalisation.
+- **287 of 1,477 tracks carry a truncated composer credit**, cut mid-name at
+  the ID666 32-byte limit. `composer_truncated` marks them. A truncated tag
+  is not a confirmed identity, and a game-level credit does not establish
+  track-level authorship.
 - **No cross-game instrument vocabulary.** See
   [Verified research results](#verified-research-results).
 - **21.7% of attacks have no recovered pitch.** Filter on `pitch_status`.

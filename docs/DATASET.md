@@ -519,6 +519,61 @@ Each score file carries **two** sets of the three formats.
 | what it is | a hardware measurement | a convention, stated as one |
 | use it for | anything about this driver | comparing tracks or games |
 
+### Three statistical populations
+
+This corpus has shipped as three distinct populations. A figure quoted
+without naming one of them is unattributable.
+
+| population | games | tracks | attacks | identity | pitched |
+|---|---|---|---|---|---|
+| 22-game frozen cohort | 22 | 1,316 | 1,863,499 | 99.18% | 78.25% |
+| 5-game expansion | 5 | 161 | 177,592 | 99.91% | 83.56% |
+| 27-game combined | 27 | 1,477 | 2,041,091 | 99.24% | 78.71% |
+
+Every row is measured from that population's own published artifacts. The
+combined row is **not** derived from the two above it.
+
+**Distinct sample identities make the point concretely.** The cohort has
+1,132 and the expansion 166, which sum to 1,298. The combined corpus
+measures **1,288**: ten identities occur in both cohorts — the same decoded
+audio in Ken Griffey Jr. Baseball and Plok!, in Street Fighter II Turbo and
+both Mega Man X and Breath of Fire 2. Adding the two figures would have
+overstated sample diversity by ten and quietly asserted that no sample is
+shared across cohorts, which is false.
+
+### Splits are a property of the population, and this one limits evaluation
+
+Splits are composer-disjoint and recomputed for each population; they are
+never concatenated. For the combined corpus: **train 1,186 tracks over 18
+games, valid 145 over 4, test 146 over 5.**
+
+The limitation to understand before using them as a benchmark: splits are
+assigned by *game*, because composer credits attach to games in the source
+metadata. So a held-out score differs from training data in composer AND in
+genre, sound driver, and instrument bank simultaneously. **A model scoring
+poorly on `test` does not isolate composer generalisation** — those factors
+are correlated with the games, and with 27 games they cannot be separated.
+
+The five-game expansion alone is worse and should not be used as a benchmark
+at all: its validation split is one racing soundtrack and its test split is
+nine tracks of one baseball soundtrack.
+
+### Composer attribution is tiered, and one tier is not an identity
+
+Disjointness is only as strong as the attribution it is computed from.
+
+| tier | combined tracks | what it is |
+|---|---|---|
+| full ID666 credit | 1,190 | the tag fits in the field |
+| **truncated** ID666 credit | 287 | cut at the 32-byte limit, mid-name |
+
+A truncated credit such as `Yoshihiro Sakaguchi, Yoko Shimom` or
+`Chris Jojo, Paul Tonge, Matthew` is an **incomplete tag string, not a
+confirmed identity**. `composer_truncated` carries this per track. A
+game-level credit does not establish track-level authorship, and nothing in
+this corpus asserts that it does: a track's credit is the credit its SPC
+carried, at whatever completeness the dumper recorded.
+
 ### Row duration is stated per population, not corpus-wide
 
 The span above describes the **22-game frozen cohort** (`gate5-rc10`, 1,316
@@ -529,6 +584,15 @@ amended when a new game is measured outside it.
 |---|---|---|
 | 22-game frozen cohort | 1,316 | **2.000–30.500 ms** |
 | 5-game expansion | 161 | **1.813–20.000 ms** |
+| 27-game combined | 1,477 | **1.813–30.500 ms** |
+
+The combined figure is **measured over the combined artifacts**, not taken
+as the union of the two rows above. For a minimum and a maximum the two
+happen to coincide — an envelope of mins and maxes is the union by
+construction — but that is not true of anything else a reader might want:
+the median, the count of distinct rates, and every per-population share have
+to be measured, and a release that unioned them would be publishing
+arithmetic rather than measurement.
 
 The expansion's 1.813 ms minimum is a **verified extension**, observed in one
 Ken Griffey Jr. Baseball track, not a correction to the figure above. Its
