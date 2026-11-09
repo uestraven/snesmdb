@@ -147,6 +147,23 @@ def assemble(dist: Path) -> list[str]:
     return written
 
 
+def sweep_bytecode(dist: Path) -> list[str]:
+    """Remove `__pycache__` written by running the toolkit.
+
+    Verification imports the packaged modules, which leaves `.pyc` files
+    behind. They were pinned into a frozen manifest once: build detritus
+    tagged for one interpreter version (`cpython-315`), shipped to
+    researchers who may be on another, and recorded in a digest that then
+    depended on which Python happened to run the packaging step.
+    """
+    removed = []
+    for cache in sorted(dist.rglob("__pycache__")):
+        if cache.is_dir():
+            removed.append(str(cache.relative_to(dist)))
+            shutil.rmtree(cache)
+    return removed
+
+
 def verify(dist: Path) -> list[str]:
     """Run the published commands from the archive, with the repo hidden.
 
@@ -222,6 +239,11 @@ def main() -> None:
     print("\nverifying the published commands from the archive, with the "
           "repository hidden...")
     problems = verify(args.dist)
+    # Verification imports the packaged modules; the bytecode it leaves
+    # must not become part of the distribution.
+    swept = sweep_bytecode(args.dist)
+    if swept:
+        print(f"swept bytecode written by verification: {', '.join(swept)}")
     if problems:
         print(f"\n{len(problems)} PROBLEM(S):")
         for problem in problems:
