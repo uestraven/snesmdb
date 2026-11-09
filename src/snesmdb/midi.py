@@ -38,6 +38,18 @@ BPM = 120.0
 CHANNEL_FOR_VOICE = (0, 1, 2, 3, 4, 5, 6, 8)
 
 
+#: MIDI note numbers span 0..127. The writer and the summary gated on
+#: `1 <= n <= 127`, an off-by-one that discarded note 0 -- a valid note
+#: (C-1) -- for four Earthbound attacks whose estimate rounds to it. Defined
+#: once so the two cannot disagree again.
+MIDI_NOTE_LOW = 0
+MIDI_NOTE_HIGH = 127
+
+
+def _in_midi_range(number: int) -> bool:
+    return MIDI_NOTE_LOW <= number <= MIDI_NOTE_HIGH
+
+
 def _vlq(value: int) -> bytes:
     """MIDI variable-length quantity."""
     if value < 0:
@@ -130,7 +142,7 @@ def from_notes(
         last_pan: int | None = None
         for note in items:
             number = int(round(float(note["midi_note"])))
-            if not 1 <= number <= 127:
+            if not _in_midi_range(number):
                 continue
             start = _ppq_of(int(note["start"]))
             end_tick = note.get("end")
@@ -175,7 +187,7 @@ def summary(notes: Iterable[dict[str, Any]], n_voices: int = 8) -> dict[str, Any
         if note.get("midi_note") is None:
             unpitched += 1
             continue
-        if not 1 <= int(round(float(note["midi_note"]))) <= 127:
+        if not _in_midi_range(int(round(float(note["midi_note"])))):
             out_of_range += 1
             continue
         written += 1

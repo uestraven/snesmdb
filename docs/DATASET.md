@@ -519,6 +519,56 @@ Each score file carries **two** sets of the three formats.
 | what it is | a hardware measurement | a convention, stated as one |
 | use it for | anything about this driver | comparing tracks or games |
 
+### MIDI is a fixed-pitch projection of the authoritative events
+
+`events/*.json.gz` is authoritative. `midi/*.mid` is a **projection of the
+subset of attacks carrying a usable fixed-pitch estimate**, and it is lossy
+by design rather than by defect.
+
+Over the 27-game release, every one of the 2,041,091 attacks is accounted
+for — the ledger reconciles exactly:
+
+| disposition | attacks | share |
+|---|---|---|
+| written to MIDI | 1,606,517 | 78.71% |
+| omitted, no usable fixed-pitch estimate | 434,487 | 21.29% |
+| omitted despite a fixed-pitch estimate | **87** | 0.004% |
+
+**What the 434,487 are not.** They are not established to be unpitched
+sounds. The published `pitch_status` says only what the pipeline could
+determine:
+
+- **`unrecoverable`** (433,493) — the pipeline could not determine a pitch.
+  Some of these sounds may well have been pitched.
+- **`pitch_modulated`** (727) — may be musically pitched material whose
+  changing pitch a single static MIDI note cannot represent.
+- **`noise`** (267) — genuinely lacks a fixed melodic pitch.
+
+So the correct reading is that **no additional recoverable fixed-pitch
+omissions have been demonstrated**. These rows preserve uncertainty instead
+of resolving it, and writing a MIDI note for them would fabricate a pitch
+the data explicitly declines to assert. For anything in this category, read
+`events.v4`.
+
+**The 87 are recoverable and are not hidden.** Their pitch was estimated but
+falls outside MIDI's 0–127. Some are genuine extremes; some are residual
+octave errors in fundamental estimation, which is a pitch-estimation
+question rather than a MIDI one. They stay visible as their own category
+rather than folding into "unpitched".
+
+**78 tracks have no MIDI file**, covering 2,795 attacks. All 78 are
+`complete_unpitched_only` or `complete_no_events`, and none has a pitched
+attack, so no exportable musical content is missing. An empty MIDI file
+would have been more misleading than none.
+
+**One published counter does not reconcile, and is left as published.**
+`midi_notes_dropped` counts attacks rejected while converting a track that
+*does* get a file; it never covered bad-voice rejects or the 2,795 attacks
+in file-less tracks. Rather than silently redefine a metric that has
+shipped, `midi_attacks_rejected_in_conversion`,
+`midi_tracks_without_file` and `midi_attacks_in_tracks_without_file` are
+published alongside it, and together they account for every attack.
+
 ### Three statistical populations
 
 This corpus has shipped as three distinct populations. A figure quoted

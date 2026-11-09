@@ -304,6 +304,11 @@ def main() -> None:
     counts = {
         "tracks": 0, "with_clock": 0, "scores_written": 0, "midi_written": 0,
         "midi_notes_written": 0, "midi_notes_dropped": 0,
+        # Added so the export accounts for every attack. See the comment at
+        # the increment site: `midi_notes_dropped` is left as published.
+        "midi_attacks_rejected_in_conversion": 0,
+        "midi_tracks_without_file": 0,
+        "midi_attacks_in_tracks_without_file": 0,
         "expressive_with_timbre": 0, "intake_written": 0,
         "with_software_divisor": 0, "uniform_written": 0,
         "events_written": 0, "events_total": 0, "events_unpitched": 0,
@@ -358,11 +363,32 @@ def main() -> None:
             (args.dist_dir / "midi" / f"{stem}.mid").write_bytes(data)
             counts["midi_written"] += 1
             counts["midi_notes_written"] += info["n_written"]
+            # `midi_notes_dropped` KEEPS ITS PUBLISHED MEANING: attacks
+            # rejected during conversion of a track that does get a MIDI
+            # file. It is not redefined, because it has been published and a
+            # consumer comparing releases would see a metric change meaning
+            # with no way to tell.
+            #
+            # What it never covered is now counted separately. It summed the
+            # unpitched and out-of-range drops only, so bad-voice rejects
+            # were invisible, and a track emitting NO MIDI file contributed
+            # to no counter at all -- 2,795 attacks across 78 tracks on the
+            # 27-game release. The totals below reconcile; that one does not
+            # and was never meant to.
             counts["midi_notes_dropped"] += (
                 info["n_unpitched_dropped"] + info["n_out_of_range_dropped"]
             )
+            counts["midi_attacks_rejected_in_conversion"] += (
+                info["n_unpitched_dropped"] + info["n_out_of_range_dropped"]
+                + info["n_bad_voice_dropped"]
+            )
             entry["midi"] = f"midi/{stem}.mid"
             entry["midi_summary"] = info
+        else:
+            # No MIDI file for this track. Its attacks are absent from the
+            # export and must still be accounted for.
+            counts["midi_tracks_without_file"] += 1
+            counts["midi_attacks_in_tracks_without_file"] += info["n_notes"]
 
         # The three scores are indexed on the SPC700 timer register, which
         # every track has, so this is no longer conditional on an inference.
