@@ -313,6 +313,13 @@ def echo_and_modulation(log_path: Path) -> dict[str, Any]:
                 if not line.strip():
                     continue
                 write = json.loads(line)
+                # The raw log is not only register writes. `spc_dump` also
+                # emits `kind:"dir"` directory snapshots, which carry no
+                # `addr` -- 436 of them in the first Evermore track alone.
+                # Assuming every record is a write raised KeyError and took
+                # the whole performance step down.
+                if "addr" not in write:
+                    continue
                 address = int(write["addr"]) & 0xFF
                 if address in (
                     REG_FLG, REG_EON, REG_EVOL_L, REG_EVOL_R, REG_EFB,

@@ -540,6 +540,12 @@ def extract(
     timelines: dict[int, list[tuple[int, int, int, int]]] = {}
 
     for write in writes:
+        # Non-write records -- `spc_dump`'s `kind:"dir"` directory snapshots
+        # among them -- share the log and carry no `addr`. Callers that
+        # pre-filter are unaffected; this makes the function safe for a
+        # caller that does not.
+        if "addr" not in write:
+            continue
         addr = int(write["addr"])
         data = int(write["data"])
         time = int(write["t"])
