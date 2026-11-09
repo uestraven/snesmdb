@@ -685,10 +685,13 @@ be read as either.
 
 **Selection touched validation only**, over a grid declared in the source
 before any evaluation. It chose order 3, alpha 1.0 — **both at the grid
-maximum**, so the optimum may lie outside it and these figures are a lower
-bound for this model family. The grid was deliberately not widened after
-test was evaluated: selection would still have been clean, but re-running
-test after seeing a result is how a held-out set stops being held out.
+maximum**. These figures therefore describe the selected configuration under
+that grid, and **the effect of a broader search is unmeasured**: a boundary
+selection suggests a wider search would be informative, but it does not
+establish that wider tuning would improve held-out performance. The grid was
+deliberately not widened after test was evaluated — selection would still
+have been clean, but re-running test after seeing a result is how a held-out
+set stops being held out.
 
 **What this does not show.** Held-out-*game* interval prediction only. Not
 composer generalisation, not musical quality, not generation. The splits are

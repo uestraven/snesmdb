@@ -310,12 +310,15 @@ def main() -> None:
         "selected_at_grid_boundary": at_edge,
         "boundary_note": (
             "Validation selected a setting at the edge of the pre-declared "
-            "grid, so the optimum may lie outside it and these numbers are "
-            "a lower bound on what this model family can do. The grid is "
-            "NOT being widened now: selection would be clean, but test has "
-            "already been evaluated once and re-running it after seeing the "
-            "result is how a held-out set stops being held out. A wider "
-            "grid belongs to a separately declared experiment."
+            "grid. These results describe the selected configuration under "
+            "that grid; THE EFFECT OF A BROADER SEARCH IS UNMEASURED. A "
+            "boundary selection suggests a wider search would be "
+            "informative, but it does not establish that wider tuning would "
+            "improve held-out performance -- it could equally overfit "
+            "validation. The grid is NOT being widened now: selection would "
+            "be clean, but test has already been evaluated once and "
+            "re-running it after seeing the result is how a held-out set "
+            "stops being held out."
             if at_edge else
             "The selected setting is interior to the grid."),
     }
@@ -420,9 +423,9 @@ def main() -> None:
             "joined into one sequence.",
             "Says nothing about musical quality or full-song generation.",
             "The selected n-gram order and smoothing sat at the edge of the "
-            "pre-declared search grid, so the reported figures are a lower "
-            "bound for this model family rather than its best achievable "
-            "result.",
+            "pre-declared search grid. These figures describe the selected "
+            "configuration under that grid; the effect of a broader search "
+            "is unmeasured.",
         ],
     }
     args.report.write_text(json.dumps(out, indent=1))
