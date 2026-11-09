@@ -812,6 +812,7 @@ amended when a new game is measured outside it.
 | 22-game frozen cohort | 1,316 | **2.000–30.500 ms** |
 | 5-game expansion | 161 | **1.813–20.000 ms** |
 | 27-game combined | 1,477 | **1.813–30.500 ms** |
+| 13-game expansion candidate | 362 | **2.000–26.500 ms** |
 
 The combined figure is **measured over the combined artifacts**, not taken
 as the union of the two rows above. For a minimum and a maximum the two

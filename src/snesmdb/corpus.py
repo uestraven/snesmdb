@@ -139,7 +139,12 @@ def games(tracks: list[dict[str, Any]]) -> dict[str, str]:
     """
     found: dict[str, str] = {}
     for entry in tracks:
-        slug = events.game_slug(str(entry.get("track_id", "")))
+        # The PUBLISHED slug, which is the game family's where regional
+        # releases are grouped. Re-deriving it from the track id emitted a
+        # phantom entry -- `pdp` AND `ta` both mapping to Tetris Attack --
+        # so the map declared 14 slugs for 13 in use.
+        slug = str(entry.get("game_slug") or events.game_slug(
+            str(entry.get("track_id", ""))))
         name = entry.get("game")
         if slug and name:
             found.setdefault(slug, name)

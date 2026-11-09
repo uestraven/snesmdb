@@ -38,6 +38,7 @@ from snesmdb import (  # noqa: E402
     drivers as drivers_mod,
     envelope as envelope_mod,
     events as events_mod,
+    gamefamily as gamefamily_mod,
     identity,
     provenance as provenance_mod,
     spcfile,
@@ -309,6 +310,7 @@ def main() -> None:
         "midi_attacks_rejected_in_conversion": 0,
         "midi_tracks_without_file": 0,
         "midi_attacks_in_tracks_without_file": 0,
+        "tracks_grouped_into_a_game_family": 0,
         "expressive_with_timbre": 0, "intake_written": 0,
         "with_software_divisor": 0, "uniform_written": 0,
         "events_written": 0, "events_total": 0, "events_unpitched": 0,
@@ -328,9 +330,19 @@ def main() -> None:
         render_ticks = int(row["render_seconds"] * TICKS)
         counts["tracks"] += 1
 
+        # GAME FAMILY. Most tracks are their own family and this is a
+        # no-op. Where a game shipped regionally under two rips, the family
+        # supplies one slug and one published name while the variant is
+        # recorded per track. See `snesmdb.gamefamily`.
+        source_slug = events_mod.game_slug(row["track_id"])
+        family_slug, family_name, release_variant = gamefamily_mod.resolve(
+            source_slug, row["tag"]["game"])
+        if gamefamily_mod.is_grouped(source_slug):
+            counts["tracks_grouped_into_a_game_family"] += 1
+
         entry: dict[str, Any] = {
             "track_id": row["track_id"],
-            "game": row["tag"]["game"],
+            "game": family_name,
             "title": row["tag"]["title"],
             "composers": row["tag"].get("composers") or [],
             "composer_truncated": bool(row["tag"].get("composer_truncated")),
@@ -349,7 +361,12 @@ def main() -> None:
             # tracks.csv. Four did not -- the slug and the three driver
             # columns -- so a documented join by slug failed and the slug had
             # to be parsed out of `track_id` instead.
-            "game_slug": events_mod.game_slug(row["track_id"]),
+            "game_slug": family_slug,
+            # Regional release this rip came from, and the ID666 string
+            # verbatim. Grouping a family must not erase which member a
+            # track is, nor silently correct the tag's own spelling.
+            "release_variant": release_variant,
+            "game_tag_verbatim": row["tag"]["game"],
             **drivers_mod.for_slug(events_mod.game_slug(row["track_id"])),
         }
 
@@ -555,9 +572,10 @@ def main() -> None:
             legato_steps=record.get("legato_steps") or [],
             attack_level=scores_mod._velocity,
             sustain_level=scores_mod._sustain,
-            game=row["tag"]["game"],
+            game=family_name,
             track_class=row.get("track_class"),
             corrections=corrections.get(row["track_id"]),
+            game_slug_override=family_slug,
         )
         write_json_gz(args.dist_dir / "events" / f"{stem}.json.gz", table)
         counts["events_written"] += 1

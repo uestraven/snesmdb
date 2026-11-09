@@ -38,6 +38,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
+from snesmdb import events as events_mod  # noqa: E402
+from snesmdb import gamefamily as gamefamily_mod  # noqa: E402
 from snesmdb import splits as splits_mod  # noqa: E402
 
 LINKED_DIRS = ("records", "raw", "scores")
@@ -91,7 +93,18 @@ def main() -> None:
     truncated = 0
     for row in rows:
         tag = row.get("tag") or {}
-        game = tag.get("game") or "?"
+        # GROUP BY GAME FAMILY, not by the ID666 tag.
+        #
+        # A split is assigned per game, so a game whose regional releases
+        # carry different tags would be eligible to land in two splits --
+        # the same work on both sides of the partition. Here `pdp` (Panel de
+        # Pon) and `ta` (Tetris Attack) are one game; they happened to land
+        # together only because a shared composer chained them into the same
+        # component, which is luck rather than a guarantee.
+        source_slug = events_mod.game_slug(str(row.get("track_id", "")))
+        family_slug, family_name, _variant = gamefamily_mod.resolve(
+            source_slug, tag.get("game") or "?")
+        game = family_name or "?"
         names = [c for c in (tag.get("composers") or []) if c]
         if not names and tag.get("composer"):
             names = [tag["composer"]]

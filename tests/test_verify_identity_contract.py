@@ -20,6 +20,7 @@ contract correction's clothes.
 from __future__ import annotations
 
 import importlib.util
+import sys
 import json
 from pathlib import Path
 
@@ -29,6 +30,10 @@ _spec = importlib.util.spec_from_file_location(
 )
 vc = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(vc)
+
+sys.path.insert(
+    0, str(Path(__file__).resolve().parent.parent / "src"))
+from snesmdb import gamefamily  # noqa: E402
 
 
 def _write(out_dir: Path, notes_per_track, matched=True):
@@ -208,3 +213,41 @@ def test_a_mixed_cohort_still_catches_identity_collapse_in_the_native_half(
     got = _run(tmp_path)
     assert got["srcn_not_degenerate"] == "ok"
     assert got["identity_resolution_not_degenerate"] == "fail"
+
+
+# ---------------------------------------------------------------------------
+# Game families are one unit for split assignment
+# ---------------------------------------------------------------------------
+
+def test_a_game_family_resolves_to_one_slug_and_records_its_variant():
+    """Regional releases of one game must publish under one slug, and must
+    still say which release each track came from -- grouping that erased
+    provenance would trade one defect for another."""
+    from snesmdb import gamefamily
+
+    slug, name, variant = gamefamily.resolve("pdp", "Panel de Pon")
+    assert slug == "ta"
+    assert name == "Tetris Attack"
+    assert variant == "Panel de Pon (JP)"
+    assert gamefamily.is_grouped("pdp")
+
+
+def test_an_ungrouped_slug_keeps_its_own_identity():
+    """Every other game in the corpus must be untouched by the family map."""
+    from snesmdb import gamefamily
+
+    slug, name, variant = gamefamily.resolve("ct", "Chrono Trigger")
+    assert (slug, name, variant) == ("ct", "Chrono Trigger", None)
+    assert not gamefamily.is_grouped("ct")
+
+
+def test_the_family_map_stays_small():
+    """The map asserts that two slugs are the SAME WORK. It is not a place
+    to normalise spelling or merge games that merely resemble each other, so
+    growth should require justifying each entry."""
+    from snesmdb import gamefamily
+
+    assert len(gamefamily.MEMBERS) <= 2, (
+        f"family map has grown to {sorted(gamefamily.MEMBERS)}; each entry "
+        f"claims two slugs are regional releases of one game"
+    )

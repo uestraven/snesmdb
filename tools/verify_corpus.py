@@ -389,8 +389,13 @@ def check_events(
         if (
             table.get("game") != entry.get("game")
             or table.get("track_class") != entry.get("track_class")
-            or table.get("game_slug") != events_mod.game_slug(
-                str(entry.get("track_id"))
+            # Compared against the INDEX's published slug, which is the
+            # game family's. Deriving it from the track id again asserts
+            # that a slug can never be grouped, and failed on the five
+            # Panel de Pon tracks whose event tables were correct.
+            or table.get("game_slug") != (
+                entry.get("game_slug")
+                or events_mod.game_slug(str(entry.get("track_id")))
             )
         ):
             bad_fields += 1
@@ -628,11 +633,51 @@ def check_dist(
         f"tracks.csv has {max(len(csv_lines) - 1, 0)} rows for {len(index)} tracks",
     )
     declared_games = raw_index.get("games", {}) if isinstance(raw_index, dict) else {}
-    slugs = {events_mod.game_slug(str(e.get("track_id"))) for e in index}
+    # The PUBLISHED slug, which is the game family's. It is normally the
+    # track id's own slug, and differs only where regional releases of one
+    # game are grouped -- see `snesmdb.gamefamily`.
+    slugs = {str(e.get("game_slug") or events_mod.game_slug(
+        str(e.get("track_id")))) for e in index}
     report.check(
         "dist_slug_to_game_map_complete",
         set(declared_games) == slugs and bool(slugs),
         f"{len(declared_games)} slugs declared for {len(slugs)} in use",
+    )
+    # ONE SLUG, ONE GAME NAME.
+    #
+    # Completeness is not the same property. A tree declaring 15 game names
+    # for 14 slugs passed the check above, because every slug in use WAS
+    # declared -- the two `Panel de Pon` spellings in one rip went unnoticed
+    # and would have shipped as two games. A slug that maps to more than one
+    # name means either an ungrouped regional release or an inconsistent
+    # tag, and both need deciding rather than publishing.
+    names_per_slug: dict[str, set[str]] = collections.defaultdict(set)
+    for entry in index:
+        slug = str(entry.get("game_slug") or events_mod.game_slug(
+            str(entry.get("track_id"))))
+        if entry.get("game"):
+            names_per_slug[slug].add(str(entry["game"]))
+    ambiguous = {k: sorted(v) for k, v in names_per_slug.items()
+                 if len(v) > 1}
+    report.check(
+        "dist_slug_to_game_map_is_one_to_one",
+        not ambiguous,
+        f"{len(ambiguous)} slug(s) carry more than one game name"
+        + (f": {ambiguous}" if ambiguous else ""),
+    )
+    # A grouped family must still say which release each track came from,
+    # or grouping has destroyed provenance to tidy a count.
+    grouped = [e for e in index
+               if e.get("game_slug")
+               and e.get("game_slug") != events_mod.game_slug(
+                   str(e.get("track_id")))]
+    missing_variant = [e.get("track_id") for e in grouped
+                       if not e.get("release_variant")]
+    report.check(
+        "dist_grouped_tracks_record_their_release",
+        not missing_variant,
+        f"{len(grouped)} track(s) published under a game family, "
+        f"{len(missing_variant)} without a `release_variant`",
     )
     # A published estimate must be absent where it was refused. This field
     # published the rejected value on all 1,316 tracks while the docs promised

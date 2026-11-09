@@ -358,6 +358,7 @@ def build(
     game: str | None = None,
     track_class: str | None = None,
     corrections: dict[tuple[int, int], dict[str, Any]] | None = None,
+    game_slug_override: str | None = None,
 ) -> dict[str, Any]:
     """One track's event table.
 
@@ -519,7 +520,11 @@ def build(
         # and duplicating them is the price of not having a single file whose
         # loss takes the filter fields with it.
         "game": game,
-        "game_slug": game_slug(track_id),
+        # Normally derived from the track id. Overridden only when a track
+        # belongs to a GAME FAMILY whose family slug differs from its own
+        # source slug -- a regional release of the same game. See
+        # `snesmdb.gamefamily`; the track id itself never changes.
+        "game_slug": game_slug_override or game_slug(track_id),
         "track_class": track_class,
         "duration_sec": round(float(duration_sec), 4),
         "extraction_status": extraction_status(ok, len(events), pitched),
