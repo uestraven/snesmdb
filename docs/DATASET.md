@@ -519,6 +519,28 @@ Each score file carries **two** sets of the three formats.
 | what it is | a hardware measurement | a convention, stated as one |
 | use it for | anything about this driver | comparing tracks or games |
 
+### Row duration is stated per population, not corpus-wide
+
+The span above describes the **22-game frozen cohort** (`gate5-rc10`, 1,316
+tracks). It is a property of that sample, not of the SNES, and it is not
+amended when a new game is measured outside it.
+
+| population | tracks | row duration |
+|---|---|---|
+| 22-game frozen cohort | 1,316 | **2.000–30.500 ms** |
+| 5-game expansion | 161 | **1.813–20.000 ms** |
+
+The expansion's 1.813 ms minimum is a **verified extension**, observed in one
+Ken Griffey Jr. Baseball track, not a correction to the figure above. Its
+20.000 ms maximum is lower than the cohort's simply because no expansion
+driver runs as coarse as Star Ocean's; a narrower span in a smaller sample is
+not evidence of anything.
+
+Reading either figure as "the SNES row duration range" is the sampling-frame
+error this table is split to prevent. A combined 27-game release would have
+to state the range measured over the combined artifacts rather than take the
+union of these two rows.
+
 The primary grid is the honest hardware answer and it **cannot be compared
 across games**: the rate differs per track, so "notes per row" means something
 different in every one.

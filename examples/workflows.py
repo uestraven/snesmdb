@@ -45,8 +45,14 @@ INDEX_SCHEMA = "snesmdb.index.v1"
 #: doing strict equality does not. Both statements are now precise: field
 #: access is unaffected; a consumer pinning the exact string must add the new
 #: version to its accepted set.
+#: v4 adds two fields and changes one: `sample_id` is now `null` rather than
+#: `""` when no identity was established. These workflows were unaffected
+#: because they test `if not sample`, which covers both spellings -- a reader
+#: testing `is not None` would have counted 13,413 non-identities as
+#: identities under v3 and must be revisited.
 SUPPORTED_EVENT_SCHEMAS = (
-    "snesmdb.events.v3", "snesmdb.events.v2", "snesmdb.events.v1",
+    "snesmdb.events.v4", "snesmdb.events.v3", "snesmdb.events.v2",
+    "snesmdb.events.v1",
 )
 EVENTS_SCHEMA = SUPPORTED_EVENT_SCHEMAS[0]
 
