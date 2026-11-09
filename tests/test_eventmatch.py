@@ -34,7 +34,7 @@ def test_a_partial_bitmap_excludes_only_its_own_voices():
     r = em.match(
         [N(0, 100), N(1, 100)],
         [C(0, 5), C(0, 110), C(1, 110)],
-        kon_byte=0x01, kon_write_ticks=[90],
+        kon_byte=0x01, kon_writes=[(90, 0x01)],
     )
     assert r.ok, r.problems
     assert len(r.excluded_startup) == 1
@@ -46,23 +46,45 @@ def test_all_eight_bits_set_excludes_one_per_voice():
     """The Secret of Evermore case: `$FF`."""
     notes = [N(v, 100) for v in range(8)]
     commits = [C(v, 5) for v in range(8)] + [C(v, 110) for v in range(8)]
-    r = em.match(notes, commits, kon_byte=0xFF, kon_write_ticks=[90])
+    r = em.match(notes, commits, kon_byte=0xFF, kon_writes=[(90, 0xFF)])
     assert r.ok, r.problems
     assert len(r.excluded_startup) == 8 and len(r.pairs) == 8
 
 
-def test_an_early_cpu_write_fails_closed():
+def test_an_early_write_for_this_voice_accounts_for_the_first_commit():
     """A write to $4C assigns `m.new_kon`, which the DSP latches afterwards,
-    so an early write can replace the snapshot's pending request before it is
-    accepted. The origin of the first commit is then unestablished and this
-    must refuse to match rather than exclude on an assumption."""
+    so a write before the first commit REPLACES the snapshot's pending
+    request. The question is therefore causal -- does an observed key-on for
+    THIS voice account for this commit -- and when one does, the commit is a
+    real attack that must be matched rather than discarded as startup.
+
+    An earlier version refused outright whenever any write preceded the first
+    commit. That fired on three baseline tracks whose drivers write KON at
+    t=5, inside the first DSP frame, and withheld a verdict on tracks that
+    are in fact decidable. Here the write at t=5 carries voice 0's bit, so
+    nothing is excluded and the surplus commit surfaces as an arity mismatch
+    -- still a refusal to guess, just a better-localised one."""
     r = em.match(
         [N(0, 10)], [C(0, 20), C(0, 200)],
-        kon_byte=0x01, kon_write_ticks=[5],
+        kon_byte=0x01, kon_writes=[(5, 0x01)],
     )
     assert not r.ok
-    assert "refusing to match" in r.problems[0]
     assert not r.excluded_startup
+    assert "1 extracted attacks against 2 commits" in r.problems[0]
+
+
+def test_an_early_write_for_another_voice_does_not_account_for_it():
+    """The converse, so the causal rule is not merely "any write suppresses
+    exclusion": a write setting only voice 1's bit says nothing about voice
+    0's pending snapshot request, which is still a startup event."""
+    r = em.match(
+        [N(0, 100)], [C(0, 5), C(0, 110)],
+        kon_byte=0x01, kon_writes=[(5, 0x02)],
+    )
+    assert r.ok, r.problems
+    assert len(r.excluded_startup) == 1
+    assert r.excluded_startup[0]["t"] == 5
+    assert len(r.pairs) == 1
 
 
 def test_a_surplus_commit_fails_rather_than_shifting():

@@ -137,6 +137,38 @@ def decode(
     )
 
 
+# The byte an unpopulated directory reads as. A table the driver has not
+# filled is 0xFF bytes, so an entry of $FFFF/$FFFF is the ABSENCE of an
+# entry -- not a sample at address 65,535.
+ENTRY_FILL = 0xFFFF
+
+
+def plausible_entry(entry: tuple[int, int] | None) -> bool:
+    """Whether `(start, loop)` describes a sample at all.
+
+    THE canonical rule, defined once. `DirectoryEntry.plausible`,
+    `dirtimeline.plausible` and `identity.plausible_entry` all delegate here.
+
+    They did not always. This predicate had two independent implementations
+    that disagreed about `$FFFF`: the publisher's accepted it, the analysis
+    tools' rejected it. Rejected cases, each one observed:
+
+        None              no entry was read
+        start == 0        address 0 is the start of ARAM, not a sample.
+                          Donkey Kong Country 2 keys on SRCN 140 whose entry
+                          is (0, 0); the baseline published null and was
+                          right, while an ungated analysis "recovered" 211
+                          hashes of ARAM's first bytes.
+        start == $FFFF    the fill of an unpopulated table. Secret of
+                          Evermore leaves most of it unwritten at capture.
+        loop < start      a loop point before the sample is not a loop.
+    """
+    if entry is None:
+        return False
+    start, loop = entry
+    return start not in (0, ENTRY_FILL) and loop >= start
+
+
 @dataclass
 class DirectoryEntry:
     index: int
@@ -145,13 +177,8 @@ class DirectoryEntry:
 
     @property
     def plausible(self) -> bool:
-        """Whether this looks like a real entry rather than unused memory.
-
-        The directory is a fixed 256-entry table and games populate only the
-        part they use, so most entries are leftover bytes. An entry whose
-        start is zero, or whose loop precedes its start, is not a sample.
-        """
-        return self.start != 0 and self.loop >= self.start
+        """Whether this looks like a real entry rather than unused memory."""
+        return plausible_entry((self.start, self.loop))
 
 
 def read_directory(aram: bytes, dir_page: int, indices: set[int]) -> dict[int, DirectoryEntry]:

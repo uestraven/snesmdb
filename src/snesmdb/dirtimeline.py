@@ -28,6 +28,8 @@ unchanged content is not a correction to anything a researcher can observe.
 
 from __future__ import annotations
 
+from . import brr
+
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
@@ -157,13 +159,12 @@ OUTCOMES = (NEWLY_RESOLVED, IDENTITY_CORRECTED, UNCHANGED, UNRESOLVED,
 def plausible(entry: tuple[int, int] | None) -> bool:
     """Whether an entry looks like a sample rather than unwritten memory.
 
-    `$FFFF/$FFFF` is the 0xFF fill of a table the driver has not populated,
-    and a start of zero or a loop before the start is not a sample.
+    Delegates to `brr.plausible_entry`, which is the one definition. This
+    used to be a second, stricter copy of the same rule; two copies of a
+    safety predicate is how the publisher and the analysis tools came to
+    disagree about `$FFFF`.
     """
-    if entry is None:
-        return False
-    start, loop = entry
-    return start not in (0, 0xFFFF) and loop >= start
+    return brr.plausible_entry(entry)
 
 
 def classify(

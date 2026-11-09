@@ -142,8 +142,11 @@ def check(name: str, spc_path: Path, why: str, seconds: int) -> list[str]:
                 fine.append(record)
             elif "addr" in record:
                 writes.append(record)
-        extracted = voices.extract(iter(writes))
+        # The DSP snapshot carries every voice register the driver
+        # never rewrites -- SRCN among them. Omitting it reads
+        # those as zero.
         spc = spcfile.load(spc_path)
+        extracted = voices.extract(iter(writes), spc.dsp)
         outcome = eventmatch.match(
             extracted.notes, fine, spc.dsp[eventmatch.REG_KON],
             [(int(w["t"]), int(w["data"])) for w in writes

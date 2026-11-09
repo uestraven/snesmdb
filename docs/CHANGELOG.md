@@ -11,12 +11,94 @@ version.
 | format | version | file |
 |---|---|---|
 | index | `snesmdb.index.v1` | `index.json` |
-| events | `snesmdb.events.v3` | `events/*.json.gz` |
+| events | `snesmdb.events.v4` | `events/*.json.gz` |
 | tracks | `snesmdb.tracks.v1` | `tracks.csv` |
 | drivers | `snesmdb.drivers.v1` | `index.json` → `drivers` |
 | intake | `snesmdb.intake.v1` | `intake/*.json.gz` |
 | sample id | `snesmdb.sample.v1` | the `sample_id` field |
 | uniform score | 100 Hz | the `uniform` block in `scores/*.json.gz` |
+
+---
+
+## `gate5-rc10` — sample identity corrected per attack
+
+**Breaking.** `snesmdb.events.v4`. Read the compatibility section before
+upgrading: two fields are added and one changes meaning in a way a v3 reader
+will not notice.
+
+### What was wrong
+
+Every release up to `gate5-rc9` resolved a sample from the directory as the
+SPC **captured** it, and mapped one identity per SRCN. The hardware does not
+work that way. The S-DSP reads the directory entry when a voice is keyed on,
+and drivers rewrite those entries while the music plays, so one SRCN can
+address different audio at different moments in the same track.
+
+Event-time instrumentation of the DSP — three hooks at the points where it
+commits a sample start, accepts a key-on, and takes a loop — was run against
+all **1,863,499** published attacks in the 22-game corpus, at 100% coverage:
+
+| outcome | attacks | share |
+|---|---|---|
+| unchanged | 1,833,879 | 98.411% |
+| no identity established (entry is unwritten memory) | 15,165 | 0.814% |
+| identity corrected — different audio | 12,326 | 0.661% |
+| identity established where none was | 1,941 | 0.104% |
+| identity not establishable | 178 | 0.010% |
+| identity corrected — loop point only | 10 | 0.001% |
+
+**98.411% of the corpus is unchanged.** All change is confined to Super
+Turrican, plus two attacks in one Tales of Phantasia track. No other game in
+the corpus is affected.
+
+The 15,165 attacks are the most important row. Their directory entry is
+unwritten memory — `$FFFF` fill or address 0 — which still *decodes*: the
+bytes are read, hashed, and become sixteen confident-looking hex digits.
+`rc9` published those hashes as identities. They are now `null`.
+
+### Field changes
+
+| field | v3 | v4 |
+|---|---|---|
+| `sample_id` | `""` when unresolved | **`null`** when unresolved |
+| `sample_id_source` | — | `observed_at_key_on`, `capture_time_directory`, or `unresolved` |
+| `sample_id_unresolved_reason` | — | non-null exactly when `sample_id` is null |
+
+### Compatibility implications
+
+- **A reader testing `sample_id is not None` changes behaviour.** `rc9` used
+  the empty string for 13,413 events and `null` for none, so such a reader
+  previously counted 13,413 non-identities as identities. It now sees nulls.
+  A reader testing truthiness (`if sample_id:`) was already correct and is
+  unaffected.
+- **Counts of distinct samples per track will fall** on affected tracks, as
+  hashes of unwritten memory stop being counted as samples.
+- **Joins on `sample_id` lose rows** where the identity is now null. This is
+  the intended behaviour: the join previously succeeded against a value that
+  did not identify a sample.
+- **A legato step follows its parent's corrected identity.** A step does not
+  re-key, so it sounds the parent's sample; its identity column moves with
+  the parent's.
+- `attacks_with_sample_id`, `attacks_without_sample_id` and
+  `attacks_identity_observed_at_key_on` are added to each table header so
+  the split is readable without scanning events.
+
+### Publication policy
+
+An identity the DSP observations do not establish is published as `null`
+with a reason. It is **never** backfilled with a plausible-looking
+substitute. Where the evidence establishes an identity, it is corrected;
+where it does not, the record says so.
+
+### What this release does not claim
+
+- The BRR bytes at a confirmed address are read from the capture-time ARAM.
+  That a sample's bytes were unchanged during playback is **not**
+  established, and remains an open limitation.
+- 10 attacks differ only in loop point. A note that never reaches a loop has
+  no observable loop destination, so for those the loop component of the
+  identity rests on the directory word present at key-on.
+- `gate5-rc9` is preserved unchanged. Nothing in this release overwrites it.
 
 ---
 

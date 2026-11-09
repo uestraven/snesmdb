@@ -19,6 +19,7 @@ the directory is refused if it is inside one.
 from __future__ import annotations
 
 import argparse
+import collections
 import glob
 import hashlib
 import gzip
@@ -37,8 +38,8 @@ from snesmdb import (  # noqa: E402
     drivers as drivers_mod,
     envelope as envelope_mod,
     events as events_mod,
+    identity,
     provenance as provenance_mod,
-    sampleid,
     spcfile,
     grid as grid_mod,
     midi as midi_mod,
@@ -170,18 +171,23 @@ def _sample_ids(
     srcns = {int(k) for k in (row.get("samples") or {})}
     out: dict[int, str] = {}
     for srcn, entry in brr.read_directory(spc.aram, spc.dsp[0x5D], srcns).items():
-        if not entry.plausible:
-            continue
-        try:
-            decoded = brr.decode(spc.aram, entry.start, entry.loop)
-        except (ValueError, IndexError):
-            continue
-        if decoded.data:
-            # Defined in sampleid.py: SHA-256 over a version prefix, the loop
-            # offset, and the decoded PCM as signed 16-bit little-endian,
-            # truncated to 64 bits. The loop offset is PART of the identity --
-            # identical audio with different loop points sustains differently.
-            out[srcn] = sampleid.sample_id(decoded.data, decoded.loop_offset)
+        # `identity.identity_for_entry` is the ONLY supported way to turn an
+        # entry into an identity: it applies the one plausibility rule, then
+        # decodes, then hashes, and returns None rather than a hash whenever
+        # any of those steps cannot be established. The gate used to be a
+        # separate `entry.plausible` check here, which worked -- but it was a
+        # second copy of the rule, and the analysis tools' copy disagreed
+        # about $FFFF while three tools had no copy at all.
+        #
+        # The identity itself is defined in sampleid.py: SHA-256 over a
+        # version prefix, the loop offset, and the decoded PCM as signed
+        # 16-bit little-endian, truncated to 64 bits. The loop offset is PART
+        # of the identity -- identical audio with different loop points
+        # sustains differently.
+        ident, _ = identity.identity_for_entry(
+            spc.aram, entry.start, entry.loop)
+        if ident is not None:
+            out[srcn] = ident
     return out
 
 
@@ -223,6 +229,15 @@ def main() -> None:
              "SRCN index does not name a fixed sample even within one game, "
              "so identity is the hash of the decoded BRR block.",
     )
+    parser.add_argument(
+        "--corrections", type=Path, action="append", default=[],
+        help="per-attack identity corrections from the DSP validation pass "
+             "(the --rows output of measure_baseline_exposure). Keyed by "
+             "(track_id, voice, ordinal), because one SRCN addresses "
+             "different audio at different moments. Without this the "
+             "publisher emits capture-time identities, which is what every "
+             "release up to gate5-rc9 did.",
+    )
     args = parser.parse_args()
 
     # Refuse to write derived copyrighted material into a git tree.
@@ -236,6 +251,46 @@ def main() -> None:
             f"from research-only SPCs and must not be committed; publish it "
             f"outside the repository."
         )
+
+    # Load corrections, keyed per attack. Verdicts are re-derived through
+    # the one plausibility rule rather than trusted from the file: the
+    # validation ran before that rule was unified, and an identity for an
+    # unwritten entry must become null here, not be copied forward.
+    corrections: dict[str, dict[tuple[int, int], dict[str, Any]]] = {}
+    correction_counts: collections.Counter = collections.Counter()
+    for path in args.corrections:
+        for line in path.open():
+            fix = json.loads(line)
+            start, loop = fix.get("commit_start"), fix.get("commit_loop")
+            if start is None:
+                # No DSP observation for this attack; leave the capture-time
+                # identity in place rather than inventing a verdict.
+                continue
+            key = (int(fix["voice"]), int(fix["ordinal"]))
+            if not identity.plausible_entry((start, loop)):
+                entry_fix = {
+                    "sample_id": None,
+                    "source": events_mod.SOURCE_UNRESOLVED,
+                    "reason": events_mod.REASON_IMPLAUSIBLE,
+                }
+            elif fix.get("now"):
+                entry_fix = {
+                    "sample_id": fix["now"],
+                    "source": events_mod.SOURCE_OBSERVED,
+                    "reason": None,
+                }
+            else:
+                entry_fix = {
+                    "sample_id": None,
+                    "source": events_mod.SOURCE_UNRESOLVED,
+                    "reason": events_mod.REASON_NOT_ESTABLISHED,
+                }
+            corrections.setdefault(fix["track_id"], {})[key] = entry_fix
+            correction_counts[entry_fix["source"]] += 1
+    if args.corrections:
+        print(f"corrections loaded: "
+              f"{sum(len(v) for v in corrections.values()):,} attacks across "
+              f"{len(corrections):,} tracks  {dict(correction_counts)}")
 
     rows = [json.loads(line) for line in (args.out_dir / "manifest.jsonl").open()]
     good = [r for r in rows if r.get("ok") and r.get("record_path")]
@@ -476,6 +531,7 @@ def main() -> None:
             sustain_level=scores_mod._sustain,
             game=row["tag"]["game"],
             track_class=row.get("track_class"),
+            corrections=corrections.get(row["track_id"]),
         )
         write_json_gz(args.dist_dir / "events" / f"{stem}.json.gz", table)
         counts["events_written"] += 1

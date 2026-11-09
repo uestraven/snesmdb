@@ -6,8 +6,22 @@
 
 Read-only. `sample_id`'s definition is untouched.
 
+WITHDRAWN FIGURES. Every number this tool printed before the fixes below is
+retracted, not merely superseded. It ran with an unseeded SRCN -- so 13,025
+of 38,440 attacks resolved against directory entry 0 -- and a decode cache
+keyed on `(start, loop)` with no track in the key, which served one track's
+audio for another's. Its "10,955 loop-only of 16,205" and its variable-loop
+count of 128 are both artifacts of those two defects; no population under
+the corrected tools yields 128. The corrected split, confirmed twice
+independently, is 16,195 content differences and 10 loop-only. See
+`reconcile_identity_reports.py` and `tests/test_identity_comparison.py`.
+
+The per-attack classifications this tool produced must be RECOMPUTED rather
+than carried forward, including any downstream publication-impact estimate
+built on them.
+
 A published identity may differ from the one computed at key-on only in its
-LOOP OFFSET. On Super Turrican that is 10,955 of 16,205 differences, and the
+LOOP OFFSET. On Super Turrican that is 10 of 16,205 differences, and the
 loop value captured at sample start is the directory's second word at that
 instant -- not proof of the destination the DSP eventually used, because this
 driver rewrites directory entries while a voice sustains.
@@ -43,7 +57,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from snesmdb import brr, eventmatch, sampleid, spcfile, voices  # noqa: E402
+from snesmdb import (  # noqa: E402
+    eventmatch, identity, spcfile, voices,
+)
 
 INSTRUMENTED = ROOT / "build" / "spc_dump_evt"
 
@@ -72,22 +88,28 @@ def main() -> None:
         rows = rows[: args.limit]
 
     totals = collections.Counter()
+    # Keyed by (track, start, loop). An address pair means nothing
+    # without the ARAM it is read from, so a cache shared across
+    # tracks serves one track's decode for another's and the verdict
+    # becomes track-order dependent.
     cache: dict = {}
+    track_key = [""]
 
-    def identity(aram, start, loop):
-        key = (start, loop)
+    def identity_of(aram, start, loop):
+        """Canonical identity via the one identity producer, or None.
+
+        None means "not established" -- an implausible entry, an undecodable
+        block, or no samples. It must never be backfilled with a substitute.
+        """
+        key = (track_key[0], start, loop)
         if key not in cache:
-            try:
-                d = brr.decode(aram, start, loop)
-                cache[key] = sampleid.sample_id(
-                    d.data, d.loop_offset) if d.data else None
-            except Exception:
-                cache[key] = None
+            cache[key] = identity.identity_for_entry(aram, start, loop)[0]
         return cache[key]
 
     for row in rows:
         source = spcs[row["source"]]
         spc = spcfile.load(source)
+        track_key[0] = row["track_id"]
         seconds = max(5, min(int(row.get("render_seconds") or 30),
                              args.seconds_cap))
         with tempfile.TemporaryDirectory() as tmp:
@@ -108,7 +130,10 @@ def main() -> None:
                 elif "addr" in r:
                     writes.append(r)
 
-        extracted = voices.extract(iter(writes))
+        # The DSP snapshot carries every voice register the driver
+        # never rewrites -- SRCN among them. Omitting it reads
+        # those as zero.
+        extracted = voices.extract(iter(writes), spc.dsp)
         outcome = eventmatch.match(
             extracted.notes, commits, spc.dsp[eventmatch.REG_KON],
             [(int(w["t"]), int(w["data"])) for w in writes
@@ -148,7 +173,7 @@ def main() -> None:
                 continue
             was = pub_list[ordinal]
             start = int(commit["start"])
-            at_start = identity(spc.aram, start, int(commit["loop"]))
+            at_start = identity_of(spc.aram, start, int(commit["loop"]))
             if at_start == was:
                 totals["unchanged_at_start"] += 1
                 continue
@@ -166,7 +191,7 @@ def main() -> None:
             if len(set(taken)) > 1:
                 totals["destination_changed_mid_note"] += 1
                 continue
-            runtime = identity(spc.aram, start, taken[0])
+            runtime = identity_of(spc.aram, start, taken[0])
             if runtime is None:
                 totals["not_established"] += 1
             elif runtime == was:

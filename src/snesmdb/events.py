@@ -44,7 +44,38 @@ from __future__ import annotations
 import math
 from typing import Any, Iterable
 
-SCHEMA = "snesmdb.events.v3"
+SCHEMA = "snesmdb.events.v4"
+
+#: v4 CORRECTS SAMPLE IDENTITY PER ATTACK, AND STOPS SPELLING "UNKNOWN" AS "".
+#:
+#: v3 and earlier resolved a sample from the directory as the SPC CAPTURED it
+#: and mapped it per SRCN, so every attack on one SRCN published one identity.
+#: That is not how the hardware works: the DSP reads the directory entry at
+#: key-on, and drivers rewrite entries while the music plays. Event-time DSP
+#: instrumentation over all 1,863,499 published attacks found:
+#:
+#:   * 12,326 attacks whose identity was DIFFERENT AUDIO, and 10 differing
+#:     only in loop point
+#:   * 1,941 attacks with an identity where none had been established
+#:   * 15,165 attacks whose directory entry is unwritten memory, for which
+#:     v3 published a hash of that memory as though it were a sample
+#:
+#: 98.411% of attacks are unchanged, and all change is confined to Super
+#: Turrican and two attacks of Tales of Phantasia.
+#:
+#: THREE FIELD CHANGES, none additive:
+#:
+#:   * `sample_id` is now `null` when no identity was established. v3 used
+#:     the empty string for 13,413 events and never used null, so a reader
+#:     testing `is not None` saw 13,413 non-identities as identities.
+#:   * `sample_id_source` says where the identity came from: observed at
+#:     key-on, inherited from the capture-time directory, or unresolved.
+#:   * `sample_id_unresolved_reason` is non-null exactly when `sample_id` is
+#:     null, and names WHY rather than leaving the reader to guess.
+#:
+#: An uncertain identity is published as null. It is never backfilled with a
+#: plausible-looking substitute.
+PREVIOUS_SCHEMAS_V4_NOTE = None
 
 #: v3 FIXES TWO FIELDS THAT DID NOT MEAN WHAT THEY SAID. Both were found by an
 #: independent evaluator working only from the published artifact, and neither
@@ -69,7 +100,9 @@ SCHEMA = "snesmdb.events.v3"
 #: NOT ADDITIVE, unlike v2. A v2 reader that grouped on `parent_event_id` to
 #: find steps now sees nulls, and any pitch statistic computed over steps
 #: changes. That is the intent: the previous values were wrong.
-PREVIOUS_SCHEMAS = ("snesmdb.events.v2", "snesmdb.events.v1")
+PREVIOUS_SCHEMAS = (
+    "snesmdb.events.v3", "snesmdb.events.v2", "snesmdb.events.v1",
+)
 
 #: v2 adds `game`, `game_slug` and `track_class` to the header. The change is
 #: PURELY ADDITIVE -- nothing was renamed, moved or removed, so a v1 reader
@@ -172,9 +205,22 @@ def extraction_status(
     return STATUS_PITCHED
 
 
+#: Where an attack's identity came from. Published per event, because the
+#: corpus mixes all three and a reader must be able to tell them apart.
+SOURCE_OBSERVED = "observed_at_key_on"
+SOURCE_CAPTURE = "capture_time_directory"
+SOURCE_UNRESOLVED = "unresolved"
+
+#: Why no identity was established. Exactly one is set when `sample_id` is
+#: null, and none when it is not.
+REASON_IMPLAUSIBLE = "directory_entry_unwritten"
+REASON_NOT_ESTABLISHED = "not_established"
+REASON_NO_DIRECTORY_ENTRY = "no_directory_entry_at_capture"
+
+
 def _event(
     note: dict[str, Any],
-    sample_id: str,
+    sample_id: str | None,
     origin: str = ORIGIN_KEY_ON,
     event_id: int = 0,
     parent_event_id: int | None = None,
@@ -207,7 +253,16 @@ def _event(
         # Content identity of the decoded BRR block. Identifies the SOUND
         # SOURCE reproducibly; it is NOT an instrument label, and carries no
         # claim that a sample performs a consistent musical role.
-        "sample_id": sample_id,
+        "sample_id": sample_id or None,
+        # Provenance of the identity, and -- when there is none -- the
+        # reason. v3 spelled "unknown" as the empty string, which reads as a
+        # value; these two fields make the distinction explicit.
+        "sample_id_source": (
+            SOURCE_CAPTURE if sample_id else SOURCE_UNRESOLVED
+        ),
+        "sample_id_unresolved_reason": (
+            None if sample_id else REASON_NO_DIRECTORY_ENTRY
+        ),
         # The raw 14-bit PITCH register this event wrote, alongside the
         # derived `midi_note`. Published so a reader can check a surprising
         # pitch against the hardware value rather than taking the derivation
@@ -302,6 +357,7 @@ def build(
     sustain_level: Any = None,
     game: str | None = None,
     track_class: str | None = None,
+    corrections: dict[tuple[int, int], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """One track's event table.
 
@@ -313,6 +369,15 @@ def build(
     `game` and `track_class` are carried here as well as in the index, so that
     the two fields a researcher is told to filter on survive the loss of any
     single file. See the note on `SCHEMA`.
+
+    `corrections` maps `(voice, ordinal)` to the identity the DSP was
+    OBSERVED to use at that attack. The key is per attack and not per SRCN
+    on purpose: one SRCN resolves to different samples at different moments,
+    which is the whole defect being corrected. The ordinal counts key-ons
+    per voice IN PUBLISHED ORDER, so the correction is applied after the
+    sort below -- that is the order the measurement derived its ordinals
+    from, and applying it before would misalign every attack after the
+    first difference.
     """
     def levels(note: dict[str, Any]) -> dict[str, Any]:
         enriched = dict(note)
@@ -373,6 +438,40 @@ def build(
         next_id += 1
 
     events.sort(key=lambda e: (e["onset_sec"], e["voice"]))
+
+    # Per-attack identity correction, applied in published order.
+    if corrections:
+        seen: dict[int, int] = {}
+        final: dict[int, dict[str, Any]] = {}
+        for event in events:
+            if event["origin"] != ORIGIN_KEY_ON:
+                continue
+            voice = int(event["voice"])
+            ordinal = seen.get(voice, 0)
+            seen[voice] = ordinal + 1
+            fix = corrections.get((voice, ordinal))
+            if fix is None:
+                continue
+            event["sample_id"] = fix.get("sample_id") or None
+            event["sample_id_source"] = fix["source"]
+            event["sample_id_unresolved_reason"] = (
+                None if event["sample_id"] else fix.get("reason")
+            )
+            final[int(event["event_id"])] = event
+        # A legato step does not re-key, so it sounds its PARENT's sample.
+        # Its identity must follow the parent's correction or the table
+        # would disagree with itself about what a sustained note is playing.
+        for event in events:
+            if event["origin"] == ORIGIN_KEY_ON:
+                continue
+            parent = final.get(event.get("parent_event_id"))
+            if parent is None:
+                continue
+            event["sample_id"] = parent["sample_id"]
+            event["sample_id_source"] = parent["sample_id_source"]
+            event["sample_id_unresolved_reason"] = (
+                parent["sample_id_unresolved_reason"])
+
     pitched = sum(1 for e in events if e["pitch_status"] == PITCH_ESTIMATED)
     attacks = sum(1 for e in events if e["origin"] == ORIGIN_KEY_ON)
     pitched_attacks = sum(
@@ -397,6 +496,18 @@ def build(
         # An event is not necessarily an attack. Published separately so a
         # rhythmic analysis does not have to filter to get the right number.
         "attack_count": attacks,
+        # Published so a reader can see, per track, how much of the identity
+        # column is established and how much is honestly unknown.
+        "attacks_with_sample_id": sum(
+            1 for e in events
+            if e["origin"] == ORIGIN_KEY_ON and e["sample_id"]),
+        "attacks_without_sample_id": sum(
+            1 for e in events
+            if e["origin"] == ORIGIN_KEY_ON and not e["sample_id"]),
+        "attacks_identity_observed_at_key_on": sum(
+            1 for e in events
+            if e["origin"] == ORIGIN_KEY_ON
+            and e["sample_id_source"] == SOURCE_OBSERVED),
         "legato_step_count": len(events) - attacks,
         # Pitched ATTACKS, published because the distinction decides which
         # denominator a pitch statistic should use. A reviewer reported

@@ -264,6 +264,7 @@ def check_events(
         :: max(1, len(with_events) // 25)
     ]
     bad_status = bad_pitch = bad_counts = bad_fields = 0
+    empty_ids = reason_mismatch = bad_source = 0
     ids: dict[str, str] = {}
     statuses: dict[str, int] = {}
     for entry in chosen:
@@ -319,7 +320,38 @@ def check_events(
             sid = event.get("sample_id")
             if sid:
                 ids.setdefault(sid, entry["track_id"])
+            # v4 invariants. "" is not an identity and must never be
+            # published as one: v3 used it for 13,413 events and never used
+            # null, so a reader testing `is not None` read every one of
+            # them as a resolved identity.
+            if sid == "":
+                empty_ids += 1
+            if (sid is None) != (
+                    event.get("sample_id_unresolved_reason") is not None):
+                reason_mismatch += 1
+            if event.get("sample_id_source") not in (
+                    events_mod.SOURCE_OBSERVED, events_mod.SOURCE_CAPTURE,
+                    events_mod.SOURCE_UNRESOLVED):
+                bad_source += 1
 
+    report.check(
+        "dist_sample_id_null_never_empty_string",
+        empty_ids == 0,
+        f"{empty_ids} events publish sample_id as an empty string instead "
+        f"of null; an empty string reads as a value",
+    )
+    report.check(
+        "dist_sample_id_reason_exactly_when_null",
+        reason_mismatch == 0,
+        f"{reason_mismatch} events whose sample_id_unresolved_reason is not "
+        f"present exactly when sample_id is null",
+    )
+    report.check(
+        "dist_sample_id_source_known",
+        bad_source == 0,
+        f"{bad_source} events whose sample_id_source is not one of the "
+        f"three declared values",
+    )
     report.check(
         "dist_events_status_consistent",
         bad_status == 0,
@@ -596,6 +628,19 @@ def check_dist(
                         True,
                         f"measured {stated}; documented {documented.group(0)}",
                     )
+        elif not exhaustive:
+            # The documented range describes the WHOLE corpus, so a sample
+            # cannot be expected to reproduce it -- a 26-track sample
+            # measures its own narrower span and the comparison fails for a
+            # reason that says nothing about the artifact. It failed
+            # identically on the preceding release for exactly this reason.
+            # The assertion is kept, and kept strict, in exhaustive mode,
+            # which is the release gate.
+            report.skip(
+                "dist_documented_row_duration_matches",
+                f"measured {stated} over a sample; the documented range is "
+                f"corpus-wide. Run --exhaustive to assert it",
+            )
         else:
             report.check(
                 "dist_documented_row_duration_matches",

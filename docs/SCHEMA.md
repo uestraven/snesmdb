@@ -40,7 +40,7 @@ gated-voice statistics ship the two numbers that reveal their own confound.
 
 ---
 
-## `events/*.json.gz` — `snesmdb.events.v3`
+## `events/*.json.gz` — `snesmdb.events.v4`
 
 **Start here for most research.** One file per track, flat, in seconds.
 
@@ -48,7 +48,7 @@ gated-voice statistics ship the two numbers that reveal their own confound.
 
 | field | type | meaning |
 |---|---|---|
-| `schema` | string | `snesmdb.events.v3` |
+| `schema` | string | `snesmdb.events.v4` |
 | `track_id` | string | `<slug>-<number>:<hash>`, unique in the corpus |
 | `game` | string | display name, from the SPC's ID666 tag (32-char limit) |
 | `game_slug` | string | one of 22; see `index.json` → `games` |
@@ -59,6 +59,9 @@ gated-voice statistics ship the two numbers that reveal their own confound.
 | `pitched_event_count` | int | rows with `pitch_status == "estimated"` |
 | `unpitched_event_count` | int | `event_count - pitched_event_count` |
 | `attack_count` | int | rows with `origin == "key_on"` |
+| `attacks_with_sample_id` | int | key-ons whose identity was established |
+| `attacks_without_sample_id` | int | key-ons published with `sample_id: null`. Read with `sample_id_unresolved_reason` to see why |
+| `attacks_identity_observed_at_key_on` | int | key-ons whose identity came from instrumented DSP observation rather than the capture-time directory |
 | `legato_step_count` | int | rows with `origin == "legato_step"` |
 | `pitched_attack_count` | int | both: a pitched key-on. **Use this as the denominator for "how many notes have a pitch"** |
 
@@ -75,7 +78,9 @@ gated-voice statistics ship the two numbers that reveal their own confound.
 | `pitch_status` | string | — | `estimated`, `noise`, `pitch_modulated`, `unrecoverable`. **Only `estimated` is a pitch** |
 | `midi_note` | float or null | semitones | null unless `pitch_status == "estimated"`. Fractional and **not clamped to MIDI's domain**: measured −36.74 to +131.09 |
 | `pitch_confidence` | string or null | — | **null unless `pitch_status == "estimated"`.** In practice binary: among rows that have a pitch only `high` (1,394,511) and `medium` (165,491) occur. `low` and `none` attach to rows with no pitch, where the field is now null, so they are redundant with `pitch_status`. On legato steps it is 98.7% `high` and gives no discrimination. About the *estimate*, not the note |
-| `sample_id` | string | — | 16 hex chars, or **empty when no directory entry resolved** (13,680 events). Content identity of the decoded BRR audio — **not an instrument label** |
+| `sample_id` | string or **null** | — | 16 hex chars, or **null when no identity was established**. Content identity of the decoded BRR audio — **not an instrument label**. Resolved AT KEY-ON from the directory entry the DSP actually read, not from the entry present when the SPC was captured: drivers rewrite entries during playback, so one SRCN can address different audio at different moments. **v3 and earlier used `""` and never null** — a reader testing `is not None` read 13,413 non-identities as identities |
+| `sample_id_source` | string | — | `observed_at_key_on` (the DSP was instrumented and its committed entry used), `capture_time_directory` (no observation; the entry present at capture), or `unresolved` |
+| `sample_id_unresolved_reason` | string or null | — | non-null **exactly when `sample_id` is null**. `directory_entry_unwritten` (the entry is `$FFFF` fill or address 0 — it still *decodes*, which is why earlier releases published a hash of unwritten memory), `not_established`, or `no_directory_entry_at_capture`. An uncertain identity is published as null and **never** backfilled with a plausible-looking substitute |
 | `pitch_register` | int or null | raw | the **14-bit PITCH register value this event wrote**, alongside the derived `midi_note`. Published so a surprising pitch can be checked against the hardware value instead of taken on trust. A step's `midi_note` is derived as `parent.midi_note + 12·log2(step.pitch_register / parent.pitch_register)` |
 | `attack_level` | int | — | `0..127`. `VOL` rescaled. **A register value, not perceived loudness** |
 | `sustain_level` | int | — | `0..127`. Where the envelope settles; differs from `attack_level` on 19.4% of notes |

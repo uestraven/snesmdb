@@ -26,7 +26,9 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from snesmdb import brr, dirtimeline as dt, pitch, sampleid, spcfile  # noqa: E402
+from snesmdb import (  # noqa: E402
+    brr, dirtimeline as dt, identity, pitch, spcfile,
+)
 
 DUMPER = ROOT / "build" / "spc_dump"
 
@@ -36,15 +38,15 @@ def _identity_and_pitch(aram: bytes, start: int, loop: int, cache: dict):
     key = (start, loop)
     if key in cache:
         return cache[key]
-    try:
-        decoded = brr.decode(aram, start, loop)
-    except Exception:
+    # The identity comes from the one producer, which applies the shared
+    # plausibility rule and returns None rather than a hash of unwritten
+    # memory. The pitch estimate needs the decoded PCM, so it decodes again
+    # only once the identity has been established.
+    ident, _ = identity.identity_for_entry(aram, start, loop)
+    if ident is None:
         cache[key] = (None, None)
         return cache[key]
-    if not decoded.data:
-        cache[key] = (None, None)
-        return cache[key]
-    ident = sampleid.sample_id(decoded.data, decoded.loop_offset)
+    decoded = brr.decode(aram, start, loop)
     f0 = pitch.estimate_f0(0, decoded.data, decoded.loop_offset).f0_hz
     cache[key] = (ident, f0)
     return cache[key]

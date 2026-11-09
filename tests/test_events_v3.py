@@ -182,5 +182,11 @@ def test_pitched_attacks_are_counted_separately_from_pitched_events():
 
 
 def test_the_schema_version_is_bumped_for_a_breaking_change():
-    assert events.SCHEMA == "snesmdb.events.v3"
-    assert "snesmdb.events.v2" in events.PREVIOUS_SCHEMAS
+    """v4 corrects sample identity per attack and publishes null instead of
+    "" for an unknown one. Both are breaking, so the version moves and every
+    superseded version stays listed -- a reader must be able to tell which
+    contract a file in hand was written against."""
+    assert events.SCHEMA == "snesmdb.events.v4"
+    for superseded in ("snesmdb.events.v3", "snesmdb.events.v2",
+                       "snesmdb.events.v1"):
+        assert superseded in events.PREVIOUS_SCHEMAS

@@ -59,17 +59,48 @@ def startup_voices(kon_byte: int) -> set[int]:
     return {voice for voice in range(8) if kon_byte & (1 << voice)}
 
 
+def startup_by_log_order(
+    records: Iterable[dict[str, Any]], kon_byte: int
+) -> set[int]:
+    """Voices whose first KON acceptance precedes any CPU write that set them.
+
+    USES LOG ORDER, NOT TIMESTAMPS. The dump is written in emission order, so
+    a `kon` record appearing before a `$4C` write genuinely happened first,
+    whatever the render-chunk timestamp granularity. That removes the only
+    reason the validation needed `--chunk 1`: ordering commits against
+    key-ons by timestamp required one DSP frame per chunk, which costs about
+    30x and turned a 1,316-track pass into a 21-hour job.
+
+    A voice qualifies only if its bit is also set in the snapshot's own KON
+    register, so this cannot invent a startup event for a voice the SPC was
+    not holding pending.
+    """
+    pending = startup_voices(kon_byte)
+    written: set[int] = set()
+    accepted_first: set[int] = set()
+    for record in records:
+        if record.get("kind") == "kon":
+            voice = int(record["voice"])
+            if voice in pending and voice not in written:
+                accepted_first.add(voice)
+        elif record.get("addr") == REG_KON:
+            value = int(record.get("data", 0))
+            written |= {v for v in range(8) if value & (1 << v)}
+    return accepted_first
+
+
 def match(
     notes: Iterable[Any],
     commits: Iterable[dict[str, Any]],
     kon_byte: int,
     kon_writes: Iterable[tuple[int, int]] = (),
+    startup: set[int] | None = None,
 ) -> Match:
     """Pair attacks with commits per voice, after excluding startup events.
 
     `notes` are the extractor's attacks (objects with `.voice` and `.start`),
     `commits` the instrumented DSP's sample starts, `kon_byte` the SPC's own
-    DSP $4C value, and `kon_write_ticks` the times of CPU writes to $4C.
+    DSP $4C value, and `kon_writes` the (tick, value) pairs of CPU writes to $4C.
     """
     result = Match()
     by_voice: dict[int, list[Any]] = {}
@@ -84,8 +115,10 @@ def match(
     for value in commits_by_voice.values():
         value.sort(key=lambda c: int(c["t"]))
 
-    pending = startup_voices(kon_byte)
+    # `startup` supplied: origin established by log order, no timestamps.
+    pending = startup_voices(kon_byte) if startup is None else set(startup)
     writes = sorted((int(t), int(v)) for t, v in kon_writes)
+    by_order = startup is not None
 
     # Pending voices are included even when neither stream mentions them: a
     # set KON bit with no observed commit is a gap in the evidence, and
@@ -115,12 +148,16 @@ def match(
             # the first commit. That fired on three baseline tracks whose
             # drivers write KON at t=5 -- inside the first DSP frame -- and
             # produced no verdict for tracks that are in fact decidable.
-            accounted = any(
-                tick <= int(first["t"]) and (value & (1 << voice))
-                for tick, value in writes
-            )
-            if not accounted:
+            if by_order:
+                # Origin already established observationally.
                 result.excluded_startup.append(events.pop(0))
+            else:
+                accounted = any(
+                    tick <= int(first["t"]) and (value & (1 << voice))
+                    for tick, value in writes
+                )
+                if not accounted:
+                    result.excluded_startup.append(events.pop(0))
 
         if len(attacks) != len(events):
             result.problems.append(
@@ -129,7 +166,10 @@ def match(
             )
             continue
         for index, (note, commit) in enumerate(zip(attacks, events)):
-            if int(commit["t"]) + FRAME_CLOCKS < int(note.start):
+            # Skip the timing sanity check when origin came from log order:
+            # at production chunk size a commit's timestamp is the chunk
+            # base and cannot be compared to a key-on tick.
+            if not by_order and int(commit["t"]) + FRAME_CLOCKS < int(note.start):
                 result.problems.append(
                     f"voice {voice} pair {index}: commit at t={commit['t']} "
                     f"precedes its attack at t={note.start}"
