@@ -425,6 +425,12 @@ def main() -> None:
             "categorical feature across splits.",
             "Legato steps are excluded, so pitch movement inside a "
             "sounding note is outside the task.",
+            "An interval spanning two different samples carries the "
+            "difference between two independently estimated tuning offsets "
+            "rather than a clean musical interval. Sequences here are "
+            "voice-local but NOT sample-local, and 8.3% of consecutive "
+            "same-voice pairs cross a sample boundary, so a minority of the "
+            "training and evaluation intervals are noisier than the rest.",
             "No gap splitting: two phrases either side of a rest are "
             "joined into one sequence.",
             "Says nothing about musical quality or full-song generation.",

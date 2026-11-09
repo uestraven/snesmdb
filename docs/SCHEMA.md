@@ -93,10 +93,20 @@ gated-voice statistics ship the two numbers that reveal their own confound.
 >
 > What that means in practice:
 >
-> - **Relative intervals within one voice on one sample are reliable** — the
->   register ratio is exact and the sample's offset cancels. This is why the
->   published interval-prediction baseline works on intervals rather than
->   absolute pitches.
+> - **Intervals between two notes on the SAME sample are reliable** — the
+>   register ratio is exact and that sample's offset cancels. This is why
+>   the published interval-prediction baseline works on intervals rather
+>   than absolute pitches.
+> - **An interval spanning two different samples does NOT cancel**, even on
+>   the same hardware voice. A voice can be re-pointed to another sample
+>   between notes — that is what `sample_id` varying within a voice means —
+>   and the resulting interval carries the *difference* between two
+>   independent tuning offsets. "Within one voice" is therefore not the
+>   right safety condition; "within one sample" is. Group by `sample_id`,
+>   not by `voice`, when interval accuracy matters. Measured over the first
+>   200 tracks of the 27-game corpus, **8.3% of consecutive same-voice note
+>   pairs cross a sample boundary** — a minority, but not a rare edge case,
+>   and concentrated wherever a driver reassigns voices between phrases.
 > - **Absolute pitch and key analyses inherit the per-sample offset.** Two
 >   voices playing the same concert pitch from different samples can report
 >   different `midi_note` values, so a key estimate pooled across samples

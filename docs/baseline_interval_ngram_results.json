@@ -1,7 +1,7 @@
 {
  "schema": "snesmdb.interval_baseline.v1",
  "release": "snesmdb-27game-rc1",
- "dist": "/tmp/dist-combined-final",
+ "dist": "/home/paulcoh/snesmdb-releases/snesmdb-27game-rc1",
  "research_question": "Can a smoothed interval n-gram predict the next melodic interval in an unseen SNES game better than a frequency-only baseline?",
  "outcome": "N-GRAM OUTPERFORMS THE FREQUENCY BASELINE: local melodic context carries predictive information on held-out games.",
  "melody_definition": {
@@ -1208,6 +1208,7 @@
   "Splits are not interchangeable samples. Pitched share is 77.49% / 81.75% / 85.48% across train/valid/test, validation is 43% expansion-cohort against train's 6.8%, and test median max polyphony is 6 against 8. These are reported as measured and were NOT normalised away.",
   "Sample identities barely overlap between splits, so nothing here conditions on timbre and `sample_id` is unusable as a categorical feature across splits.",
   "Legato steps are excluded, so pitch movement inside a sounding note is outside the task.",
+  "An interval spanning two different samples carries the difference between two independently estimated tuning offsets rather than a clean musical interval. Sequences here are voice-local but NOT sample-local, and 8.3% of consecutive same-voice pairs cross a sample boundary, so a minority of the training and evaluation intervals are noisier than the rest.",
   "No gap splitting: two phrases either side of a rest are joined into one sequence.",
   "Says nothing about musical quality or full-song generation.",
   "The selected n-gram order and smoothing sat at the edge of the pre-declared search grid. These figures describe the selected configuration under that grid; the effect of a broader search is unmeasured."
