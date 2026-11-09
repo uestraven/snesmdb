@@ -300,6 +300,22 @@ class Extraction:
         }
 
 
+def read_all(path: Path) -> Iterator[dict[str, Any]]:
+    """EVERY record in a dump, writes and all other kinds alike.
+
+    `read_log` deliberately yields only register writes, which is what the
+    replay wants. Identity resolution needs the DSP's `kind == "sample"`
+    commits from the same stream, so a caller that needs both reads once
+    through here and filters itself -- rather than reading the file twice or
+    widening `read_log`'s contract.
+    """
+    with Path(path).open() as handle:
+        for line in handle:
+            line = line.strip()
+            if line:
+                yield json.loads(line)
+
+
 def read_log(path: Path) -> Iterator[dict[str, Any]]:
     """DSP register writes from a dump, and only those.
 

@@ -30,10 +30,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from snesmdb import splits as splits_mod  # noqa: E402
 from snesmdb.spcfile import SpcError, load  # noqa: E402
-from snesmdb import brr, pitch  # noqa: E402
+from snesmdb import brr, eventmatch, identity, pitch  # noqa: E402
 from snesmdb.checks import audio_peak, run as run_checks  # noqa: E402
 from snesmdb import (  # noqa: E402
     clock as clock_mod,
+    events as events_mod,
     envelope as envelope_mod,
     grid as grid_mod,
     provenance as provenance_mod,
@@ -41,10 +42,24 @@ from snesmdb import (  # noqa: E402
     tick as tick_mod,
     timers as timers_mod,
 )
-from snesmdb.voices import extract, read_log  # noqa: E402
+from snesmdb.voices import extract, read_all, read_log  # noqa: E402
 from snesmdb import trackclass  # noqa: E402
 
+# One definition of the published vocabulary, imported rather than restated.
+identity_source_observed = events_mod.SOURCE_OBSERVED
+identity_source_unresolved = events_mod.SOURCE_UNRESOLVED
+reason_entry_unwritten = events_mod.REASON_IMPLAUSIBLE
+
 BINARY = Path(__file__).resolve().parent.parent / "build" / "spc_dump"
+
+#: The instrumented build. Identity resolution at key-on is only possible
+#: with it: the capture-time directory cannot say which entry the DSP read
+#: for a given attack, and for a driver that populates the table at runtime
+#: it says nothing at all. Proven PCM-identical to the production build by
+#: `make verify-instrumentation`, so using it does not change the audio the
+#: extraction describes.
+INSTRUMENTED = (
+    Path(__file__).resolve().parent.parent / "build" / "spc_dump_evt")
 
 
 def _median(values: list[float]) -> float:
@@ -101,9 +116,10 @@ def process(args: tuple[str, float, bool, str]) -> dict[str, Any]:
         log = tmp_dir / "writes.jsonl"
         wav = tmp_dir / "out.wav"
         try:
+            binary = INSTRUMENTED if INSTRUMENTED.is_file() else BINARY
             result = subprocess.run(
                 [
-                    str(BINARY), str(path), str(log),
+                    str(binary), str(path), str(log),
                     str(seconds), "--wav", str(wav),
                 ],
                 capture_output=True, text=True, timeout=300,
@@ -129,7 +145,11 @@ def process(args: tuple[str, float, bool, str]) -> dict[str, Any]:
         # is the row clock: a stored hardware register rather than anything
         # inferred from write cadence. See timers.py.
         row["timers"] = timers_mod.read(spc.aram).to_dict()
-        result_extract = extract(read_log(log), initial_dsp=spc.dsp)
+        # Read once into a list: the replay needs the register writes and
+        # identity resolution needs the DSP's sample commits, and the log is
+        # a single stream carrying both.
+        log_records = list(read_all(log))
+        result_extract = extract(iter(log_records), initial_dsp=spc.dsp)
         row["summary"] = result_extract.summary()
 
         # Milestone 3: absolute pitch, where it can be had. The PITCH register
@@ -153,10 +173,77 @@ def process(args: tuple[str, float, bool, str]) -> dict[str, Any]:
             if srcn in fundamentals
         }
 
+        # IDENTITY AND PITCH AT KEY-ON.
+        #
+        # The capture-time directory above is the fallback, not the answer.
+        # The DSP reads a directory entry when a voice is keyed on, and
+        # drivers rewrite entries while the music plays, so identity is a
+        # property of the ATTACK. Secret of Evermore makes the difference
+        # total rather than marginal: its capture-time table resolves
+        # nothing, so the fallback supplies no identity AND no fundamental
+        # for any of its 55,744 attacks.
+        #
+        # Pitch has to follow identity here rather than be repaired later. A
+        # post-hoc correction can replace a `sample_id`, but the fundamental
+        # is estimated from the sample's decoded audio, so an attack whose
+        # sample was unknown at extraction has no pitch -- measured at 100.0%
+        # of the 28,973 Evermore attacks the capture-time table missed.
+        per_attack: dict[Any, dict[str, Any]] = {}
+        row["identity"] = {"observed": 0, "unresolved": 0, "matched": False}
+        commits = [r for r in log_records if r.get("kind") == "sample"]
+        if commits:
+            matched = eventmatch.match(
+                result_extract.notes, commits,
+                spc.dsp[eventmatch.REG_KON],
+                startup=eventmatch.startup_by_log_order(
+                    log_records, spc.dsp[eventmatch.REG_KON]),
+            )
+            row["identity"]["matched"] = bool(matched.ok)
+            if matched.ok:
+                # Cached per (start, loop): one decode and one f0 estimate
+                # per distinct sample, not per attack.
+                resolved: dict[tuple[int, int], tuple[Any, Any]] = {}
+                for note, commit in matched.pairs:
+                    key = (int(commit["start"]), int(commit["loop"]))
+                    if key not in resolved:
+                        ident, _ = identity.identity_for_entry(
+                            spc.aram, key[0], key[1])
+                        f0 = None
+                        if ident is not None:
+                            decoded = brr.decode(spc.aram, key[0], key[1])
+                            f0 = pitch.estimate_f0(
+                                note.srcn, decoded.data, decoded.loop_offset)
+                        resolved[key] = (ident, f0)
+                    ident, f0 = resolved[key]
+                    per_attack[note.note_id] = {
+                        "sample_id": ident,
+                        "sample_id_source": (
+                            identity_source_observed if ident
+                            else identity_source_unresolved),
+                        "sample_id_unresolved_reason": (
+                            None if ident else reason_entry_unwritten),
+                        "f0": f0,
+                    }
+                    row["identity"][
+                        "observed" if ident else "unresolved"] += 1
+            else:
+                row["identity"]["problems"] = matched.problems[:3]
+
         notes_out = []
         for note in result_extract.notes:
             item = note.to_dict()
-            estimate = fundamentals.get(note.srcn)
+            at_key_on = per_attack.get(note.note_id)
+            if at_key_on is not None:
+                # The identity the DSP actually used, and the fundamental of
+                # that same sample. Both or neither: a pitch derived from a
+                # different sample than the one published would be worse
+                # than no pitch.
+                item["sample_id"] = at_key_on["sample_id"]
+                item["sample_id_source"] = at_key_on["sample_id_source"]
+                item["sample_id_unresolved_reason"] = (
+                    at_key_on["sample_id_unresolved_reason"])
+            estimate = (at_key_on["f0"] if at_key_on is not None
+                        else fundamentals.get(note.srcn))
             usable = (
                 estimate is not None
                 and estimate.f0_hz

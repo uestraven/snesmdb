@@ -439,6 +439,39 @@ def build(
 
     events.sort(key=lambda e: (e["onset_sec"], e["voice"]))
 
+    # NATIVE PER-ATTACK IDENTITY, where the extractor resolved it at key-on.
+    #
+    # A record written by the v4 extractor carries `sample_id` on the note
+    # itself, resolved from the directory entry the DSP committed for THAT
+    # attack. It takes precedence over the per-SRCN map, which can only
+    # describe the capture-time directory and is wrong for any driver that
+    # populates or rewrites entries during playback.
+    #
+    # This is the path new games use. `corrections` below exists for the
+    # frozen 22-game cohort, whose records predate the v4 extractor, and is
+    # applied afterwards so an explicit correction still wins.
+    native = {}
+    for index, note in enumerate(notes):
+        if "sample_id" in note:
+            native[int(note.get("note_id", index))] = note
+    if native:
+        for event in events:
+            key = (event["event_id"] if event["origin"] == ORIGIN_KEY_ON
+                   else event.get("parent_event_id"))
+            note = native.get(key)
+            if note is None:
+                continue
+            sid = note.get("sample_id") or None
+            event["sample_id"] = sid
+            event["sample_id_source"] = (
+                note.get("sample_id_source")
+                or (SOURCE_OBSERVED if sid else SOURCE_UNRESOLVED)
+            )
+            event["sample_id_unresolved_reason"] = (
+                None if sid else (note.get("sample_id_unresolved_reason")
+                                  or REASON_NOT_ESTABLISHED)
+            )
+
     # Per-attack identity correction, applied in published order.
     if corrections:
         seen: dict[int, int] = {}
