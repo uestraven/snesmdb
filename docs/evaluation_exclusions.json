@@ -1,0 +1,113 @@
+{
+ "schema": "snesmdb.evaluation_exclusions.v1",
+ "applies_to": [
+  "snesmdb-27game-rc1"
+ ],
+ "note": "An evaluation-protocol record, NOT a dataset change. The corpus and its published split assignments are immutable and unmodified. Every track named here remains in the distribution; what this file states is which tracks must not contribute to a SCORE, and under what condition. Keyed by track_id, which is stable across releases. Do not match on game or title: titles repeat across games and are not identifiers.",
+ "duplicate_clusters": [
+  {
+   "cluster_id": "capcom-startup-fanfare",
+   "status": "confirmed",
+   "description": "The Capcom startup fanfare, present as a complete track in three games across two splits. The same 24 notes in the same key, so a model trained on the two training members has seen the validation member in full.",
+   "evidence": {
+    "method": "exact_pitch and interval, independently",
+    "run_tokens": 24,
+    "coverage_of_each_track": 1.0,
+    "shortest_period": 24,
+    "distinct_nonzero_intervals": 10,
+    "voice_method_combinations_matched": 40,
+    "why_not_a_convention": "Matched on absolute pitch rather than interval alone, so it is the same notes in the same key and not a quotation. Period equals run length, so there is no internal repetition to produce a spurious match. Coverage is complete for both tracks rather than a passage inside a longer one."
+   },
+   "members": [
+    {
+     "track_id": "mmx-01:4c67c8f50c56",
+     "game": "Megaman X",
+     "title": "Capcom Logo",
+     "split": "train",
+     "track_class": "jingle",
+     "role": "training_material"
+    },
+    {
+     "track_id": "bof2-s01:63651d0deeed",
+     "game": "Breath of Fire 2",
+     "title": "La la la...",
+     "split": "train",
+     "track_class": "jingle",
+     "role": "training_material",
+     "coverage_note": "Matches the validation member at 0.96 coverage rather than 1.00; the same fanfare under a different title."
+    },
+    {
+     "track_id": "sf2t-01:e5fe428a1b8c",
+     "game": "Street Fighter 2 Turbo",
+     "title": "Capcom Logo",
+     "split": "valid",
+     "track_class": "jingle",
+     "role": "duplicated_evaluation_material"
+    }
+   ],
+   "exclusions": [
+    {
+     "track_id": "sf2t-01:e5fe428a1b8c",
+     "split": "valid",
+     "action": "exclude_from_scoring",
+     "conditional_on_training_tracks_present": [
+      "mmx-01:4c67c8f50c56",
+      "bof2-s01:63651d0deeed"
+     ],
+     "rationale": "Scoring this track measures recall of training material. The condition matters: if neither training member is in the training set for a given experiment, the duplication does not apply and the track is legitimate evaluation data.",
+     "do_not": "Remove the track from the distribution, reassign its split, or drop it from corpus statistics. It is valid data that is unusable as a SCORE for a model trained on its duplicates."
+    }
+   ]
+  }
+ ],
+ "unconfirmed_candidates": [
+  {
+   "candidate_id": "lufia2-secret-of-mana-repeating-figure",
+   "status": "unconfirmed",
+   "action": "none",
+   "description": "A 31-interval agreement between a validation and a training track. Recorded for review, NOT treated as leakage and NOT excluded from scoring.",
+   "evidence": {
+    "method": "interval and interval_rhythm",
+    "run_tokens": 31,
+    "shortest_period": 8,
+    "distinct_nonzero_intervals": 6,
+    "coverage": {
+     "ed2-102:0d7928d92091": 0.0678,
+     "sd2-27:2debfdf51a1c": 0.0412
+    },
+    "why_unconfirmed": "The run repeats every 8 tokens, so it is a short figure rather than a theme, and it covers 7% and 4% of two long tracks rather than either in substance. A repeating accompaniment figure shared by two games is a convention of the idiom, not evidence of a shared composition."
+   },
+   "members": [
+    {
+     "track_id": "ed2-102:0d7928d92091",
+     "game": "Lufia 2",
+     "title": "Rumbling",
+     "split": "valid"
+    },
+    {
+     "track_id": "sd2-27:2debfdf51a1c",
+     "game": "Secret of Mana",
+     "title": "Monarch on the Shore",
+     "split": "train"
+    }
+   ]
+  }
+ ],
+ "attribution_caveats": [
+  {
+   "caveat_id": "ke-kenji-yamamoto-unresolved",
+   "description": "The recorded credit 'Ke' covers 206 Earthbound tracks in train and is a truncation fragment, not an author identity. It is a prefix of 'Kenji Yamamoto', a complete credit in test. Whether they name the same person is not decidable from published data, so composer-level separation between train and test is NOT established.",
+   "affected_tracks_in_train": 206,
+   "action": "none",
+   "rationale": "A two-letter prefix is far too weak to establish identity, and resolving it by name recognition would add evidence the dataset does not contain. The correct response is to limit the research claim, not to move tracks."
+  }
+ ],
+ "search_coverage_limits": [
+  "The leakage search reads published symbolic events only. 21.29% of attacks carry no fixed-pitch estimate and cannot match.",
+  "Pitch recovery differs between the 22-game cohort and the 5-game expansion, so the two halves are not equally observable and a cross-cohort duplicate is less likely to be found.",
+  "Sequence matching only: a re-orchestrated, re-harmonised or re-voiced quotation need not share a note sequence.",
+  "Sequences are built per voice, so material split across voices in one arrangement and merged in another will not match.",
+  "A NEGATIVE RESULT BOUNDS THE METHOD'S COVERAGE AND DOES NOT ESTABLISH THAT NO SHARED COMPOSITION EXISTS."
+ ],
+ "supported_research_claim": "SNES-MDB provides game-disjoint, recorded-credit-disjoint research splits for held-out-game symbolic music evaluation. Composer-level generalisation is not established, because 287 of 1,477 tracks carry an incomplete credit and one possible authorship overlap affecting 206 tracks is unresolved. One cross-split duplicated composition has been identified; an evaluation protocol must exclude the affected validation material or otherwise control for it. The symbolic leakage search has documented coverage limitations."
+}

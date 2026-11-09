@@ -638,6 +638,70 @@ The five-game expansion alone is worse and should not be used as a benchmark
 at all: its validation split is one racing soundtrack and its test split is
 nine tracks of one baseball soundtrack.
 
+### What the splits support, and what they do not
+
+The claim the evidence supports:
+
+> Game-disjoint, recorded-credit-disjoint splits for **held-out-game**
+> symbolic music evaluation. Composer-level generalisation is **not
+> established**. One cross-split duplicated composition has been identified
+> and must be controlled for.
+
+Three things stand behind that wording.
+
+**Composer separation is by recorded credit, not by author.** 287 of 1,477
+tracks carry a credit truncated at ID666's 32-byte field, and six of the 53
+distinct "composers" are truncation fragments rather than names. The largest
+is `Ke`, which covers **206 Earthbound tracks in train** and is a prefix of
+`Kenji Yamamoto`, a complete credit in **test**. Whether they name the same
+person is not decidable from published data. 501 tracks list several
+contributors, so even a complete credit does not establish who wrote a given
+track. Splits were assigned from these strings, so disjointness is a
+property of the strings.
+
+**One cross-split duplicate is confirmed.** The Capcom startup fanfare is a
+complete track in Mega Man X and Breath of Fire 2 (train) and in Street
+Fighter II Turbo (valid) — 24 notes matching on **absolute pitch** at full
+coverage of each track, across eight voices and two independent matching
+methods, with no internal repetition. A model trained on either training
+copy has seen the validation copy in full.
+
+The response is a change to the **evaluation protocol**, not the dataset.
+All three tracks stay in the corpus and keep their published splits.
+`docs/evaluation_exclusions.json` records the cluster and the rule, keyed by
+`track_id`:
+
+| track | split | role |
+|---|---|---|
+| `mmx-01:4c67c8f50c56` | train | training material |
+| `bof2-s01:63651d0deeed` | train | training material |
+| `sf2t-01:e5fe428a1b8c` | valid | **excluded from scoring** |
+
+The exclusion is **conditional**: it applies only when a training copy is
+actually in the training set. For an experiment that trained on neither, the
+validation track is ordinary evaluation data, and dropping it
+unconditionally would shrink everyone's evaluation set for one experiment's
+problem. Restricting a task to `music`-class tracks also excludes all three,
+since they are jingles — but the record is still needed by anyone evaluating
+jingles or all classes.
+
+**One candidate is recorded and NOT excluded.** A 31-interval agreement
+between Lufia 2's "Rumbling" (valid) and Secret of Mana's "Monarch on the
+Shore" (train) repeats every 8 notes and covers 7% and 4% of two long
+tracks. That is a shared accompaniment figure, a convention of the idiom.
+Treating it as leakage would discard valid evaluation data on weak evidence.
+
+**What the search cannot tell you.** It reads published symbolic events, so
+the 21.29% of attacks with no fixed-pitch estimate cannot match; pitch
+recovery differs between the two cohorts, so they are not equally
+observable; it matches note sequences, so a re-orchestrated or re-harmonised
+quotation need not match; and sequences are built per voice, so material
+redistributed across voices will not match. Sensitivity was verified by
+planting a transposed composition in another split and confirming it is
+found; specificity by confirming that ostinati, looping arpeggios and scales
+are not. **A negative result bounds the method and does not establish that
+no shared composition exists.**
+
 ### Composer attribution is tiered, and one tier is not an identity
 
 Disjointness is only as strong as the attribution it is computed from.
