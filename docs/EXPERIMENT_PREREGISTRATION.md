@@ -49,21 +49,35 @@ benefit over simpler representations.
 | **Reproducibility** | fixed split, config, eval scripts, recorded seeds; rerun reproduces reported numbers | 1 (primary) |
 | **Generalization** | paired bootstrap over test tracks excludes zero improvement; per-game deltas reported for all 8 games with no game materially worse | 1 |
 | **Generation validity** | ≥99% structurally valid generated event sequences | 1 |
-| **Musical preference** | ≥60% preference for model excerpts over matched baseline excerpts in blind listening | 2 (primary) |
+| **Musical preference** | ≥60% preference for model excerpts over matched baseline excerpts, **multi-listener study only** | 2 (primary) |
 | **Originality** | no identified near-exact copying of substantial training passages, judged by review of flagged matches against a **corpus control** | 2 (primary) |
 
 Level 1 passes on **Learning + Reproducibility**. Level 2 passes on **Musical
-preference + Originality**.
+preference + Originality**, and the preference criterion is satisfiable **only
+by the multi-listener study** — see the listening section.
+
+A Level 1 pass is a meaningful result on its own: it would establish that
+hardware-extracted SNES symbolic data supports reproducible learning on unseen
+games. There is no need to manufacture a Level 2 success for the work to be
+worthwhile, and this document exists partly to make that explicit in advance.
 
 ### Two corrections to the proposed criteria
 
 **The test set holds 8 games, not 6.** Actraiser, Adventure Island, Alien 3,
-F-Zero, Shadowrun, Star Fox, Tactics Ogre, Tetris 2. A sign test over 8 games
-needs **7 of 8** to reach p<0.05 one-sided (7/8 = 0.035, 6/8 = 0.145). Rather
-than set a criterion that cannot carry the claim, generalization is registered
-as a **paired bootstrap over test tracks** (primary) with the per-game count
-reported as a descriptive secondary. A "4 of 6" style threshold is explicitly
-NOT registered as sufficient.
+F-Zero, Shadowrun, Star Fox, Tactics Ogre, Tetris 2. Exact sign test over 8:
+
+| games improved | one-sided | two-sided |
+|---|---|---|
+| 8/8 | 0.0039 | 0.0078 |
+| 7/8 | 0.0352 | **0.0703** |
+| 6/8 | 0.1445 | 0.2891 |
+
+So **not even 7 of 8 clears a conventional two-sided 5% test** — only 8 of 8
+does. A per-game count cannot carry the generalization claim at this corpus
+size in either direction. Generalization is therefore registered as a **paired
+bootstrap over test tracks** (primary), with per-game deltas reported purely
+descriptively. A "4 of 6" style threshold is explicitly NOT registered as
+sufficient, and neither is 7 of 8.
 
 **Originality needs a corpus control, not a threshold.** This project has
 already learned that a repetition metric without a control is meaningless: on
@@ -77,14 +91,23 @@ model is judged against that control rather than against an absolute number.
 The published 50-game split is used verbatim. **The test split is not touched
 until model and hyperparameter selection are final.**
 
-Restricted to `track_class == "music"`, following the precedent of the existing
-interval baseline, which dropped 353 non-music tracks by definition:
+Restricted to `track_class == "music"`. **One filter, fully accounted for:**
 
 | split | all tracks | music only | games |
 |---|---|---|---|
 | train | 1,785 | **1,384** | 33 |
 | valid | 225 | **180** | 9 |
 | test | 218 | **176** | 8 |
+| **total** | **2,228** | **1,740** | 50 |
+
+The 488 excluded tracks are `jingle` 364, `drone` 35 and `effect` 89, summing
+exactly to 2,228 − 1,740. **There is no second eligibility filter.**
+
+An earlier draft of this section cited "353 non-music tracks" as the
+precedent. That figure belongs to a DIFFERENT population — the 27-game
+release, 1,477 tracks — and quoting it here implied an exclusion count that
+does not apply to this experiment. The policy precedent stands (exclude
+non-music by class, by definition rather than silently); the number does not.
 
 Splits are separated by game family and recorded composer-credit connections.
 **They are not proof of authorship independence**: 406 tracks carry an
@@ -133,15 +156,33 @@ rhythmic organisation, melodic development and overall listenability.
 The symbolic dataset does not supply every parameter needed for faithful SNES
 synthesis; this tests composition, not emulation fidelity.
 
-The design target is 20 listeners × 12 randomised pairs, analysed with a model
-accounting for repeated judgements by listener and by excerpt.
+**Settled 2026-11-10.** Two studies, with different standing. 20 independent
+listeners cannot be recruited by the project, and completion of the ML
+experiment is explicitly NOT made dependent on recruiting volunteers.
 
-> **Open logistical risk:** every listening result in the parent project to
-> date has come from a single listener. If 20 listeners cannot be recruited,
-> the 60% criterion cannot carry the phrase "blind listeners consistently
-> prefer", and the Level 2 claim must be restated as a single-listener
-> preference with far wider uncertainty. **This must be settled before the
-> listening test runs, not after.**
+| study | purpose | permitted conclusion |
+|---|---|---|
+| single listener, blinded | **exploratory pilot** | "one listener preferred one model over another" — nothing more |
+| ~20 independent listeners | **confirmatory Level 2** | evidence of listener preference, subject to uncertainty analysis |
+| no listening study | Level 1 only | no claim about perceived musical quality |
+
+**The 60% criterion applies to the multi-listener study only.** It is not a
+passing threshold for a single listener, and a single-listener result at or
+above 60% does not demonstrate Level 2.
+
+**A poor pilot means Level 2 is NOT DEMONSTRATED, not conclusively failed.**
+That distinction matters precisely because a failure is the registered
+prediction: a weak pilot is consistent with the prediction but is not evidence
+for it at n=1.
+
+The pilot's legitimate uses are diagnostic — finding rendering problems,
+confusing comparisons, or obvious musical weaknesses. It must not be used to
+tune the model, and it touches no test-set decision.
+
+For the eventual multi-listener study: 12 randomised comparisons per
+participant, retained as proposed. Uncertainty is analysed across **both
+listeners and excerpts** — 240 judgements from 20 people are not 240
+independent observations.
 
 ## Known measurement traps
 
