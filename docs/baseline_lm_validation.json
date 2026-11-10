@@ -1,0 +1,614 @@
+{
+ "results": {
+  "unigram_flat": {
+   "name": "unigram_flat",
+   "bits_per_token": 6.202464360841981,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 6.191253841904247,
+    "Bokujou Monogatari": 6.333270874194463,
+    "Hagane": 6.374102686783963,
+    "Street Fighter 2 Turbo": 6.062222233819262,
+    "Super Castlevania 4": 6.420413928360325,
+    "Super Metroid": 6.726342502388039,
+    "Super Turrican": 5.893425253988084,
+    "Top Gear": 5.983231774402476,
+    "Wild Guns": 6.037137170857897
+   },
+   "detail": {}
+  },
+  "unigram_stride_aware": {
+   "name": "unigram_stride_aware",
+   "bits_per_token": 4.20246439182583,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 4.191253853378252,
+    "Bokujou Monogatari": 4.333270975080292,
+    "Hagane": 4.374102722394735,
+    "Street Fighter 2 Turbo": 4.062222271606264,
+    "Super Castlevania 4": 4.420413970341162,
+    "Super Metroid": 4.726342601393514,
+    "Super Turrican": 3.8934252868305688,
+    "Top Gear": 3.9832317554082675,
+    "Wild Guns": 4.037137173114294
+   },
+   "detail": {}
+  },
+  "slot_ngram_order1_d1.0": {
+   "name": "slot_ngram_order1_d1.0",
+   "bits_per_token": 3.747558852028148,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 4.1015072790073175,
+    "Bokujou Monogatari": 3.7889392946683538,
+    "Hagane": 3.9625687022914398,
+    "Street Fighter 2 Turbo": 3.4547964525545902,
+    "Super Castlevania 4": 3.924589828334066,
+    "Super Metroid": 4.112317240196022,
+    "Super Turrican": 3.634537995406612,
+    "Top Gear": 3.294095825759373,
+    "Wild Guns": 3.5346329902064135
+   },
+   "detail": {}
+  },
+  "slot_ngram_order1_d2.0": {
+   "name": "slot_ngram_order1_d2.0",
+   "bits_per_token": 3.746404013513357,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 4.09900045600063,
+    "Bokujou Monogatari": 3.788795151025298,
+    "Hagane": 3.9610269254741017,
+    "Street Fighter 2 Turbo": 3.4542785714185444,
+    "Super Castlevania 4": 3.923680508150009,
+    "Super Metroid": 4.1096393315321595,
+    "Super Turrican": 3.633422928915848,
+    "Top Gear": 3.2937401566027256,
+    "Wild Guns": 3.534168920262986
+   },
+   "detail": {}
+  },
+  "slot_ngram_order1_d4.0": {
+   "name": "slot_ngram_order1_d4.0",
+   "bits_per_token": 3.7449150739625288,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 4.095943640862404,
+    "Bokujou Monogatari": 3.7886639392139534,
+    "Hagane": 3.958750267811994,
+    "Street Fighter 2 Turbo": 3.4534656841195694,
+    "Super Castlevania 4": 3.922517460210098,
+    "Super Metroid": 4.1072800826780345,
+    "Super Turrican": 3.631820374635044,
+    "Top Gear": 3.2930772106163113,
+    "Wild Guns": 3.5334055736417915
+   },
+   "detail": {}
+  },
+  "slot_ngram_order2_d2.0": {
+   "name": "slot_ngram_order2_d2.0",
+   "bits_per_token": 3.7191452468684107,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 4.127345991819803,
+    "Bokujou Monogatari": 3.6716694916881987,
+    "Hagane": 3.9755941348866384,
+    "Street Fighter 2 Turbo": 3.4913226359517058,
+    "Super Castlevania 4": 3.9217456624894576,
+    "Super Metroid": 3.989157310549447,
+    "Super Turrican": 3.5183544227766803,
+    "Top Gear": 3.20651642583942,
+    "Wild Guns": 3.525794737634066
+   },
+   "detail": {}
+  },
+  "slot_ngram_order2_d4.0": {
+   "name": "slot_ngram_order2_d4.0",
+   "bits_per_token": 3.67390864694075,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 4.0738813832022585,
+    "Bokujou Monogatari": 3.6355343714822204,
+    "Hagane": 3.9144787878977914,
+    "Street Fighter 2 Turbo": 3.4573280251904355,
+    "Super Castlevania 4": 3.8670103830023046,
+    "Super Metroid": 3.919402397847441,
+    "Super Turrican": 3.492381357126716,
+    "Top Gear": 3.169558209551805,
+    "Wild Guns": 3.4914494893998516
+   },
+   "detail": {}
+  },
+  "copy_prev_event_lam0.1": {
+   "name": "copy_prev_event_lam0.1",
+   "bits_per_token": 4.020035706877984,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 4.118120186555779,
+    "Bokujou Monogatari": 4.134353283998027,
+    "Hagane": 4.18700611934961,
+    "Street Fighter 2 Turbo": 3.8766868051314343,
+    "Super Castlevania 4": 4.1986110791260405,
+    "Super Metroid": 4.303530304103788,
+    "Super Turrican": 3.7699669018348674,
+    "Top Gear": 3.7851635118724656,
+    "Wild Guns": 3.909301060176716
+   },
+   "detail": {}
+  },
+  "copy_prev_event_lam0.25": {
+   "name": "copy_prev_event_lam0.25",
+   "bits_per_token": 4.057673788746671,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 4.21986497747515,
+    "Bokujou Monogatari": 4.170540672451317,
+    "Hagane": 4.231965727529743,
+    "Street Fighter 2 Turbo": 3.8965534178282186,
+    "Super Castlevania 4": 4.2287467921766115,
+    "Super Metroid": 4.259049624293667,
+    "Super Turrican": 3.810135198882894,
+    "Top Gear": 3.7999575596919084,
+    "Wild Guns": 3.9689650710996713
+   },
+   "detail": {}
+  },
+  "copy_prev_event_lam0.5": {
+   "name": "copy_prev_event_lam0.5",
+   "bits_per_token": 4.356979390654282,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 4.593017616642769,
+    "Bokujou Monogatari": 4.4758649950985605,
+    "Hagane": 4.546741380477735,
+    "Street Fighter 2 Turbo": 4.166127381392006,
+    "Super Castlevania 4": 4.53393947230866,
+    "Super Metroid": 4.481029075935808,
+    "Super Turrican": 4.090530592551401,
+    "Top Gear": 4.069125261302698,
+    "Wild Guns": 4.288050246736591
+   },
+   "detail": {}
+  },
+  "copy_lag16_lam0.1": {
+   "name": "copy_lag16_lam0.1",
+   "bits_per_token": 3.9686187606036194,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 3.9914740547555247,
+    "Bokujou Monogatari": 4.041548730824605,
+    "Hagane": 4.147907286341016,
+    "Street Fighter 2 Turbo": 3.9332364736396936,
+    "Super Castlevania 4": 4.13770802199652,
+    "Super Metroid": 4.350760848414587,
+    "Super Turrican": 3.67926550506791,
+    "Top Gear": 3.66664708066352,
+    "Wild Guns": 3.8766678276780175
+   },
+   "detail": {}
+  },
+  "copy_lag16_lam0.25": {
+   "name": "copy_lag16_lam0.25",
+   "bits_per_token": 3.958880898976755,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 3.9926555873336236,
+    "Bokujou Monogatari": 4.0142724853460505,
+    "Hagane": 4.15592606993509,
+    "Street Fighter 2 Turbo": 3.9837689102091125,
+    "Super Castlevania 4": 4.112594931222553,
+    "Super Metroid": 4.303228534560994,
+    "Super Turrican": 3.650178376904812,
+    "Top Gear": 3.58576128211135,
+    "Wild Guns": 3.9069590512811776
+   },
+   "detail": {}
+  },
+  "copy_lag32_lam0.1": {
+   "name": "copy_lag32_lam0.1",
+   "bits_per_token": 3.971663070590853,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 3.9797015922439276,
+    "Bokujou Monogatari": 4.056937715916886,
+    "Hagane": 4.174517101729359,
+    "Street Fighter 2 Turbo": 3.931162842177391,
+    "Super Castlevania 4": 4.154215104861029,
+    "Super Metroid": 4.354951322172872,
+    "Super Turrican": 3.675458904724875,
+    "Top Gear": 3.648146330998344,
+    "Wild Guns": 3.8872515685252034
+   },
+   "detail": {}
+  },
+  "copy_lag32_lam0.25": {
+   "name": "copy_lag32_lam0.25",
+   "bits_per_token": 3.963424053368359,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 3.9773739642045216,
+    "Bokujou Monogatari": 4.039404996316432,
+    "Hagane": 4.195918931055752,
+    "Street Fighter 2 Turbo": 3.9763790137665738,
+    "Super Castlevania 4": 4.136877480513566,
+    "Super Metroid": 4.31184231214351,
+    "Super Turrican": 3.646156375330868,
+    "Top Gear": 3.5564719169271735,
+    "Wild Guns": 3.9232305498087485
+   },
+   "detail": {}
+  },
+  "copy_lag64_lam0.1": {
+   "name": "copy_lag64_lam0.1",
+   "bits_per_token": 3.989247030329995,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 4.015363133259918,
+    "Bokujou Monogatari": 4.113568472428715,
+    "Hagane": 4.206325934255478,
+    "Street Fighter 2 Turbo": 3.943017343577356,
+    "Super Castlevania 4": 4.1914673691328215,
+    "Super Metroid": 4.345008632463044,
+    "Super Turrican": 3.6758551832503583,
+    "Top Gear": 3.6368896264303046,
+    "Wild Guns": 3.896433509915402
+   },
+   "detail": {}
+  },
+  "copy_lag64_lam0.25": {
+   "name": "copy_lag64_lam0.25",
+   "bits_per_token": 3.9913822265516115,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 4.035978500790199,
+    "Bokujou Monogatari": 4.121877181558683,
+    "Hagane": 4.246914439420866,
+    "Street Fighter 2 Turbo": 3.995678389948727,
+    "Super Castlevania 4": 4.195259221377231,
+    "Super Metroid": 4.299569230698437,
+    "Super Turrican": 3.64624914299973,
+    "Top Gear": 3.536678891970288,
+    "Wild Guns": 3.9389948359347615
+   },
+   "detail": {}
+  },
+  "interval_reversal_lam0.1": {
+   "name": "interval_reversal_lam0.1",
+   "bits_per_token": 4.162241518324912,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 4.150258346663742,
+    "Bokujou Monogatari": 4.304541120625028,
+    "Hagane": 4.322419378571904,
+    "Street Fighter 2 Turbo": 4.041016875184592,
+    "Super Castlevania 4": 4.374103491908614,
+    "Super Metroid": 4.600425649461238,
+    "Super Turrican": 3.854881255977962,
+    "Top Gear": 3.968904222397141,
+    "Wild Guns": 4.017406626326201
+   },
+   "detail": {}
+  },
+  "interval_reversal_lam0.25": {
+   "name": "interval_reversal_lam0.25",
+   "bits_per_token": 4.195080285160178,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 4.179970142220273,
+    "Bokujou Monogatari": 4.3391823566376315,
+    "Hagane": 4.350737630676095,
+    "Street Fighter 2 Turbo": 4.0796316093183735,
+    "Super Castlevania 4": 4.403205065404696,
+    "Super Metroid": 4.613737473365811,
+    "Super Turrican": 3.8913790462305937,
+    "Top Gear": 4.01083442790382,
+    "Wild Guns": 4.055857243401342
+   },
+   "detail": {}
+  },
+  "interval_reversal_lam0.5": {
+   "name": "interval_reversal_lam0.5",
+   "bits_per_token": 4.3067058176432065,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 4.2882683884534885,
+    "Bokujou Monogatari": 4.452502734186098,
+    "Hagane": 4.457826570035735,
+    "Street Fighter 2 Turbo": 4.197163020151493,
+    "Super Castlevania 4": 4.510978170166697,
+    "Super Metroid": 4.705991955169233,
+    "Super Turrican": 4.00622316939555,
+    "Top Gear": 4.131969814367696,
+    "Wild Guns": 4.173263528501065
+   },
+   "detail": {}
+  },
+  "slot_ngram_order2_d8.0": {
+   "name": "slot_ngram_order2_d8.0",
+   "bits_per_token": 3.637562609735197,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 4.0274776715859195,
+    "Bokujou Monogatari": 3.6095111803545605,
+    "Hagane": 3.8668326111277875,
+    "Street Fighter 2 Turbo": 3.427895441563838,
+    "Super Castlevania 4": 3.8237613646065105,
+    "Super Metroid": 3.8709218130637506,
+    "Super Turrican": 3.4716473543694426,
+    "Top Gear": 3.140484006273155,
+    "Wild Guns": 3.4612905048000817
+   },
+   "detail": {}
+  },
+  "slot_ngram_order2_d16.0": {
+   "name": "slot_ngram_order2_d16.0",
+   "bits_per_token": 3.6131649558493732,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 3.991934651089598,
+    "Bokujou Monogatari": 3.5970057026946614,
+    "Hagane": 3.8351830559499347,
+    "Street Fighter 2 Turbo": 3.4053303008209403,
+    "Super Castlevania 4": 3.7961664409551794,
+    "Super Metroid": 3.8469977316129502,
+    "Super Turrican": 3.458965358627312,
+    "Top Gear": 3.1216962656683425,
+    "Wild Guns": 3.4380254477712846
+   },
+   "detail": {}
+  },
+  "slot_ngram_order3_d4.0": {
+   "name": "slot_ngram_order3_d4.0",
+   "bits_per_token": 3.726531166947077,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 4.168790874875816,
+    "Bokujou Monogatari": 3.635559235384638,
+    "Hagane": 4.0020714514780344,
+    "Street Fighter 2 Turbo": 3.557559862132911,
+    "Super Castlevania 4": 3.903914478933296,
+    "Super Metroid": 3.9239333226369264,
+    "Super Turrican": 3.4975004988223706,
+    "Top Gear": 3.1540293623302422,
+    "Wild Guns": 3.5887158890296815
+   },
+   "detail": {}
+  },
+  "slot_ngram_order3_d8.0": {
+   "name": "slot_ngram_order3_d8.0",
+   "bits_per_token": 3.621456818118693,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 4.033024192350535,
+    "Bokujou Monogatari": 3.5475776273278727,
+    "Hagane": 3.883420463597165,
+    "Street Fighter 2 Turbo": 3.46689367946085,
+    "Super Castlevania 4": 3.782807328219451,
+    "Super Metroid": 3.810150639288496,
+    "Super Turrican": 3.420394878846207,
+    "Top Gear": 3.072688551265271,
+    "Wild Guns": 3.486974545326555
+   },
+   "detail": {}
+  },
+  "slot_ngram_order3_d16.0": {
+   "name": "slot_ngram_order3_d16.0",
+   "bits_per_token": 3.5555892409179886,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 3.9432472188247334,
+    "Bokujou Monogatari": 3.501483800824419,
+    "Hagane": 3.8075538024455406,
+    "Street Fighter 2 Turbo": 3.4057381095539543,
+    "Super Castlevania 4": 3.709909500993008,
+    "Super Metroid": 3.745575255046302,
+    "Super Turrican": 3.374152068985481,
+    "Top Gear": 3.0237247585610327,
+    "Wild Guns": 3.4194085302879658
+   },
+   "detail": {}
+  },
+  "slot_ngram_order4_d8.0": {
+   "name": "slot_ngram_order4_d8.0",
+   "bits_per_token": 3.6239876390728374,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 4.049742086411427,
+    "Bokujou Monogatari": 3.5331877009570483,
+    "Hagane": 3.906588301509792,
+    "Street Fighter 2 Turbo": 3.5245633402655705,
+    "Super Castlevania 4": 3.7961137884108287,
+    "Super Metroid": 3.772640809245174,
+    "Super Turrican": 3.407373570621384,
+    "Top Gear": 2.978323091244674,
+    "Wild Guns": 3.518772081357714
+   },
+   "detail": {}
+  },
+  "slot_ngram_order4_d16.0": {
+   "name": "slot_ngram_order4_d16.0",
+   "bits_per_token": 3.5245947755397675,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 3.9182911479169578,
+    "Bokujou Monogatari": 3.4581792108769998,
+    "Hagane": 3.7957381133241186,
+    "Street Fighter 2 Turbo": 3.4254205138570923,
+    "Super Castlevania 4": 3.6878677799017043,
+    "Super Metroid": 3.6821990038079817,
+    "Super Turrican": 3.3262799614512564,
+    "Top Gear": 2.9131539268171,
+    "Wild Guns": 3.4132039397536733
+   },
+   "detail": {}
+  },
+  "slot_ngram_order3_d32.0": {
+   "name": "slot_ngram_order3_d32.0",
+   "bits_per_token": 3.524
+  },
+  "slot_ngram_order3_d64.0": {
+   "name": "slot_ngram_order3_d64.0",
+   "bits_per_token": 3.5192
+  },
+  "slot_ngram_order3_d128.0": {
+   "name": "slot_ngram_order3_d128.0",
+   "bits_per_token": 3.5336
+  },
+  "slot_ngram_order4_d32.0": {
+   "name": "slot_ngram_order4_d32.0",
+   "bits_per_token": 3.47420574524083,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 3.8445458360949427,
+    "Bokujou Monogatari": 3.4317981540126907,
+    "Hagane": 3.7365313394620236,
+    "Street Fighter 2 Turbo": 3.3663155789573653,
+    "Super Castlevania 4": 3.635583888314582,
+    "Super Metroid": 3.649043261629173,
+    "Super Turrican": 3.2911556554916714,
+    "Top Gear": 2.886015702774046,
+    "Wild Guns": 3.3539511208403274
+   },
+   "detail": {}
+  },
+  "slot_ngram_order4_d64.0": {
+   "name": "slot_ngram_order4_d64.0",
+   "bits_per_token": 3.461624299236813,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 3.8152102506204115,
+    "Bokujou Monogatari": 3.442752823963507,
+    "Hagane": 3.7164895788640964,
+    "Street Fighter 2 Turbo": 3.3374230947164305,
+    "Super Castlevania 4": 3.6256533057471607,
+    "Super Metroid": 3.662735828356022,
+    "Super Turrican": 3.2923754810802235,
+    "Top Gear": 2.8885592619709346,
+    "Wild Guns": 3.330327658708894
+   },
+   "detail": {}
+  },
+  "slot_ngram_order5_d32.0": {
+   "name": "slot_ngram_order5_d32.0",
+   "bits_per_token": 3.444766428138865,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 3.818231829667859,
+    "Bokujou Monogatari": 3.4001341665031077,
+    "Hagane": 3.7200903411575115,
+    "Street Fighter 2 Turbo": 3.371000306303049,
+    "Super Castlevania 4": 3.6001189140309133,
+    "Super Metroid": 3.6090604189870077,
+    "Super Turrican": 3.257771219042805,
+    "Top Gear": 2.806952480330988,
+    "Wild Guns": 3.337110278485738
+   },
+   "detail": {}
+  },
+  "slot_ngram_order5_d64.0": {
+   "name": "slot_ngram_order5_d64.0",
+   "bits_per_token": 3.424404914560991,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 3.7809768191273236,
+    "Bokujou Monogatari": 3.404199202153313,
+    "Hagane": 3.690456251262789,
+    "Street Fighter 2 Turbo": 3.329643518703478,
+    "Super Castlevania 4": 3.58382105409172,
+    "Super Metroid": 3.6165340355838103,
+    "Super Turrican": 3.250646443006752,
+    "Top Gear": 2.8077819991276334,
+    "Wild Guns": 3.304337919328894
+   },
+   "detail": {}
+  },
+  "slot_ngram_order6_d64.0": {
+   "name": "slot_ngram_order6_d64.0",
+   "bits_per_token": 3.404379243765844,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 3.7646906363427353,
+    "Bokujou Monogatari": 3.386382946920963,
+    "Hagane": 3.6801963109449245,
+    "Street Fighter 2 Turbo": 3.327925401303433,
+    "Super Castlevania 4": 3.5571859574354106,
+    "Super Metroid": 3.5957555972102737,
+    "Super Turrican": 3.2283354603114414,
+    "Top Gear": 2.758771205972587,
+    "Wild Guns": 3.2880085626299724
+   },
+   "detail": {}
+  },
+  "slot_ngram_order8_d64.0": {
+   "name": "slot_ngram_order8_d64.0",
+   "bits_per_token": 3.387085502021955,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 3.7540506617894516,
+    "Bokujou Monogatari": 3.3703731701244877,
+    "Hagane": 3.67602772726413,
+    "Street Fighter 2 Turbo": 3.33504493477213,
+    "Super Castlevania 4": 3.538201057946518,
+    "Super Metroid": 3.5800740395032875,
+    "Super Turrican": 3.2136566418314496,
+    "Top Gear": 2.6845600765606368,
+    "Wild Guns": 3.2770365933240715
+   },
+   "detail": {}
+  },
+  "slot_ngram_order10_d64.0": {
+   "name": "slot_ngram_order10_d64.0",
+   "bits_per_token": 3.3839324198484966,
+   "n_tokens": 1482800,
+   "n_tracks": 180,
+   "per_game": {
+    "Axelay": 3.7545058377732827,
+    "Bokujou Monogatari": 3.3705658264706364,
+    "Hagane": 3.678545238455748,
+    "Street Fighter 2 Turbo": 3.339465419142726,
+    "Super Castlevania 4": 3.5349145717690353,
+    "Super Metroid": 3.581056352315563,
+    "Super Turrican": 3.2105888620065124,
+    "Top Gear": 2.6519301568723144,
+    "Wild Guns": 3.281416979599416
+   },
+   "detail": {}
+  }
+ },
+ "strongest": "slot_ngram_order10_d64.0",
+ "target_bits_per_token": 3.2147357988560716,
+ "strongest_bits_per_token": 3.3839324198484966,
+ "n_configs_evaluated": 36
+}
