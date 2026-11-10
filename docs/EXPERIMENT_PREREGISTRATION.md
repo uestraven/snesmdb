@@ -165,6 +165,44 @@ Model size starts at ~5M parameters rather than larger. The NES foundation was
 5.67M and its limit was never capacity — it was the objective. Starting small
 also keeps a CPU fallback genuinely viable.
 
+## Time base — measured, then chosen
+
+The release offers three candidate time bases. The choice was made by measuring
+coverage across all 1,740 music tracks, not by preference.
+
+| candidate | coverage | verdict |
+|---|---|---|
+| per-track native row grid (`onset_grid`) | train 68.9% / valid 73.3% / **test 60.2%** found; only **51%** plausible | **rejected** |
+| fixed 100 Hz uniform grid | 100%, snapping cost 0.0% | secondary |
+| unquantised `onset_sec` | 100% | **primary** |
+
+The native grid is rejected for three measured reasons, despite milestone 4
+having genuinely delivered it — the SPC700 timer register was read for **100%**
+of tracks:
+
+1. **Coverage is only 60-73%.** The dominant failure reason is the dataset's
+   own: "onsets do not lie on a single period even after clustering".
+2. **Coverage is split-dependent** — 60.2% on test against 68.9% on train. That
+   would make train and test differently representable, which is exactly the
+   kind of asymmetry that invalidates a cross-split comparison, and it would
+   stack on the non-interchangeability already documented.
+3. **Half the found grids are not musical.** In a 300-track sample: 154
+   plausible at 4-40 rows/s, 39 above 40, 21 below 4. `rows_per_second` spans
+   1.18 to 500.00 corpus-wide.
+
+**Primary representation: delta-time tokens from unquantised `onset_sec`**,
+bucketed by quantiles **fitted on the training split only**. This assumes no
+grid, covers every event, and keeps the sealed split sealed.
+
+The 100 Hz uniform grid is retained as a **secondary** representation, and the
+comparison between the two is exactly the deferred Level 3 representation
+ablation rather than something to fold in here.
+
+Driver labels are used for **no** modelling purpose — not as features, not for
+stratification — because the release documents them as "curated external
+knowledge, NOT derived from the SPC files… a hypothesis to test rather than a
+measurement". Per-driver breakdowns remain legitimate as descriptive output.
+
 ## Listening test
 
 Short excerpts (~16 bars), model and baseline rendered through the **same
