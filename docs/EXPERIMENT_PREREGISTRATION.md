@@ -146,6 +146,25 @@ A new SNES representation is built for this. RSE's frozen
 `rse-repr/1.0.0-d4k4-tempo1.01` is NES-specific — four channels, duty-cycle
 timbre, vocabulary 555 — and must not be modified.
 
+## Compute discipline
+
+Measured on the development machine (8 cores, CPU-only torch): **6,600 tok/s**,
+1.25 s/step for a 5.2M-parameter model at context 1024. So 50k steps is 17.4 h
+on CPU against roughly 56 minutes on the RTX PRO 4500 used previously, at about
+$0.70.
+
+**Registered rule: any run over 200 steps happens on GPU.** CPU is for smoke
+runs only — proving the data loader, checkpointing and evaluation path work end
+to end before anything is billed.
+
+The reason is a measured waste, not a preference: the previous pod billed $4.33
+in a day at 0% GPU utilisation, because it was provisioned before there was
+anything to run. Provision late, run the sweep, terminate immediately.
+
+Model size starts at ~5M parameters rather than larger. The NES foundation was
+5.67M and its limit was never capacity — it was the objective. Starting small
+also keeps a CPU fallback genuinely viable.
+
 ## Listening test
 
 Short excerpts (~16 bars), model and baseline rendered through the **same
