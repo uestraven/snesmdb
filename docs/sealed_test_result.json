@@ -55,6 +55,1250 @@
   "ci_lower_exceeds_5pct": true,
   "fraction_of_resamples_above_5pct": 1.0
  },
+ "bootstrap_by_game": {
+  "unit": "game",
+  "n_games": 8,
+  "observed_relative_improvement": 0.23656351783398608,
+  "ci_lower": 0.2193213762166428,
+  "ci_upper": 0.2591786478998504,
+  "confidence": 0.95,
+  "ci_lower_exceeds_5pct": true,
+  "note": "Resamples whole games. With 8 clusters this interval is wide by construction; that width is what eight games support. Reported alongside the registered track-level interval, not instead of it."
+ },
+ "per_track": [
+  {
+   "track_id": "actr-01:dc49f11e79a2",
+   "game": "Actraiser",
+   "model_bits": 26270.781323327166,
+   "baseline_bits": 34491.18915092383,
+   "n_tokens": 9624
+  },
+  {
+   "track_id": "actr-02:f612e31b90fe",
+   "game": "Actraiser",
+   "model_bits": 3420.9367259762025,
+   "baseline_bits": 4264.075511943398,
+   "n_tokens": 973
+  },
+  {
+   "track_id": "actr-03:9178838683e8",
+   "game": "Actraiser",
+   "model_bits": 1168.0709426132996,
+   "baseline_bits": 1391.2738937039594,
+   "n_tokens": 441
+  },
+  {
+   "track_id": "actr-04:b815b0c4e4fe",
+   "game": "Actraiser",
+   "model_bits": 31261.505242285293,
+   "baseline_bits": 37950.51569528359,
+   "n_tokens": 12693
+  },
+  {
+   "track_id": "actr-05:0d556c0b8702",
+   "game": "Actraiser",
+   "model_bits": 12526.312667233844,
+   "baseline_bits": 16332.848405508399,
+   "n_tokens": 6307
+  },
+  {
+   "track_id": "actr-07:a3df762dec78",
+   "game": "Actraiser",
+   "model_bits": 20803.674289004564,
+   "baseline_bits": 29183.859792821608,
+   "n_tokens": 7766
+  },
+  {
+   "track_id": "actr-08:a90141064929",
+   "game": "Actraiser",
+   "model_bits": 6553.057774596239,
+   "baseline_bits": 8060.429869496002,
+   "n_tokens": 2563
+  },
+  {
+   "track_id": "actr-09:c06f66968833",
+   "game": "Actraiser",
+   "model_bits": 8940.617332213347,
+   "baseline_bits": 12035.418011650285,
+   "n_tokens": 3938
+  },
+  {
+   "track_id": "actr-10:5e203bba8851",
+   "game": "Actraiser",
+   "model_bits": 15413.779000621216,
+   "baseline_bits": 21236.846227702783,
+   "n_tokens": 7023
+  },
+  {
+   "track_id": "actr-11:036f97c7767e",
+   "game": "Actraiser",
+   "model_bits": 13710.173653470938,
+   "baseline_bits": 19734.07753359029,
+   "n_tokens": 4837
+  },
+  {
+   "track_id": "actr-12:574324c4d61c",
+   "game": "Actraiser",
+   "model_bits": 38705.38379345767,
+   "baseline_bits": 53000.72401038308,
+   "n_tokens": 13552
+  },
+  {
+   "track_id": "actr-13:2919c8f71c8d",
+   "game": "Actraiser",
+   "model_bits": 19879.061480635733,
+   "baseline_bits": 25958.274142918734,
+   "n_tokens": 7674
+  },
+  {
+   "track_id": "actr-14:88c09f90afb4",
+   "game": "Actraiser",
+   "model_bits": 1058.8639295486644,
+   "baseline_bits": 1141.8437814460744,
+   "n_tokens": 437
+  },
+  {
+   "track_id": "actr-15:c6762f22211b",
+   "game": "Actraiser",
+   "model_bits": 9460.694805635063,
+   "baseline_bits": 11661.318106391203,
+   "n_tokens": 3866
+  },
+  {
+   "track_id": "actr-16:dea679d92619",
+   "game": "Actraiser",
+   "model_bits": 11968.225409958673,
+   "baseline_bits": 14382.20630577713,
+   "n_tokens": 4829
+  },
+  {
+   "track_id": "actr-17:c3b0e0e21026",
+   "game": "Actraiser",
+   "model_bits": 6318.546392484002,
+   "baseline_bits": 7728.985697375378,
+   "n_tokens": 2679
+  },
+  {
+   "track_id": "actr-18:49b7c70c402c",
+   "game": "Actraiser",
+   "model_bits": 19271.055777396206,
+   "baseline_bits": 26217.84332614829,
+   "n_tokens": 6827
+  },
+  {
+   "track_id": "al3-01:83621cc0568e",
+   "game": "Alien 3",
+   "model_bits": 786.1461365061673,
+   "baseline_bits": 1143.4752740373965,
+   "n_tokens": 269
+  },
+  {
+   "track_id": "al3-02:8768294c0bda",
+   "game": "Alien 3",
+   "model_bits": 2620.2732064557385,
+   "baseline_bits": 3135.907526850297,
+   "n_tokens": 693
+  },
+  {
+   "track_id": "al3-03:e44c023e2e62",
+   "game": "Alien 3",
+   "model_bits": 2176.6553121618026,
+   "baseline_bits": 3054.7745441728903,
+   "n_tokens": 1108
+  },
+  {
+   "track_id": "al3-04:732b422070b8",
+   "game": "Alien 3",
+   "model_bits": 29911.70660136679,
+   "baseline_bits": 40500.12949723985,
+   "n_tokens": 11254
+  },
+  {
+   "track_id": "al3-05:bc746596ab7f",
+   "game": "Alien 3",
+   "model_bits": 23691.68090657755,
+   "baseline_bits": 34026.33109998536,
+   "n_tokens": 10359
+  },
+  {
+   "track_id": "al3-06:6b347d132650",
+   "game": "Alien 3",
+   "model_bits": 17380.458652566587,
+   "baseline_bits": 21271.327164102033,
+   "n_tokens": 6279
+  },
+  {
+   "track_id": "al3-07:06498259b585",
+   "game": "Alien 3",
+   "model_bits": 19858.309046852217,
+   "baseline_bits": 27545.319354262272,
+   "n_tokens": 8501
+  },
+  {
+   "track_id": "al3-08:883fb4aa60bb",
+   "game": "Alien 3",
+   "model_bits": 15279.0075617536,
+   "baseline_bits": 24719.374976634783,
+   "n_tokens": 8138
+  },
+  {
+   "track_id": "al3-09:eb372536ed36",
+   "game": "Alien 3",
+   "model_bits": 23534.201836089414,
+   "baseline_bits": 33162.01063548509,
+   "n_tokens": 10431
+  },
+  {
+   "track_id": "al3-10:95d69c1bee50",
+   "game": "Alien 3",
+   "model_bits": 3459.2958244797605,
+   "baseline_bits": 4950.544560269898,
+   "n_tokens": 1684
+  },
+  {
+   "track_id": "al3-11:b367f0cb49ea",
+   "game": "Alien 3",
+   "model_bits": 22168.266554222904,
+   "baseline_bits": 30343.157234253238,
+   "n_tokens": 9888
+  },
+  {
+   "track_id": "al3-b01:fe2f3630e8e3",
+   "game": "Alien 3",
+   "model_bits": 2259.553129241828,
+   "baseline_bits": 2889.3302492150438,
+   "n_tokens": 753
+  },
+  {
+   "track_id": "fz-01:cb1a88acfddb",
+   "game": "F-Zero",
+   "model_bits": 7916.205407561109,
+   "baseline_bits": 10874.46605071477,
+   "n_tokens": 3726
+  },
+  {
+   "track_id": "fz-02:ed45f46e5b13",
+   "game": "F-Zero",
+   "model_bits": 20303.30557608925,
+   "baseline_bits": 25967.817717049795,
+   "n_tokens": 9656
+  },
+  {
+   "track_id": "fz-03:7a0f42190687",
+   "game": "F-Zero",
+   "model_bits": 21008.178072152918,
+   "baseline_bits": 32488.604098472697,
+   "n_tokens": 12158
+  },
+  {
+   "track_id": "fz-04:acf300d5db33",
+   "game": "F-Zero",
+   "model_bits": 38668.21944879862,
+   "baseline_bits": 51411.50184152171,
+   "n_tokens": 18551
+  },
+  {
+   "track_id": "fz-05:5b7dec262d40",
+   "game": "F-Zero",
+   "model_bits": 11297.108490869166,
+   "baseline_bits": 15542.812678592521,
+   "n_tokens": 4493
+  },
+  {
+   "track_id": "fz-06a:53acfb3fabc5",
+   "game": "F-Zero",
+   "model_bits": 19647.250308693714,
+   "baseline_bits": 25416.314288072906,
+   "n_tokens": 6619
+  },
+  {
+   "track_id": "fz-06b:e2227b35a62a",
+   "game": "F-Zero",
+   "model_bits": 17309.865085211663,
+   "baseline_bits": 22392.53812009875,
+   "n_tokens": 6843
+  },
+  {
+   "track_id": "fz-07:fadea7dc1fd7",
+   "game": "F-Zero",
+   "model_bits": 22849.291303021775,
+   "baseline_bits": 32948.48753980854,
+   "n_tokens": 9224
+  },
+  {
+   "track_id": "fz-08:211cd2afbdcd",
+   "game": "F-Zero",
+   "model_bits": 977.5902010510458,
+   "baseline_bits": 1848.7466265933099,
+   "n_tokens": 725
+  },
+  {
+   "track_id": "fz-09:2b5238430b72",
+   "game": "F-Zero",
+   "model_bits": 12639.621992100543,
+   "baseline_bits": 15692.52126441774,
+   "n_tokens": 7766
+  },
+  {
+   "track_id": "fz-10:ae2cddf97818",
+   "game": "F-Zero",
+   "model_bits": 25100.707302906852,
+   "baseline_bits": 33334.84494105124,
+   "n_tokens": 10851
+  },
+  {
+   "track_id": "fz-11a:3d07a6239c3d",
+   "game": "F-Zero",
+   "model_bits": 15887.345681315885,
+   "baseline_bits": 23709.347893944592,
+   "n_tokens": 7174
+  },
+  {
+   "track_id": "fz-11b:ca4b8491ce7b",
+   "game": "F-Zero",
+   "model_bits": 13738.88983608535,
+   "baseline_bits": 21118.976919263507,
+   "n_tokens": 6947
+  },
+  {
+   "track_id": "fz-12:788bdfbf0b82",
+   "game": "F-Zero",
+   "model_bits": 10325.457409352062,
+   "baseline_bits": 12839.867626560823,
+   "n_tokens": 4161
+  },
+  {
+   "track_id": "sai-01:82a1f6e9a3d7",
+   "game": "Adventure Island",
+   "model_bits": 40368.56853972708,
+   "baseline_bits": 58704.12193395416,
+   "n_tokens": 16645
+  },
+  {
+   "track_id": "sai-03:3827f4d3180f",
+   "game": "Adventure Island",
+   "model_bits": 99278.59677329827,
+   "baseline_bits": 131389.77012508185,
+   "n_tokens": 32598
+  },
+  {
+   "track_id": "sai-04:6344428e105c",
+   "game": "Adventure Island",
+   "model_bits": 33535.645230028924,
+   "baseline_bits": 40363.471330943445,
+   "n_tokens": 8681
+  },
+  {
+   "track_id": "sai-05:e1d23a7d5bed",
+   "game": "Adventure Island",
+   "model_bits": 32743.768026217072,
+   "baseline_bits": 45799.13665084427,
+   "n_tokens": 11135
+  },
+  {
+   "track_id": "sai-06:621be191e070",
+   "game": "Adventure Island",
+   "model_bits": 23924.739049048607,
+   "baseline_bits": 36040.979727812606,
+   "n_tokens": 9712
+  },
+  {
+   "track_id": "sai-08:eb402c3acc22",
+   "game": "Adventure Island",
+   "model_bits": 36897.42635213188,
+   "baseline_bits": 49135.91454302035,
+   "n_tokens": 10487
+  },
+  {
+   "track_id": "sai-09:b8ad7ab4d39c",
+   "game": "Adventure Island",
+   "model_bits": 16499.785479784066,
+   "baseline_bits": 20457.69553704405,
+   "n_tokens": 5704
+  },
+  {
+   "track_id": "sai-10:1611aaa744e4",
+   "game": "Adventure Island",
+   "model_bits": 23637.969508451788,
+   "baseline_bits": 29990.831704298304,
+   "n_tokens": 6495
+  },
+  {
+   "track_id": "sai-11:93cfb2a8f626",
+   "game": "Adventure Island",
+   "model_bits": 50618.02203316931,
+   "baseline_bits": 76466.15608902164,
+   "n_tokens": 20246
+  },
+  {
+   "track_id": "sai-12:d5e7ff1c1609",
+   "game": "Adventure Island",
+   "model_bits": 22879.505787483617,
+   "baseline_bits": 31354.61989239942,
+   "n_tokens": 7490
+  },
+  {
+   "track_id": "sai-13:4adddb076a9f",
+   "game": "Adventure Island",
+   "model_bits": 19778.202180740733,
+   "baseline_bits": 32092.202506948528,
+   "n_tokens": 9836
+  },
+  {
+   "track_id": "sai-14:79c8fb550626",
+   "game": "Adventure Island",
+   "model_bits": 4569.046189896616,
+   "baseline_bits": 6699.301998884324,
+   "n_tokens": 1584
+  },
+  {
+   "track_id": "sai-15:8444d046e8d6",
+   "game": "Adventure Island",
+   "model_bits": 1023.8537432640449,
+   "baseline_bits": 1243.2033072774304,
+   "n_tokens": 309
+  },
+  {
+   "track_id": "sf-04:3bcedcf18dc7",
+   "game": "Star Fox",
+   "model_bits": 5268.163843772947,
+   "baseline_bits": 6151.918639714308,
+   "n_tokens": 1792
+  },
+  {
+   "track_id": "sf-05:3c1b1e8e534f",
+   "game": "Star Fox",
+   "model_bits": 1455.1027994043823,
+   "baseline_bits": 1870.659547766611,
+   "n_tokens": 589
+  },
+  {
+   "track_id": "sf-06:227a10d6499d",
+   "game": "Star Fox",
+   "model_bits": 8882.705506871142,
+   "baseline_bits": 13648.567831982036,
+   "n_tokens": 3314
+  },
+  {
+   "track_id": "sf-07:8954d0fd64dd",
+   "game": "Star Fox",
+   "model_bits": 7321.601957331131,
+   "baseline_bits": 9560.379026223869,
+   "n_tokens": 2495
+  },
+  {
+   "track_id": "sf-08:dada9d56ccb3",
+   "game": "Star Fox",
+   "model_bits": 1150.2680470644782,
+   "baseline_bits": 1308.2110963952105,
+   "n_tokens": 373
+  },
+  {
+   "track_id": "sf-09:790467b90b1a",
+   "game": "Star Fox",
+   "model_bits": 45740.46170785885,
+   "baseline_bits": 60107.49745182853,
+   "n_tokens": 16673
+  },
+  {
+   "track_id": "sf-10:27d0bbe506e8",
+   "game": "Star Fox",
+   "model_bits": 47676.03945587081,
+   "baseline_bits": 63451.012166087625,
+   "n_tokens": 19187
+  },
+  {
+   "track_id": "sf-11:2a6e9af04983",
+   "game": "Star Fox",
+   "model_bits": 41636.30268555033,
+   "baseline_bits": 55224.75441283655,
+   "n_tokens": 14795
+  },
+  {
+   "track_id": "sf-12:16dcdf92dd2e",
+   "game": "Star Fox",
+   "model_bits": 29899.372708711988,
+   "baseline_bits": 35683.233947415545,
+   "n_tokens": 10623
+  },
+  {
+   "track_id": "sf-13:656ef1831d93",
+   "game": "Star Fox",
+   "model_bits": 44571.65116830206,
+   "baseline_bits": 58572.77781138544,
+   "n_tokens": 16417
+  },
+  {
+   "track_id": "sf-14:1990547dfab4",
+   "game": "Star Fox",
+   "model_bits": 24280.758735848984,
+   "baseline_bits": 32028.92704604895,
+   "n_tokens": 13308
+  },
+  {
+   "track_id": "sf-15:0a1c89b433dc",
+   "game": "Star Fox",
+   "model_bits": 19252.800542710112,
+   "baseline_bits": 23559.39151919151,
+   "n_tokens": 6020
+  },
+  {
+   "track_id": "sf-16:86c51b16076b",
+   "game": "Star Fox",
+   "model_bits": 25062.08269621103,
+   "baseline_bits": 32777.224742986386,
+   "n_tokens": 11362
+  },
+  {
+   "track_id": "sf-17:b9d20affa97c",
+   "game": "Star Fox",
+   "model_bits": 40231.898588504184,
+   "baseline_bits": 48974.780154631764,
+   "n_tokens": 13904
+  },
+  {
+   "track_id": "sf-18:19ee70ea9d4f",
+   "game": "Star Fox",
+   "model_bits": 25167.16998457417,
+   "baseline_bits": 34497.24420650378,
+   "n_tokens": 8505
+  },
+  {
+   "track_id": "sf-19:bda8df76483d",
+   "game": "Star Fox",
+   "model_bits": 13888.739040733388,
+   "baseline_bits": 18335.38443179609,
+   "n_tokens": 5300
+  },
+  {
+   "track_id": "sf-20a:b7445520833f",
+   "game": "Star Fox",
+   "model_bits": 16927.51823092759,
+   "baseline_bits": 21146.036270320485,
+   "n_tokens": 6727
+  },
+  {
+   "track_id": "sf-20b:631d385d8d98",
+   "game": "Star Fox",
+   "model_bits": 15676.918113982598,
+   "baseline_bits": 19921.0376543597,
+   "n_tokens": 6343
+  },
+  {
+   "track_id": "sf-21:4492b7e99e55",
+   "game": "Star Fox",
+   "model_bits": 15153.308617725641,
+   "baseline_bits": 20700.28870085785,
+   "n_tokens": 5772
+  },
+  {
+   "track_id": "sf-22:0de774973327",
+   "game": "Star Fox",
+   "model_bits": 5659.220141648284,
+   "baseline_bits": 8040.986184290226,
+   "n_tokens": 1992
+  },
+  {
+   "track_id": "sf-23:595787ac266f",
+   "game": "Star Fox",
+   "model_bits": 27634.280912595652,
+   "baseline_bits": 36609.615329743756,
+   "n_tokens": 10783
+  },
+  {
+   "track_id": "sf-24:095a586b3bab",
+   "game": "Star Fox",
+   "model_bits": 11335.151999832531,
+   "baseline_bits": 16793.83714240256,
+   "n_tokens": 4585
+  },
+  {
+   "track_id": "sf-25:f9b26451b3c9",
+   "game": "Star Fox",
+   "model_bits": 2305.4062465533634,
+   "baseline_bits": 3570.992500848263,
+   "n_tokens": 969
+  },
+  {
+   "track_id": "sf-26a:506a0d03f7d9",
+   "game": "Star Fox",
+   "model_bits": 12764.534780041768,
+   "baseline_bits": 16455.29902854508,
+   "n_tokens": 4977
+  },
+  {
+   "track_id": "sf-26b:bd0775b33b79",
+   "game": "Star Fox",
+   "model_bits": 11825.169305385369,
+   "baseline_bits": 15696.024529329721,
+   "n_tokens": 5033
+  },
+  {
+   "track_id": "sf-26c:79cf79893748",
+   "game": "Star Fox",
+   "model_bits": 15774.659162038271,
+   "baseline_bits": 20081.86904787197,
+   "n_tokens": 5980
+  },
+  {
+   "track_id": "sf-26d:bbecec1780f7",
+   "game": "Star Fox",
+   "model_bits": 10445.999691617893,
+   "baseline_bits": 14420.04700703942,
+   "n_tokens": 4589
+  },
+  {
+   "track_id": "sf-27:387582fe0484",
+   "game": "Star Fox",
+   "model_bits": 12476.034956391148,
+   "baseline_bits": 16152.953814428301,
+   "n_tokens": 5520
+  },
+  {
+   "track_id": "sf-30b:d2e7fc0248b3",
+   "game": "Star Fox",
+   "model_bits": 1133.6413037166549,
+   "baseline_bits": 1851.6256076812904,
+   "n_tokens": 553
+  },
+  {
+   "track_id": "sf-31:d7c82c965c7a",
+   "game": "Star Fox",
+   "model_bits": 7446.255070731611,
+   "baseline_bits": 9742.108706693762,
+   "n_tokens": 2855
+  },
+  {
+   "track_id": "sf-32:92c87e0d8ba0",
+   "game": "Star Fox",
+   "model_bits": 9190.44519752885,
+   "baseline_bits": 11513.360698905853,
+   "n_tokens": 2847
+  },
+  {
+   "track_id": "sf-33:ba567093cc0e",
+   "game": "Star Fox",
+   "model_bits": 791.2583524478721,
+   "baseline_bits": 939.6827513848432,
+   "n_tokens": 317
+  },
+  {
+   "track_id": "sf-34:35d33b9af528",
+   "game": "Star Fox",
+   "model_bits": 17853.842302444897,
+   "baseline_bits": 24253.071683475377,
+   "n_tokens": 5996
+  },
+  {
+   "track_id": "sf-35:b671dc824b31",
+   "game": "Star Fox",
+   "model_bits": 54091.81261049825,
+   "baseline_bits": 67135.99892008667,
+   "n_tokens": 17365
+  },
+  {
+   "track_id": "sf-36:ec5df3eabee7",
+   "game": "Star Fox",
+   "model_bits": 38921.89961542456,
+   "baseline_bits": 49602.99047344662,
+   "n_tokens": 12821
+  },
+  {
+   "track_id": "sf-37:ccb023e8e320",
+   "game": "Star Fox",
+   "model_bits": 16417.379362478718,
+   "baseline_bits": 23813.748465190474,
+   "n_tokens": 7246
+  },
+  {
+   "track_id": "sf-38:51d031f69ede",
+   "game": "Star Fox",
+   "model_bits": 28487.96664485301,
+   "baseline_bits": 39120.051214999956,
+   "n_tokens": 10004
+  },
+  {
+   "track_id": "sf-39:fd48ba01fa7d",
+   "game": "Star Fox",
+   "model_bits": 2398.440880675143,
+   "baseline_bits": 4036.755156370326,
+   "n_tokens": 953
+  },
+  {
+   "track_id": "sf-40:4a3f1898b257",
+   "game": "Star Fox",
+   "model_bits": 3397.611849997592,
+   "baseline_bits": 4696.279321423193,
+   "n_tokens": 1188
+  },
+  {
+   "track_id": "sf-41:caa17449acc7",
+   "game": "Star Fox",
+   "model_bits": 22337.30004108527,
+   "baseline_bits": 28679.321608115224,
+   "n_tokens": 8313
+  },
+  {
+   "track_id": "sf-s01:7ed9a01a47cd",
+   "game": "Star Fox",
+   "model_bits": 3556.088210729832,
+   "baseline_bits": 4430.21721467933,
+   "n_tokens": 1232
+  },
+  {
+   "track_id": "sf-s02:cb49e1d00f9a",
+   "game": "Star Fox",
+   "model_bits": 7187.430878252871,
+   "baseline_bits": 10663.985270021787,
+   "n_tokens": 2339
+  },
+  {
+   "track_id": "sf-s03:46a6e0737ceb",
+   "game": "Star Fox",
+   "model_bits": 26131.144310901247,
+   "baseline_bits": 36465.98831259091,
+   "n_tokens": 9149
+  },
+  {
+   "track_id": "sf-s04:f88378e9485f",
+   "game": "Star Fox",
+   "model_bits": 846.8684170253802,
+   "baseline_bits": 1134.565162772897,
+   "n_tokens": 389
+  },
+  {
+   "track_id": "sf-v02:49d463d54292",
+   "game": "Star Fox",
+   "model_bits": 3328.0952847816516,
+   "baseline_bits": 4201.22543917353,
+   "n_tokens": 929
+  },
+  {
+   "track_id": "shr-01a:16500c5cd265",
+   "game": "Shadowrun",
+   "model_bits": 4300.500536364151,
+   "baseline_bits": 5264.734944127137,
+   "n_tokens": 1248
+  },
+  {
+   "track_id": "shr-01b:00db08799855",
+   "game": "Shadowrun",
+   "model_bits": 6594.067420183892,
+   "baseline_bits": 9662.867117716425,
+   "n_tokens": 2371
+  },
+  {
+   "track_id": "shr-02:312c09e838d9",
+   "game": "Shadowrun",
+   "model_bits": 1012.9161529860943,
+   "baseline_bits": 1560.0793958107706,
+   "n_tokens": 381
+  },
+  {
+   "track_id": "shr-03:942baec68a76",
+   "game": "Shadowrun",
+   "model_bits": 30845.020563763115,
+   "baseline_bits": 44178.874765643646,
+   "n_tokens": 10939
+  },
+  {
+   "track_id": "shr-04:75f3377ebd60",
+   "game": "Shadowrun",
+   "model_bits": 58131.61338038641,
+   "baseline_bits": 76763.65906877314,
+   "n_tokens": 18388
+  },
+  {
+   "track_id": "shr-05:eefaed3d5b2e",
+   "game": "Shadowrun",
+   "model_bits": 2885.8324706869494,
+   "baseline_bits": 4423.8403226687005,
+   "n_tokens": 817
+  },
+  {
+   "track_id": "shr-06:8bd75bf89e53",
+   "game": "Shadowrun",
+   "model_bits": 15488.992687895141,
+   "baseline_bits": 17670.67954135,
+   "n_tokens": 3950
+  },
+  {
+   "track_id": "shr-07:f1bb0031dab7",
+   "game": "Shadowrun",
+   "model_bits": 21145.02285681111,
+   "baseline_bits": 27467.05686197636,
+   "n_tokens": 7274
+  },
+  {
+   "track_id": "shr-08:4f632fb3f0b0",
+   "game": "Shadowrun",
+   "model_bits": 64390.681887268045,
+   "baseline_bits": 90976.6667149491,
+   "n_tokens": 20885
+  },
+  {
+   "track_id": "shr-09:e3a39f553ee6",
+   "game": "Shadowrun",
+   "model_bits": 1020.5758915247204,
+   "baseline_bits": 1305.707390351668,
+   "n_tokens": 297
+  },
+  {
+   "track_id": "shr-10:7904cfa8528a",
+   "game": "Shadowrun",
+   "model_bits": 46714.579895637056,
+   "baseline_bits": 57763.00339177715,
+   "n_tokens": 14847
+  },
+  {
+   "track_id": "shr-11:6c7b8da4de02",
+   "game": "Shadowrun",
+   "model_bits": 18351.529648985077,
+   "baseline_bits": 24904.707547901446,
+   "n_tokens": 6044
+  },
+  {
+   "track_id": "shr-12:138d16a92071",
+   "game": "Shadowrun",
+   "model_bits": 54083.09656277318,
+   "baseline_bits": 62855.54891004658,
+   "n_tokens": 16921
+  },
+  {
+   "track_id": "shr-13:1654dfebd20f",
+   "game": "Shadowrun",
+   "model_bits": 100696.03584545995,
+   "baseline_bits": 125476.71308306341,
+   "n_tokens": 32634
+  },
+  {
+   "track_id": "shr-14:28be9f3e4ad6",
+   "game": "Shadowrun",
+   "model_bits": 1777.0392643945117,
+   "baseline_bits": 2294.0328489119333,
+   "n_tokens": 509
+  },
+  {
+   "track_id": "shr-15:aa3afa4edba1",
+   "game": "Shadowrun",
+   "model_bits": 79554.51714203949,
+   "baseline_bits": 95546.40136427678,
+   "n_tokens": 20346
+  },
+  {
+   "track_id": "tet2-01:c05b213c27d0",
+   "game": "Tetris 2",
+   "model_bits": 23249.56331738496,
+   "baseline_bits": 29804.849543463606,
+   "n_tokens": 7678
+  },
+  {
+   "track_id": "tet2-02:0e7935807a11",
+   "game": "Tetris 2",
+   "model_bits": 19448.949436196777,
+   "baseline_bits": 24410.12441472155,
+   "n_tokens": 7358
+  },
+  {
+   "track_id": "tet2-03:156d13ef0e4d",
+   "game": "Tetris 2",
+   "model_bits": 16634.79862994851,
+   "baseline_bits": 22146.310152370774,
+   "n_tokens": 5760
+  },
+  {
+   "track_id": "tet2-04:f5dd6c69e9d3",
+   "game": "Tetris 2",
+   "model_bits": 15422.96385379047,
+   "baseline_bits": 20049.603024830874,
+   "n_tokens": 6619
+  },
+  {
+   "track_id": "tet2-05:ac458b49e0fa",
+   "game": "Tetris 2",
+   "model_bits": 23364.129188774692,
+   "baseline_bits": 31543.606392266305,
+   "n_tokens": 7246
+  },
+  {
+   "track_id": "tet2-09:86eb4a3877c1",
+   "game": "Tetris 2",
+   "model_bits": 5909.7691783739965,
+   "baseline_bits": 8129.523820253073,
+   "n_tokens": 2583
+  },
+  {
+   "track_id": "tet2-10:ae40a987969a",
+   "game": "Tetris 2",
+   "model_bits": 6496.922813464853,
+   "baseline_bits": 8357.74708412239,
+   "n_tokens": 2335
+  },
+  {
+   "track_id": "tet2-11:1fb88a7de404",
+   "game": "Tetris 2",
+   "model_bits": 10517.75008307558,
+   "baseline_bits": 13069.464495134336,
+   "n_tokens": 3446
+  },
+  {
+   "track_id": "tet2-12:23c978a128c8",
+   "game": "Tetris 2",
+   "model_bits": 16837.534794673353,
+   "baseline_bits": 23272.556530164864,
+   "n_tokens": 7079
+  },
+  {
+   "track_id": "tet2-13:d49cd79fee4d",
+   "game": "Tetris 2",
+   "model_bits": 20630.342193470024,
+   "baseline_bits": 28906.083405952984,
+   "n_tokens": 7926
+  },
+  {
+   "track_id": "tet2-15:d46075ce28ba",
+   "game": "Tetris 2",
+   "model_bits": 23623.49175024025,
+   "baseline_bits": 32765.48974285996,
+   "n_tokens": 8669
+  },
+  {
+   "track_id": "tet2-16:0cb9bfdaa2a2",
+   "game": "Tetris 2",
+   "model_bits": 42270.54958421017,
+   "baseline_bits": 53459.378024102174,
+   "n_tokens": 13384
+  },
+  {
+   "track_id": "tet2-17:754fec0c2105",
+   "game": "Tetris 2",
+   "model_bits": 20113.49405341804,
+   "baseline_bits": 26271.346847613422,
+   "n_tokens": 7974
+  },
+  {
+   "track_id": "tet2-18:b9f9ed85b80d",
+   "game": "Tetris 2",
+   "model_bits": 24989.480481562925,
+   "baseline_bits": 31954.35824486607,
+   "n_tokens": 8349
+  },
+  {
+   "track_id": "tet2-21:ab8a818e4743",
+   "game": "Tetris 2",
+   "model_bits": 16114.375804356974,
+   "baseline_bits": 20975.74838721013,
+   "n_tokens": 6379
+  },
+  {
+   "track_id": "to-01:d736111f20e0",
+   "game": "Tactics Ogre",
+   "model_bits": 16290.289499818806,
+   "baseline_bits": 21118.12787316864,
+   "n_tokens": 6016
+  },
+  {
+   "track_id": "to-02:08aedd3bcc9a",
+   "game": "Tactics Ogre",
+   "model_bits": 32151.81984502685,
+   "baseline_bits": 44402.791809907896,
+   "n_tokens": 13364
+  },
+  {
+   "track_id": "to-03:dc4f9de230bf",
+   "game": "Tactics Ogre",
+   "model_bits": 44994.42406087048,
+   "baseline_bits": 51858.26746379202,
+   "n_tokens": 13968
+  },
+  {
+   "track_id": "to-04:348a9b2fc143",
+   "game": "Tactics Ogre",
+   "model_bits": 12733.6054201106,
+   "baseline_bits": 15192.871109311287,
+   "n_tokens": 4066
+  },
+  {
+   "track_id": "to-05:d3bb2d29ad31",
+   "game": "Tactics Ogre",
+   "model_bits": 14988.196115165152,
+   "baseline_bits": 16969.669025107236,
+   "n_tokens": 4893
+  },
+  {
+   "track_id": "to-06:f94ed1ab0bd8",
+   "game": "Tactics Ogre",
+   "model_bits": 6877.259985808116,
+   "baseline_bits": 9860.021481824337,
+   "n_tokens": 2651
+  },
+  {
+   "track_id": "to-07:e01aff40440a",
+   "game": "Tactics Ogre",
+   "model_bits": 13614.573973783907,
+   "baseline_bits": 19582.10731203194,
+   "n_tokens": 5472
+  },
+  {
+   "track_id": "to-08:df06526164e2",
+   "game": "Tactics Ogre",
+   "model_bits": 35906.62594628199,
+   "baseline_bits": 43068.58970437017,
+   "n_tokens": 12837
+  },
+  {
+   "track_id": "to-09:2abd3d864272",
+   "game": "Tactics Ogre",
+   "model_bits": 1163.0254724504641,
+   "baseline_bits": 1288.4528787219022,
+   "n_tokens": 413
+  },
+  {
+   "track_id": "to-10:04b3d60ac7c1",
+   "game": "Tactics Ogre",
+   "model_bits": 8114.2216418915605,
+   "baseline_bits": 10335.058060227171,
+   "n_tokens": 2263
+  },
+  {
+   "track_id": "to-11:3615e96a7372",
+   "game": "Tactics Ogre",
+   "model_bits": 19024.153455295946,
+   "baseline_bits": 27308.85754229058,
+   "n_tokens": 7450
+  },
+  {
+   "track_id": "to-12:65e68c367aad",
+   "game": "Tactics Ogre",
+   "model_bits": 6714.368937745401,
+   "baseline_bits": 8265.253561521873,
+   "n_tokens": 2279
+  },
+  {
+   "track_id": "to-13:d702420f0756",
+   "game": "Tactics Ogre",
+   "model_bits": 30813.488378499304,
+   "baseline_bits": 39806.853906841054,
+   "n_tokens": 11842
+  },
+  {
+   "track_id": "to-14:7f2e7b1e3db1",
+   "game": "Tactics Ogre",
+   "model_bits": 5296.095455292736,
+   "baseline_bits": 6270.539366314181,
+   "n_tokens": 1680
+  },
+  {
+   "track_id": "to-15:6a2eb3c137b6",
+   "game": "Tactics Ogre",
+   "model_bits": 17439.716972734095,
+   "baseline_bits": 20393.600595327,
+   "n_tokens": 6040
+  },
+  {
+   "track_id": "to-16:9aebffebe400",
+   "game": "Tactics Ogre",
+   "model_bits": 7190.427525975284,
+   "baseline_bits": 10335.16416534507,
+   "n_tokens": 3266
+  },
+  {
+   "track_id": "to-17:a40fa1b92367",
+   "game": "Tactics Ogre",
+   "model_bits": 18240.27095168871,
+   "baseline_bits": 23200.91426440434,
+   "n_tokens": 7642
+  },
+  {
+   "track_id": "to-18:16b27ad2ac4e",
+   "game": "Tactics Ogre",
+   "model_bits": 7305.313697853984,
+   "baseline_bits": 9374.748978977774,
+   "n_tokens": 2979
+  },
+  {
+   "track_id": "to-19:aff8c16bfd05",
+   "game": "Tactics Ogre",
+   "model_bits": 11113.705267410336,
+   "baseline_bits": 13389.575569446446,
+   "n_tokens": 4269
+  },
+  {
+   "track_id": "to-20:60dbf461526e",
+   "game": "Tactics Ogre",
+   "model_bits": 3582.5439304295323,
+   "baseline_bits": 4574.646280511695,
+   "n_tokens": 1472
+  },
+  {
+   "track_id": "to-21:c9ebb180206e",
+   "game": "Tactics Ogre",
+   "model_bits": 46550.395494012286,
+   "baseline_bits": 62566.71193048239,
+   "n_tokens": 19143
+  },
+  {
+   "track_id": "to-23:7623b56bc098",
+   "game": "Tactics Ogre",
+   "model_bits": 1344.8769005781428,
+   "baseline_bits": 1540.0632604688485,
+   "n_tokens": 421
+  },
+  {
+   "track_id": "to-24:1dcec1444854",
+   "game": "Tactics Ogre",
+   "model_bits": 5110.343361581483,
+   "baseline_bits": 5852.417113024709,
+   "n_tokens": 1684
+  },
+  {
+   "track_id": "to-25:6e4c354cdd3f",
+   "game": "Tactics Ogre",
+   "model_bits": 4034.5390363573797,
+   "baseline_bits": 6357.58270157099,
+   "n_tokens": 1336
+  },
+  {
+   "track_id": "to-26:72de9f09bf40",
+   "game": "Tactics Ogre",
+   "model_bits": 28226.37743363776,
+   "baseline_bits": 31858.1667246395,
+   "n_tokens": 9344
+  },
+  {
+   "track_id": "to-27:e4561643c62e",
+   "game": "Tactics Ogre",
+   "model_bits": 9170.728247896546,
+   "baseline_bits": 11703.521779667917,
+   "n_tokens": 3698
+  },
+  {
+   "track_id": "to-28:2d35ea0cb782",
+   "game": "Tactics Ogre",
+   "model_bits": 39032.891857936156,
+   "baseline_bits": 47429.0134706845,
+   "n_tokens": 15223
+  },
+  {
+   "track_id": "to-29:763e81701a73",
+   "game": "Tactics Ogre",
+   "model_bits": 10762.255544884521,
+   "baseline_bits": 13178.283976007519,
+   "n_tokens": 3474
+  },
+  {
+   "track_id": "to-30:5ef57a5a105a",
+   "game": "Tactics Ogre",
+   "model_bits": 24587.188174617302,
+   "baseline_bits": 28872.236481934866,
+   "n_tokens": 8729
+  },
+  {
+   "track_id": "to-31:08aecdfdf4a5",
+   "game": "Tactics Ogre",
+   "model_bits": 3507.4931451225057,
+   "baseline_bits": 4423.868803494794,
+   "n_tokens": 1348
+  },
+  {
+   "track_id": "to-32:c508a5ad4889",
+   "game": "Tactics Ogre",
+   "model_bits": 4595.295420346384,
+   "baseline_bits": 5472.719308626567,
+   "n_tokens": 1908
+  },
+  {
+   "track_id": "to-33:7154dda89e8a",
+   "game": "Tactics Ogre",
+   "model_bits": 46924.622345659904,
+   "baseline_bits": 61125.5947469263,
+   "n_tokens": 21269
+  },
+  {
+   "track_id": "to-34:cb84a1789cf8",
+   "game": "Tactics Ogre",
+   "model_bits": 8635.173854847952,
+   "baseline_bits": 10411.642336520801,
+   "n_tokens": 3043
+  },
+  {
+   "track_id": "to-35:180a623e782b",
+   "game": "Tactics Ogre",
+   "model_bits": 48932.16349045818,
+   "baseline_bits": 59372.38175477393,
+   "n_tokens": 17377
+  },
+  {
+   "track_id": "to-36:52220916e701",
+   "game": "Tactics Ogre",
+   "model_bits": 3269.736359581649,
+   "baseline_bits": 4003.364989014661,
+   "n_tokens": 1252
+  },
+  {
+   "track_id": "to-37:92a18fe083a6",
+   "game": "Tactics Ogre",
+   "model_bits": 30271.426712286553,
+   "baseline_bits": 34826.89691844849,
+   "n_tokens": 9356
+  },
+  {
+   "track_id": "to-38:05a3f590b750",
+   "game": "Tactics Ogre",
+   "model_bits": 2761.661921342733,
+   "baseline_bits": 3936.879780981529,
+   "n_tokens": 1108
+  },
+  {
+   "track_id": "to-39:d2f49be8b459",
+   "game": "Tactics Ogre",
+   "model_bits": 5674.186033402252,
+   "baseline_bits": 7547.955149572808,
+   "n_tokens": 2307
+  },
+  {
+   "track_id": "to-40:412587c7ff0d",
+   "game": "Tactics Ogre",
+   "model_bits": 8665.546706438152,
+   "baseline_bits": 11603.004798114775,
+   "n_tokens": 3930
+  },
+  {
+   "track_id": "to-41:97306e0c41c2",
+   "game": "Tactics Ogre",
+   "model_bits": 72031.41777937286,
+   "baseline_bits": 93734.52558409469,
+   "n_tokens": 27287
+  },
+  {
+   "track_id": "to-42:fc1bd47cdad0",
+   "game": "Tactics Ogre",
+   "model_bits": 7332.79944228762,
+   "baseline_bits": 7877.976452132033,
+   "n_tokens": 2255
+  },
+  {
+   "track_id": "to-43:3fe10500d904",
+   "game": "Tactics Ogre",
+   "model_bits": 7743.945030858519,
+   "baseline_bits": 9818.32919699566,
+   "n_tokens": 2583
+  },
+  {
+   "track_id": "to-44:28c1c9bb3d2e",
+   "game": "Tactics Ogre",
+   "model_bits": 9451.180097996621,
+   "baseline_bits": 9979.872717591828,
+   "n_tokens": 2951
+  },
+  {
+   "track_id": "to-45:043e0065e209",
+   "game": "Tactics Ogre",
+   "model_bits": 26691.82170945008,
+   "baseline_bits": 32806.35738472162,
+   "n_tokens": 11602
+  }
+ ],
  "verdict": {
   "model_test_bits": 2.705743091014067,
   "baseline_test_bits": 3.544162683105425,

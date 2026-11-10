@@ -13,7 +13,8 @@ tokenizer, baseline configuration and evaluation code were frozen. Protocol:
 | locked model | **2.7057** bits/token |
 | registered threshold (0.95 x baseline) | 3.3670 |
 | **relative improvement** | **23.66%** |
-| bootstrap 95% CI | **[22.63%, 24.68%]** |
+| bootstrap 95% CI, over tracks | **[22.63%, 24.68%]** |
+| bootstrap 95% CI, over games | **[21.93%, 25.92%]** |
 | games improved | **8 / 8** |
 | test population | 176 music tracks, 8 games, 1,313 windows |
 
@@ -58,6 +59,57 @@ This answers the question the diagnostic was registered to ask. The concern was
 that a model might merely exploit the highly predictable voice and duration
 fields; it does not. It improves on all four, by the largest margin on timing
 and by a substantial margin on the hardest field.
+
+## Uncertainty: two units, and what neither supports
+
+The registered statistic resamples **tracks**. That answers "how uncertain is
+this improvement over these 176 tracks" and it is the criterion the protocol
+binds to.
+
+It does **not** answer "how uncertain is it over unseen games". Tracks within a
+game share a composer, a driver, an instrument bank and an idiom, so 176 tracks
+are nowhere near 176 independent observations of game-level performance. A
+**game-clustered bootstrap**, resampling whole games, is therefore reported
+alongside:
+
+| unit | n | 95% CI | width |
+|---|---|---|---|
+| tracks (registered) | 176 | [22.63%, 24.68%] | 2.05 pts |
+| games (clustered) | 8 | **[21.93%, 25.92%]** | 3.99 pts |
+
+Clustering roughly doubles the width and the lower bound still sits 4.4x above
+the 5% threshold, because between-game variance is low — every one of the eight
+improved by 20-28%.
+
+**Neither interval supports a claim about the wider SNES library.** With only 8
+clusters a clustered bootstrap is itself anti-conservative, so even the wider
+figure understates game-level uncertainty. The binding limit is not the
+statistic; it is that eight games are eight games, drawn from a split separated
+by game family and recorded composer-credit connections rather than by proven
+authorship independence, in a corpus where 406 of 2,228 tracks carry an
+incomplete or missing credit.
+
+## Reconciling the two baseline figures
+
+Three numbers appear for the same frozen comparator. They differ by scoring
+convention, not by configuration, and the model is scored identically in each
+case:
+
+| figure | split | scoring convention |
+|---|---|---|
+| **3.3839** | validation | whole-track sequences; history spans the track |
+| **3.3898** | validation | windowed; history confined to each 1024-token window |
+| **3.5442** | **test** | windowed; history confined to each window |
+
+The 3.3839 to 3.3898 step is the **0.17% window-boundary handicap**: confining
+history to a window truncates the comparator's order-10 context in roughly the
+first 40 tokens of each window. The windowed convention is used for the
+judgment because it is what the model sees, and scoring the comparator on whole
+tracks would have given it 1,137 extra targets on the test split.
+
+So the registered comparison is **2.7057 against 3.5442, both windowed, both on
+test**. The 3.3839 figure belongs to baseline selection and should not be
+compared to a test number.
 
 ## Two properties of the measurement, stated rather than buried
 
