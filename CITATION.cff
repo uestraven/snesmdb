@@ -1,0 +1,70 @@
+# Citation metadata for SNES-MDB.
+#
+# DRAFT — two fields need a human decision and are deliberately left as
+# placeholders rather than invented:
+#
+#   authors  below lists the git-recorded author only. Real authorship,
+#            affiliation and ORCID are not derivable from a repository and
+#            must be supplied.
+#   doi      absent. A DOI requires a hosting decision, which is gated on
+#            the rights review for the musical corpus.
+#
+# `version` and `date-released` describe the CODE and the release label, not
+# a published dataset. Nothing here asserts that the corpus may be
+# redistributed; see LICENSE and docs/DATASET.md.
+
+cff-version: 1.2.0
+message: >-
+  If you use SNES-MDB, please cite both this project and NES-MDB, whose
+  design, format family and composer-disjoint split convention it follows.
+title: "SNES-MDB: a symbolic music database for the Super Nintendo Entertainment System"
+abstract: >-
+  A symbolic music corpus extracted from SNES/Super Famicom SPC files,
+  intended for musical analysis and machine learning without requiring
+  knowledge of SPC700 or S-DSP internals. Sample identity is resolved from
+  the directory entry the S-DSP reads at key-on, so an identity is a
+  property of the attack rather than of a hardware index. Uncertainty is
+  published explicitly: an unestablished identity is null with a reason, and
+  an unrecovered pitch is marked rather than estimated.
+type: software
+license: MIT
+license-url: "https://spdx.org/licenses/MIT.html"
+
+authors:
+  - name: "SNES-MDB contributors"
+    # TODO: replace with named authors, affiliations and ORCIDs.
+
+version: "snesmdb-50game-rc1"
+date-released: "2026-11-10"
+
+keywords:
+  - symbolic music
+  - music information retrieval
+  - Super Nintendo
+  - SPC700
+  - S-DSP
+  - music generation
+  - video game music
+
+references:
+  - type: conference-paper
+    title: >-
+      The NES Music Database: A multi-instrumental dataset with expressive
+      performance attributes
+    authors:
+      - family-names: Donahue
+        given-names: Chris
+      - family-names: Mao
+        given-names: "Huanru Henry"
+      - family-names: McAuley
+        given-names: Julian
+    collection-title: "Proceedings of the 19th International Society for Music Information Retrieval Conference (ISMIR)"
+    year: 2018
+  - type: software
+    title: snes_spc
+    authors:
+      - name: "Shay Green (blargg)"
+    license: LGPL-2.1
+    notes: >-
+      The SPC700/S-DSP emulator extraction depends on. Vendored, with three
+      marked instrumentation hooks added for the research build.

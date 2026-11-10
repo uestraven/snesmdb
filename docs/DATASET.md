@@ -602,7 +602,9 @@ without naming one of them is unattributable.
 | 5-game expansion | 5 | 161 | 177,592 | 99.91% | 83.56% |
 | 27-game combined | 27 | 1,477 | 2,041,091 | 99.24% | 78.71% |
 | 13-game expansion | 13 | 362 | 596,517 | 100.00% | 82.55% |
-| **40-game combined** | **40** | **1,839** | **2,637,608** | 99.42% | **79.58%** |
+| 40-game combined | 40 | 1,839 | 2,637,608 | 99.42% | 79.58% |
+| 10-game expansion | 10 | 389 | 567,853 | 100.00% | 76.92% |
+| **50-game combined** | **50** | **2,228** | **3,205,461** | 99.52% | **79.11%** |
 
 Every row is measured from that population's own published artifacts. The
 combined row is **not** derived from the two above it.

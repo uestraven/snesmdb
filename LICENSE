@@ -1,0 +1,46 @@
+MIT License
+
+Copyright (c) 2026 SNES-MDB contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+SCOPE OF THIS LICENSE — READ BEFORE REDISTRIBUTING ANYTHING
+
+This MIT license covers THE SOFTWARE IN THIS REPOSITORY ONLY: the extraction
+and analysis code, the tools, the tests and the documentation.
+
+It does NOT cover, and must not be read as granting any right to:
+
+  * THE MUSICAL CORPUS. The published event tables, scores, MIDI files and
+    intake trees are derived from SPC files, which are rips of copyrighted
+    commercial game music. No license is granted for them here, and none is
+    implied by this file's presence. Their distribution terms are UNRESOLVED
+    pending a rights review; see `docs/DATASET.md`.
+  * SPC FILES. Never present in this repository or in any published tree.
+    The principal archive offers them "for educational and personal
+    non-profit use only... as fair use samples for preservation purposes
+    only."
+  * `vendor/snes_spc`. Shay Green's (blargg's) snes_spc emulator, licensed
+    **LGPL-2.1**, with three marked instrumentation hooks added for the
+    research build. Its own license governs it, not this one.
+
+A frozen release directory that contains this file licenses the CODE inside
+it. It does not license the data beside it.
