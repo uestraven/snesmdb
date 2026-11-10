@@ -516,9 +516,14 @@ def main() -> None:
     print(f"\n{checked - failures}/{checked} applicable claims reproduced, "
           f"{failures} failed, {not_applicable} not applicable to this "
           f"release, {skipped} not mechanically checkable")
+    # The game count is READ from the release being checked, not written
+    # out. A hardcoded 22 here printed "beyond these 22 games" while
+    # checking a 50-game corpus.
+    n_games = len(
+        (json.loads((dist / "index.json").read_text()).get("games") or {}))
     print("NOTE: reproducing a measurement does not establish that it "
           "measures the\n      musical concept it is named for, nor that any "
-          "conclusion generalises\n      beyond these 22 games.")
+          f"conclusion generalises\n      beyond these {n_games} games.")
 
     if args.report:
         args.report.write_text(json.dumps({

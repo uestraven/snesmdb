@@ -20,6 +20,81 @@ version.
 
 ---
 
+## Release history
+
+Newest first. Every figure is measured from that release's own artifacts, and
+**no release's statistics are derived from another's** — see
+`DATASET.md` → *Seven statistical populations*.
+
+| release | frozen | games | tracks | attacks | events | what it is |
+|---|---|---|---|---|---|---|
+| **`snesmdb-50game-rc1`** | 2026-11-10 | **50** | **2,228** | **3,205,461** | **3,499,685** | **the current corpus** |
+| `expansion-9-rc1` | 2026-11-10 | 10 | 389 | 567,853 | 643,425 | cohort, native `events.v4` |
+| `snesmdb-40game-rc1` | 2026-11-10 | 40 | 1,839 | 2,637,608 | 2,856,260 | combined, superseded |
+| `expansion-8-rc1` | 2026-11-10 | 13 | 362 | 596,517 | 639,706 | cohort, native `events.v4` |
+| `snesmdb-27game-rc1` | 2026-11-09 | 27 | 1,477 | 2,041,091 | 2,216,554 | combined, superseded |
+| `expansion-6b-rc1` | — | 5 | 161 | 177,592 | — | cohort, native `events.v4` |
+| `gate5-rc10` | — | 22 | 1,316 | 1,863,499 | — | cohort, corrections path |
+
+All of them publish `snesmdb.events.v4`. **A superseded release is not a
+withdrawn one**: each is immutable and still correct about its own
+population, so a paper citing `snesmdb-27game-rc1` needs no revision. What
+changed is which release is current.
+
+### `snesmdb-50game-rc1` — the current corpus
+
+50 games, 2,228 tracks. Adds the 10-game `expansion-9-rc1` cohort to the
+40-game corpus. No format change: `events.v4` throughout, every field as
+documented in `SCHEMA.md`.
+
+What a reader of the 27-game or 40-game release needs to know:
+
+- **Splits were recomputed over the whole population**, not concatenated
+  from the cohorts. A split is a property of the population drawn from, so
+  merging two assignments would leave composer-disjointness untested across
+  them. Train / valid / test is **1,785 / 225 / 218** tracks over
+  **33 / 9 / 8** games. **Track-to-split assignments from an earlier release
+  do not carry over.**
+- **Game families are published.** A few games were released regionally
+  under different titles; they are grouped under one `game_slug`, with
+  `release_variant` and `game_tag_verbatim` preserving which rip a track came
+  from. Five tracks are grouped this way. Group by `game_slug`, never by
+  splitting `track_id` — see `SCHEMA.md` → *Game families*.
+- **Identity coverage is 99.52%**, and 15,519 attacks publish
+  `sample_id: null` with a reason. Nearly all of them are in the 22-game
+  cohort, whose identities came from the capture-time directory.
+- **`drivers` still covers 22 of 50 games.** The curated engine labels were
+  never extended to the later cohorts. Absence of a label is not absence of
+  a driver.
+- **The interval-prediction baseline in `toolkit/` remains scoped to its
+  original 27-game population** and was not recomputed here. Its figures
+  describe that corpus.
+
+22 SPCs tagged `Mario Paint (Prototype)` were excluded from the 10-game
+cohort as `unreleased_prototype_out_of_scope`: an unreleased build is
+neither a regional release of the retail game nor a separate game within
+the declared scope. The 37 retail Mario Paint tracks are included.
+
+Known documentation defects in this release's own shipped copies of
+`DATASET.md` are recorded in the repository's `docs/ERRATA.md` rather than
+patched, because the release is immutable.
+
+### `snesmdb-40game-rc1` — superseded
+
+40 games, 1,839 tracks. Added `expansion-8-rc1` (13 games) to the 27-game
+corpus. Same format, same recompute-the-splits rule. Superseded by
+`snesmdb-50game-rc1`.
+
+### `snesmdb-27game-rc1` — superseded
+
+27 games, 1,477 tracks: the 22-game cohort plus `expansion-6b-rc1`. The
+first release to mix two production paths — the cohort's identities were
+corrected after extraction, the expansion's were resolved at key-on — which
+is why its pitch figures should not be read as one method's result.
+Superseded by `snesmdb-40game-rc1`.
+
+---
+
 ## Secret of Evermore accepted — native `events.v4` extraction
 
 The first game published by resolving sample identity **during** extraction

@@ -64,6 +64,81 @@ and no release needs reissuing on its account.
 
 ---
 
+## E-004 — `index.composition.note` describes 22 games in a 50-game index
+
+**Affects:** `snesmdb-50game-rc1`, `snesmdb-40game-rc1`,
+`snesmdb-27game-rc1` — every combined release
+**Severity:** misleading prose beside correct data. No published figure is
+wrong.
+
+`index.json` → `composition` carries a `note` field reading:
+
+> Descriptive of the collected sample, NOT of SNES music. 22 games of
+> roughly 700 commercial titles, JRPG- and first-party-weighted. Weight or
+> qualify any corpus-wide figure accordingly.
+
+The same block reports `n_games: 50`. The caveat's *point* still holds and
+is still worth heeding — 50 of roughly 700 commercial titles is a biased
+sample, JRPG- and first-party-weighted — but the count inside it was never
+updated as the corpus grew, so a reader is told the corpus is 22 games by a
+field sitting next to the one saying 50.
+
+Nothing computed from `composition` is affected: `tracks_per_game` has 50
+entries, `n_credited_composers` is measured over the release's own tracks,
+and the concentration shares are correct.
+
+**Fixed in:** the repository's publisher, and therefore the next release.
+
+---
+
+## E-005 — the 50-game release ships documentation scoped to earlier populations
+
+**Affects:** `snesmdb-50game-rc1`, `expansion-9-rc1`, and the 40-game pair
+**Severity:** high for a reader who has only the release. No published data
+is wrong.
+
+The shipped `DATASET.md` opens with the 22-game cohort's headline
+(`1,316 tracks · 22 games · 1,863,499 notes`), says "zero unhandled DSP
+registers occur across all 22 games", scopes the MIDI ledger and the
+composer-attribution analysis to the 27-game release, labels the 50-game row
+a *candidate*, and heads a seven-row populations table "Three statistical
+populations". The shipped `SCHEMA.md` documents `game_slug` as "one of 22"
+and `index.json` → `games` as covering "all 22", and omits the published
+`release_variant` and `game_tag_verbatim` fields entirely.
+
+A researcher holding `snesmdb-50game-rc1` therefore finds documentation
+describing a corpus less than half its size, with no statement of which
+population each figure belongs to.
+
+The current figures for this release, measured from its own artifacts:
+
+| | |
+|---|---|
+| tracks / games | 2,228 / 50 |
+| events | 3,499,685 = 3,205,461 attacks + 294,224 legato steps |
+| pitched attacks | 2,535,863 (79.11%) |
+| identity | 3,189,942 (99.52%), 2,118 distinct identities |
+| splits (train / valid / test) | 1,785 / 225 / 218 tracks over 33 / 9 / 8 games |
+| MIDI files | 2,115 of 2,228 |
+| truncated composer credits | 406 tracks |
+
+Note in particular that **split assignments differ from every earlier
+release**: splits are recomputed over each population, so a track's split in
+the 27-game release is not its split here.
+
+**Fixed in:** the repository's `README.md`, `docs/DATASET.md`,
+`docs/SCHEMA.md` and `docs/CHANGELOG.md`, and therefore the next release.
+The figures are now produced by `tools/corpus_census.py` and asserted
+against the prose by `tests/test_readme_census.py`.
+
+That mechanism is the real correction. Every figure in the stale
+documentation was true of *a* population and internally consistent with its
+neighbours, which is why three expansion milestones passed without anything
+looking wrong. Internal consistency cannot detect a document describing the
+wrong corpus; only comparison against a measured artifact can.
+
+---
+
 ## E-003 — Killer Instinct: two different correct numbers
 
 **Affects:** no published artifact. Recorded to prevent the two being read

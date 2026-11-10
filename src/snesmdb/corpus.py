@@ -196,10 +196,15 @@ def composition(tracks: list[dict[str, Any]]) -> dict[str, Any]:
     credits = sum(per_composer.values()) or 1
     top_composers = sorted(per_composer.values(), reverse=True)[:3]
     return {
+        # The game count is INTERPOLATED, not written out. A hardcoded 22
+        # survived three expansions here and shipped in every combined
+        # release, telling a reader the corpus was 22 games from a field
+        # beside the one reporting 50.
         "note": (
-            "Descriptive of the collected sample, NOT of SNES music. 22 games "
-            "of roughly 700 commercial titles, JRPG- and first-party-"
-            "weighted. Weight or qualify any corpus-wide figure accordingly."
+            f"Descriptive of the collected sample, NOT of SNES music. "
+            f"{len(per_game)} games of roughly 700 commercial titles, "
+            f"JRPG- and first-party-weighted. Weight or qualify any "
+            f"corpus-wide figure accordingly."
         ),
         "n_music_tracks": len(music),
         "n_games": len(per_game),

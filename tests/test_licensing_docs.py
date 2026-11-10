@@ -86,6 +86,24 @@ def test_license_names_a_holder_and_a_year():
                                   "the authors", "todo"), holder
 
 
+def test_there_is_exactly_one_license_file_at_the_root():
+    """Two MIT files disagreed for five days and no test noticed.
+
+    `LICENSE.txt` predated `LICENSE`, named a different copyright holder
+    ("snesmdb contributors"), carried the appended scope text that now lives
+    in RIGHTS.md, and asserted the vendored emulator was "kept
+    byte-identical to upstream" -- false since the three hooks landed. It was
+    referenced by nothing and shipped in nothing, so it was removable, but
+    the earlier version of this file only checked `LICENSE` and so could not
+    have found it. Two license files is itself the defect: a reader and a
+    license scanner can reach different conclusions about the same code.
+    """
+    found = sorted(p.name for p in ROOT.iterdir()
+                   if p.is_file() and p.name.upper().startswith("LICEN"))
+    assert found == ["LICENSE"], (
+        f"expected exactly one root license file, found {found}")
+
+
 def test_license_carries_no_extra_sections():
     text = read(ROOT / "LICENSE")
     for banned in ("SCOPE OF THIS LICENSE", "subject to the following "
@@ -126,6 +144,27 @@ def test_citation_author_is_a_valid_cff_entity():
     block = text.split("authors:", 1)[1].split("\nversion:", 1)[0]
     assert "family-names:" in block or re.search(r"^\s+-\s+name:", block,
                                                  re.M), block
+
+
+def test_citation_version_is_a_software_version_not_a_corpus_label():
+    """`type: software`, so `version` must describe the software.
+
+    An earlier draft put `snesmdb-50game-rc1` here. A reader would have
+    cited the frozen dataset while the entry described the code, and the two
+    version in different units -- the corpus label advances with each
+    expansion, the toolkit's version does not.
+    """
+    text = read(ROOT / "CITATION.cff")
+    match = re.search(r'^version:\s*"?([^"\n]+)"?', text, re.M)
+    assert match, "CITATION.cff states no version"
+    version = match.group(1).strip()
+    assert not re.match(r"^(snesmdb-|expansion-|gate\d)", version), (
+        f"version {version!r} is a corpus release label, not a software "
+        f"version")
+    assert re.match(r"^\d+\.\d+", version), (
+        f"version {version!r} does not look like a software version")
+    # The corpus release is still named, just not as the software's version.
+    assert "snesmdb-50game-rc1" in text
 
 
 def test_citation_omits_doi_until_assigned():

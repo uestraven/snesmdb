@@ -2,9 +2,17 @@
 
 EVERYTHING ELSE IN THIS PROJECT IS MEASURED. No extraction step identifies a
 driver, nothing game-specific enters the pipeline, and "zero unhandled DSP
-registers across 22 games" is the claim the corpus exists to support. This
-module is the one exception, and it is isolated in its own file and labelled
-in its own output so that the boundary is visible rather than implied.
+registers across every game in the corpus" is the claim the corpus exists to
+support. This module is the one exception, and it is isolated in its own file
+and labelled in its own output so that the boundary is visible rather than
+implied.
+
+COVERAGE IS PARTIAL. The map was written for the original 22-game cohort and
+has not been extended since, so it labels 22 of the 50 published games. A
+game with no entry publishes no driver fields; absence of a label is absence
+of curated knowledge, not absence of a driver. Any analysis conditioned on
+`driver` therefore runs on under half the corpus, and a per-driver aggregate
+is drawn from the oldest cohort.
 
 WHY IT EXISTS ANYWAY. `DATASET.md` conditions substantive advice on the
 driver in four places -- which games are safe for interval-level work, the

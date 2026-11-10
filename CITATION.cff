@@ -4,7 +4,17 @@
 # gated on the unresolved rights review for the musical corpus (see
 # RIGHTS.md). It will be added when one is assigned, not before.
 #
-# `version` and `date-released` describe the CODE and its release label.
+# `version` describes THE SOFTWARE, because `type` is software. An earlier
+# draft put `snesmdb-50game-rc1` here, which is a frozen *corpus* release
+# label -- a reader would have cited the dataset while the entry described
+# the code, and the two version in different units. The corpus release this
+# code produced is named in the abstract instead, where it cannot be
+# mistaken for the software's own version.
+#
+# 0.1.0 is the first release-ready state of the toolkit. The repository
+# carries no tags, so this is the project's declared starting version rather
+# than a reading of its history.
+#
 # Nothing here asserts that the corpus may be redistributed.
 
 cff-version: 1.2.0
@@ -18,7 +28,9 @@ abstract: >-
   the directory entry the S-DSP reads at key-on, so an identity is a
   property of the attack rather than of a hardware index. Uncertainty is
   published explicitly: an unestablished identity is null with a reason, and
-  an unrecovered pitch is marked rather than estimated.
+  an unrecovered pitch is marked rather than estimated. This version of the
+  software produced the corpus release `snesmdb-50game-rc1`: 2,228 tracks
+  from 50 games, 3,499,685 events.
 type: software
 license: MIT
 license-url: "https://spdx.org/licenses/MIT.html"
@@ -28,7 +40,7 @@ authors:
   - family-names: Cohen
     given-names: Paul
 
-version: "snesmdb-50game-rc1"
+version: "0.1.0"
 date-released: "2026-11-10"
 
 keywords:

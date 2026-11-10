@@ -168,6 +168,16 @@ audit:
 	@echo "== exhaustive release audit =="
 	@$(PYTHON) -I tools/verify_corpus.py $(OUT_DIR) $(DIST_DIR) --exhaustive
 
+# DOCUMENTED FIGURES. Recompute every number the public documentation
+# quotes, from one release's own published artifacts. The README fell three
+# expansion milestones behind while every figure in it was still internally
+# consistent, because prose does not get recomputed. This makes it an
+# artifact that tests can check.
+RELEASE ?= $(DIST_DIR)
+CENSUS ?= docs/corpus_census_50game.json
+census:
+	@$(PYTHON) -I tools/corpus_census.py $(RELEASE) $(CENSUS)
+
 # RELEASE FREEZE. Pin the tree so an evaluation names one exact artifact.
 # Refuses a dirty working tree: a pin whose commit does not contain the code
 # that built the corpus cannot be reproduced.

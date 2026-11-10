@@ -50,8 +50,8 @@ gated-voice statistics ship the two numbers that reveal their own confound.
 |---|---|---|
 | `schema` | string | `snesmdb.events.v4` |
 | `track_id` | string | `<slug>-<number>:<hash>`, unique in the corpus |
-| `game` | string | display name, from the SPC's ID666 tag (32-char limit) |
-| `game_slug` | string | one of 22; see `index.json` → `games` |
+| `game` | string | the **canonical game name**. Usually the SPC's ID666 tag, which the format cuts at 32 bytes, so long titles arrive truncated: `loz3` publishes as `Legend of Zelda: A Link to the P`. Where regional releases of one game are grouped, this is the **family's** name and not any single rip's tag — see [Game families](#game-families) |
+| `game_slug` | string | the published game's identifier; see `index.json` → `games`, which lists every one. For a grouped game this is the **family** slug, so it does not always equal the slug embedded in `track_id` |
 | `track_class` | string | `music`, `jingle`, `effect`, `drone` — **musical**, independent of `extraction_status` |
 | `duration_sec` | float | rendered length, from the ID666 "seconds to play" field |
 | `extraction_status` | string | `complete_with_pitched_events`, `complete_unpitched_only`, `complete_no_events`, `incomplete` — **data quality**, independent of `track_class` |
@@ -166,11 +166,38 @@ was a bare top-level array before `v1`.**
 |---|---|
 | `formats` | the schema version of every format in the tree. Check the one you read |
 | `corpus` | `n_tracks`, `n_games`, `n_events`, `n_pitched_events`, `n_pitched_attacks`, `n_attacks`, `track_classes`, `extraction_statuses` |
-| `games` | slug → display name, for all 22 |
+| `games` | slug → canonical name, one entry per published game. **This block is the authoritative game list** — count it rather than assuming a population |
+| `composition` | descriptive statistics of the collected sample: `tracks_per_game`, `tracks_per_composer`, credit and concentration shares. Descriptive of *this corpus*, not of SNES music |
 | `drivers` | **curated external knowledge** — see below |
-| `tracks` | one object per track: every `tracks.csv` column (including `game_slug` and the three `driver*` fields), plus `midi_summary`, `uniform_hz`, `uniform_n_rows`, `checks_passed`, `composer_truncated`, `sha256_source_spc`, and the relative paths `events`, `scores`, `intake`, `midi` |
+| `tracks` | one object per track: every `tracks.csv` column (including `game_slug` and the three `driver*` fields), plus `midi_summary`, `uniform_hz`, `uniform_n_rows`, `checks_passed`, `composer_truncated`, `sha256_source_spc`, `release_variant`, `game_tag_verbatim`, and the relative paths `events`, `scores`, `intake`, `midi` |
 
-`midi` is absent on the 73 tracks with no pitched note.
+`midi` is absent on every track with no pitched note; `index.json` →
+`corpus.extraction_statuses` gives how many that is for the release in hand.
+
+### Game families
+
+Most games are one game with one slug. A few were released regionally under
+different titles, and the rips carry different ID666 tags, so three facts
+have to coexist: the releases are **one game** for corpus purposes, they are
+**different rips** a researcher may want to compare, and their `track_id`s
+are **permanent** and cannot be rewritten to tidy the grouping.
+
+So grouping happens at publication, and two fields preserve what it would
+otherwise erase:
+
+| field | type | meaning |
+|---|---|---|
+| `release_variant` | string or null | which regional release this track was ripped from, e.g. `Panel de Pon (JP)` or `Tetris Attack (US/EU)`. `null` for a game that is its own family, which is most of them |
+| `game_tag_verbatim` | string | the ID666 game tag exactly as the rip carried it, including inconsistent capitalisation. A property of the source, preserved rather than corrected |
+
+Two consequences worth stating, because both have caused errors:
+
+- **`game_slug` can differ from the slug inside `track_id`.** Track
+  `pdp-01a:...` publishes under `game_slug: "ta"`. Group by `game_slug` or
+  `game`, never by splitting `track_id`.
+- **Splits are assigned per family, not per tag.** Grouping by the raw tag
+  would make one game eligible for two splits — the same work on both sides
+  of the partition.
 
 ## `tracks.csv` — `snesmdb.tracks.v1`
 
@@ -325,7 +352,9 @@ a researcher comparing their own figures could not tell a method difference
 from an error. Dropping the 4,674 censored notes instead moves `voices.max` on
 at least one game and lowers `mean` across the board; with this convention an
 evaluator reproduced all 22 per-game maxima exactly and `mean_when_sounding`
-to a median 0.0076 voices.
+to a median 0.0076 voices. (A **historical measurement**, made against the
+22-game cohort. It establishes that the convention is reproducible, which is
+the point here; it is not a figure for the current corpus.)
 
 Register names used below, since this table assumes them: **VOLL/VOLR** are
 the per-voice left and right volumes (signed, −128..127); **EVOLL/EVOLR** are

@@ -11,17 +11,21 @@ That shielding is harder on the SNES than on the NES, and the reasons shape
 every format choice here — see the
 [SNES Synthesizer Primer](#snes-synthesizer-primer).
 
-**1,477 tracks from 27 games.** 2,216,554 events, composer-disjoint splits,
+**2,228 tracks from 50 games.** 3,499,685 events, composer-disjoint splits,
 every track clocked from its own SPC700 timer register. Event schema
-`snesmdb.events.v4`.
+`snesmdb.events.v4`. Current release: **`snesmdb-50game-rc1`**.
 
-The corpus ships as three populations, and a figure belongs to one of them:
-the **22-game frozen cohort** (1,316 tracks), the **5-game expansion** (161
-tracks), and the **27-game combined release** (1,477 tracks). Each
-population's statistics are measured from its own artifacts — see
-[DATASET.md](docs/DATASET.md). Do not add figures across them; ten sample
-identities occur in both cohorts, so even the distinct-sample count is not a
-sum.
+The corpus has grown through four extraction cohorts and three combined
+releases, so **a figure belongs to one population and is not portable
+between them.** Everything below is measured from `snesmdb-50game-rc1`'s own
+artifacts; the full table of seven populations is in
+[DATASET.md](docs/DATASET.md). Earlier releases are immutable and remain
+correct about their own populations — a paper citing the 27-game release
+needs no revision.
+
+Do not add figures across populations. The four cohorts partition the corpus
+by *track* (1,316 + 161 + 362 + 389 = 2,228) and by nothing else: sample
+banks overlap, so even the distinct-identity count is not a sum.
 
 **If you are here to do research, start with `events/*.json.gz`** — the flat
 event table in seconds, described in [DATASET.md](docs/DATASET.md). The score,
@@ -35,7 +39,7 @@ read correctly.
   - [Voice event log](#voice-event-log)
   - [Score formats](#score-formats)
   - [MIDI](#midi)
-  - [Raw format](#raw-format)
+  - [Raw format — not distributed](#raw-format--not-distributed)
 - [Verified research results](#verified-research-results)
 - [Audio rendering](#audio-rendering)
 - [Tools](#tools)
@@ -52,9 +56,9 @@ for it on first run. Everything else is the standard library plus one C++
 build of vendored `snes_spc`.
 
 ```sh
-git clone <repo> && cd snesmdb
+git clone https://github.com/uestraven/snesmdb.git && cd snesmdb
 make                  # builds build/spc_dump
-make test             # 634 tests, no skips
+make test             # 664 tests, no skips
 ```
 
 You only need the C++ tool to process SPC files yourself; the Python
@@ -105,58 +109,100 @@ the object of study.
 
 ### MIDI
 
-`midi/*.mid`, for **1,399 of the 1,477 tracks**. Only attacks carrying a
-usable fixed-pitch estimate can be written, so **434,574 of 2,041,091
-attacks are absent** — see the MIDI section of
-[DATASET.md](DATASET.md) for the full reconciliation, including the 87
-omissions that *do* carry a pitch estimate. MIDI is a lossy projection, not
-the dataset.
+`midi/*.mid`, for **2,115 of the 2,228 tracks**. Only attacks carrying a
+usable fixed-pitch estimate can be written, so **669,685 of 3,205,461
+attacks (20.89%) are absent** — see the MIDI section of
+[DATASET.md](docs/DATASET.md) for the full reconciliation. MIDI is a lossy
+projection, not the dataset.
 
-The 78 tracks without a MIDI file are all `complete_unpitched_only` (59) or
-`complete_no_events` (19); none has a pitched attack, so no exportable
+Every omitted attack is accounted for:
+
+| reason | attacks |
+|---|---|
+| no pitch recovered | 664,538 |
+| track has no MIDI file at all | 5,060 |
+| pitch outside the MIDI range | 87 |
+| **total omitted** | **669,685** |
+
+Only the last 87 carry a fixed-pitch estimate that an exporter could have
+written; the other 669,598 have no single note to write, and writing one
+would fabricate it. **That is not a claim they were unpitched** —
+`unrecoverable` means the pipeline could not determine a pitch, and
+`pitch_modulated` may be musically pitched material that one static note
+cannot represent.
+
+The 113 tracks without a MIDI file are all `complete_unpitched_only` (78) or
+`complete_no_events` (35); none has a pitched attack, so no exportable
 musical content is missing.
 
-### Raw format
+### Raw format — **not distributed**
 
 The timestamped DSP register write stream as JSONL, plus a dump of the 64K
 ARAM carrying the BRR sample directory and the samples. Everything else is
 derived from this.
 
+**No release contains it.** The ARAM dump holds the game's BRR samples —
+copyrighted audio — so shipping it would ship the music itself, and the
+write log is large enough that distributing it is a separate decision
+nobody has made. `records/` and `raw/` exist only inside a build tree.
+
+It is documented because it is the input the rest of the pipeline is defined
+against, and because a reader comparing their own extraction needs to know
+what the stages consume. To obtain it, run the extractor over SPC files you
+supply yourself:
+
+```sh
+./build/spc_dump track.spc writes.jsonl 30 --aram out.bin
+```
+
 ## Verified research results
 
-Figures below are measured from the published release. In a source checkout
-they are re-checked by `make audit`, which opens every published file; from
-a release archive alone, the reproducible check is the interval baseline in
-`toolkit/` (see `REPRODUCE.md`).
+All figures are for **`snesmdb-50game-rc1`**, the current release, and are
+measured from its own published artifacts — not combined from the cohorts it
+contains.
 
-All figures are for the **27-game combined release** and are measured from
-its own artifacts, not combined from the two cohorts it contains.
+They are not transcribed by hand. In a source checkout,
+`make census RELEASE=<dir>` recomputes every one of them from a release
+directory into `docs/corpus_census_50game.json`, and the test suite asserts
+this table matches that artifact. The README fell three expansions behind
+once; it cannot now do so silently. (That artifact is a repository build
+product and is not shipped — a release already carries the same authoritative
+figures in `index.json` and `RELEASE.json`.)
 
 | | |
 |---|---|
-| tracks / games | 1,477 / 27 |
-| splits (train / valid / test) | 1,186 / 145 / 146 tracks over 18 / 4 / 5 games, composer-disjoint |
-| events | 2,216,554 — 2,041,091 attacks + 175,463 legato steps |
-| attacks with a recovered pitch | 1,606,604 (**78.71%**) |
-| attacks with an established sample identity | 2,025,587 (**99.24%**) |
-| attacks published with `sample_id: null` | 15,504 |
-| distinct sample identities | 1,288 |
-| tracks with a clock read from hardware | 1,477 (**100%**) |
+| tracks / games | 2,228 / 50 |
+| splits (train / valid / test) | 1,785 / 225 / 218 tracks over 33 / 9 / 8 games, composer-disjoint |
+| events | 3,499,685 — 3,205,461 attacks + 294,224 legato steps |
+| attacks with a recovered pitch | 2,535,863 (**79.11%**) |
+| attacks with an established sample identity | 3,189,942 (**99.52%**) |
+| attacks published with `sample_id: null` | 15,519 |
+| distinct sample identities | 2,118 |
+| tracks with a clock read from a timer register | 2,228 (**100%**) |
+| tracks with a MIDI file | 2,115 |
+| tracks carrying a truncated composer credit | 406 |
 
-Per-population figures, including the frozen cohort's, are in
+Per-population figures, including every superseded release's, are in
 [DATASET.md](docs/DATASET.md).
 
-**This is a union of two validated populations, not a demonstration that
-their extraction paths agree.** The 22-game cohort's identities were
-corrected after extraction, so its pitch estimates come from the
-capture-time sample directory; the 5-game expansion resolved identity at
-key-on, so its pitch comes from the sample actually used. Because pitch is
-estimated from a sample's audio, the cohort half's pitched share may
-understate what the newer path would recover — on one game the same audio
-yielded 40.63% versus 91.72%. Quantifying that for the cohort is a separate
-versioned study, not part of this release.
+In a source checkout these are re-checked by `make audit`, which opens every
+published file. From a release archive alone, the reproducible check is the
+interval baseline in `toolkit/` (see `REPRODUCE.md`) — **whose figures are
+scoped to the 27-game population it was run on and were not recomputed for
+this release.**
 
-**Absolute pitch is recoverable for 78.71% of attacks.** No SNES field records
+**This corpus unions four cohorts; it is not a demonstration that their
+extraction paths agree.** The 22-game cohort's identities were corrected
+after extraction, so its pitch estimates come from the capture-time sample
+directory; the three later cohorts resolved identity at key-on, so their
+pitch comes from the sample actually used. Because pitch is estimated from a
+sample's audio, the oldest cohort's pitched share may understate what the
+newer path would recover — on one game the same audio yielded 40.63% versus
+91.72%. Quantifying that for the 1,316-track cohort is a separate versioned
+study, not part of this release, so **the corpus-wide 79.11% is a mixture of
+two methods** rather than one method's result.
+
+**Absolute pitch is recoverable for 79.11% of attacks.** No SNES field records
 a sample's base frequency, so pitch requires estimating each sample's
 fundamental from its decoded audio. The remainder are unpitched or
 unrecoverable and are marked as such — `pitch_status` is the field to filter
@@ -221,14 +267,23 @@ and reports it rather than substituting a sample.
 
 ```sh
 make                        # build build/spc_dump
-make test                   # 634 tests, no skips (bootstraps .venv for pytest)
+make test                   # 664 tests, no skips (bootstraps .venv for pytest)
 make corpus                 # full rebuild: ~80 min on 8 jobs
-make verify                 # 37 checks on an existing corpus and dist tree
-make audit                  # 39 checks, opening EVERY published file
+make verify                 # schema, reconciliation and contract checks, sampled
+make audit                  # the same checks exhaustively, opening EVERY published file
+make census RELEASE=<dir>   # measure the figures this documentation quotes
 make workflows              # dist-only research workflows
 make freeze LABEL=rc1       # pin a published tree by file hash
 make check-freeze           # re-hash a tree against its pin
 ```
+
+`verify` and `audit` run the same assertions; the difference is coverage.
+`verify` samples, so it is fast enough to run on every build and reports
+`n/a` for anything a sample cannot establish. `audit` opens every published
+file and is the gate before a release is frozen. Both print one line per
+check with its own count, so the count to trust is the one they print —
+neither this README nor any other document hardcodes how many checks exist,
+because that number changes whenever an assertion is added.
 
 `make corpus` is the only entry point that guarantees the correct ordering of
 extraction, scoring and publication.
@@ -287,25 +342,60 @@ Stated here because they bound what the data supports, not as caveats to skim:
   several factors.** Composer credits attach to games in the source
   metadata, so a held-out score differs from training data in composer *and*
   in genre, sound driver and instrument bank at once. A model scoring poorly
-  on `test` does not isolate composer generalisation.
-- **287 of 1,477 tracks carry a truncated composer credit**, cut mid-name at
+  on `test` does not isolate composer generalisation. The defensible claim
+  is held-out-**game** evaluation.
+- **Split assignments are recomputed per population and do not carry across
+  releases.** A split is a property of the population it was drawn from, so
+  the 50-game assignment (1,785 / 225 / 218 tracks over 33 / 9 / 8 games) is
+  not an extension of the 27-game one: a track in `test` there may be in
+  `train` here. Results are comparable only within one release. Splits are
+  also assigned per **game family**, so regional releases of one game cannot
+  land on both sides of the partition.
+- **406 of 2,228 tracks carry a truncated composer credit**, cut mid-name at
   the ID666 32-byte limit. `composer_truncated` marks them. A truncated tag
   is not a confirmed identity, and a game-level credit does not establish
-  track-level authorship.
+  track-level authorship. The corpus records **80 distinct credit strings**
+  (72 of them on music tracks), of which **10 are truncation fragments**
+  rather than names and cover all 406 of those tracks. No credit string
+  spans two splits, but **three fragments are prefixes of complete credits
+  on the other side of the partition** — `Ke` (train) of both
+  `Kenji Yamamoto` and `Kemco sound team` (valid), and `Yoko Shimom`
+  (valid) of `Yoko Shimomura` (train). Whether they name the same person is
+  not decidable from the published data, so disjointness is a property of
+  the **strings**, which is weaker than disjoint authorship. 725 tracks
+  credit several contributors, so even a complete credit does not establish
+  who wrote a given track.
 - **No cross-game instrument vocabulary.** See
   [Verified research results](#verified-research-results).
-- **21.7% of attacks have no recovered pitch.** Filter on `pitch_status`.
-- **15,504 attacks have no sample identity** across the 27-game corpus
-  (15,343 of them in the 22-game cohort alone). Their directory entry was
-  unwritten memory at key-on, or no entry existed. Published as `null`.
+- **20.89% of attacks have no recovered pitch.** Filter on `pitch_status`.
+- **15,519 attacks have no sample identity** (0.48%), and they are not spread
+  evenly: **only 5 of the 50 games have any**, and **96.4% are Super
+  Turrican alone** (14,954), whose driver rewrites the sample directory
+  continuously. The rest are Donkey Kong Country 2 (211), Earthbound (178),
+  Secret of Evermore (161) and Shadowrun (15). Their directory entry was
+  unwritten memory at key-on (15,341) or no entry existed (178). Published
+  as `null` with `sample_id_unresolved_reason` — so a study that excludes
+  one game loses almost all of the corpus's identity uncertainty, and one
+  that pools games inherits it from a single soundtrack.
+- **The `drivers` block covers 22 of the 50 games.** Those labels are
+  curated external knowledge and were not extended to the later cohorts. A
+  missing label means nobody recorded the engine, not that the track lacks
+  one; and a label is a hypothesis to test, not a measurement.
 - **Sample bytes are read from the capture-time ARAM.** A confirmed directory
   address does not establish that the sample's bytes were unchanged during
   playback. This remains open.
 - **10 attacks differ only in loop point.** A note that never reaches its loop
   has no observable loop destination, so for those the loop component of the
-  identity rests on the directory word present at key-on.
+  identity rests on the directory word present at key-on. (Measured on the
+  22-game cohort; not recomputed for the full corpus.)
 - **The uniform 100 Hz grid loses one attack** in 1,863,499 — two events
-  5.1 ms apart in one Axelay track.
+  5.1 ms apart in one Axelay track. (Also a 22-game cohort measurement. The
+  grid's resolution is unchanged, so the failure mode still applies; the
+  count does not cover the later cohorts.)
+- **Several limitations above were measured on one population.** Where a
+  figure is cohort-scoped it says so. A limitation stated for the cohort has
+  not been shown absent from the rest of the corpus — it has not been
+  re-measured there.
 - **The intake schema is not verified against the renderer** it was designed
   for, which lives in a separate project.
 - `timbre_class` is inert, and `max_polyphony` carries a note about its

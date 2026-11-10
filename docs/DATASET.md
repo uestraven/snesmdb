@@ -4,7 +4,16 @@ Symbolic SNES music extracted from SPC files by emulating the SPC700 and
 logging every DSP register write. The counterpart to NES-MDB, built because no
 SNES equivalent has been published.
 
-**1,316 tracks · 22 games · 1,863,499 notes · 109,263 rendered seconds.**
+**2,228 tracks · 50 games · 3,205,461 attacks · 180,152 rendered seconds.**
+Release `snesmdb-50game-rc1`. Event schema `snesmdb.events.v4`.
+
+The corpus has grown through four extraction cohorts, and **a figure quoted
+without naming its population is unattributable** — see
+[Seven statistical populations](#seven-statistical-populations), each
+measured from its own artifacts. Earlier figures in this document
+are labelled with the release they were measured on; they are kept because
+they are the record of what was published, not because they describe the
+corpus you have.
 
 ---
 
@@ -49,10 +58,28 @@ clustering failed its own validation and ships nothing.
 ```
 
 No step identifies the driver. Nothing game-specific enters the pipeline, and
-**zero unhandled DSP registers** occur across all 22 games — which is the claim
-the corpus exists to support, tested against Square's AKAO, Nintendo's N-SPC,
-Konami, Capcom, Rare, Chunsoft, HAL, tri-Ace, Namco, Factor 5, Software
-Creations and Quintet.
+**zero unhandled DSP registers** occur across all 50 games — which is the claim
+the corpus exists to support.
+
+That is measured, not asserted. `no_unhandled_registers` runs per track on
+every build, and each cohort's `summary.json` publishes the tracks that
+failed each check. The register check appears in none of them:
+
+| cohort | tracks | `no_unhandled_registers` failures |
+|---|---|---|
+| `gate5-rc10` (22 games) | 1,316 | 0 |
+| `expansion-6b-rc1` (5 games) | 161 | 0 |
+| `expansion-8-rc1` (13 games) | 362 | 0 |
+| `expansion-9-rc1` (10 games) | 389 | 0 |
+| **total** | **2,228** | **0** |
+
+Across the engines the corpus can name: Square's AKAO, Nintendo's and HAL's
+N-SPC, Konami, Capcom, Rare, Chunsoft, tri-Ace, Namco/Wolf Team, Neverland,
+Factor 5, Software Creations and Quintet. **Those labels cover 22 of the 50
+games** — the `drivers` block is curated external knowledge and was never
+extended to the later cohorts, so the engine behind the other 28 games is
+unlabelled here. The register claim does not depend on the labels; it holds
+over every track regardless of whether its engine is named.
 
 Render length per track comes from the ID666 "seconds to play" field, not a
 fixed window. A flat 60 s captured 8.8% of Final Fantasy VI's 683-second
@@ -547,24 +574,41 @@ re-export belongs to an explicitly versioned data release, not to this one.
 subset of attacks carrying a usable fixed-pitch estimate**, and it is lossy
 by design rather than by defect.
 
-Over the 27-game release, every one of the 2,041,091 attacks is accounted
-for — the ledger reconciles exactly:
+Over the **50-game release** (`snesmdb-50game-rc1`), every one of the
+3,205,461 attacks is accounted for — the ledger reconciles exactly, and is
+reproducible from the distribution alone with
+`tools/midi_export_ledger.py <release-dir> ledger.json`:
 
 | disposition | attacks | share |
 |---|---|---|
-| written to MIDI | 1,606,517 | 78.71% |
-| omitted, no usable fixed-pitch estimate | 434,487 | 21.29% |
-| omitted despite a fixed-pitch estimate | **87** | 0.004% |
+| written to MIDI | 2,535,776 | 79.11% |
+| omitted, no usable fixed-pitch estimate | 669,598 | 20.89% |
+| omitted despite a fixed-pitch estimate | **87** | 0.003% |
 
-**What the 434,487 are not.** They are not established to be unpitched
+Omissions by the exporter's own rule:
+
+| reason | attacks |
+|---|---|
+| no pitch recovered | 664,538 |
+| track has no MIDI file at all | 5,060 |
+| pitch outside the MIDI range (0–127) | 87 |
+
+**What the 669,598 are not.** They are not established to be unpitched
 sounds. The published `pitch_status` says only what the pipeline could
 determine:
 
-- **`unrecoverable`** (433,493) — the pipeline could not determine a pitch.
+- **`unrecoverable`** (666,885) — the pipeline could not determine a pitch.
   Some of these sounds may well have been pitched.
-- **`pitch_modulated`** (727) — may be musically pitched material whose
+- **`noise`** (1,854) — genuinely lacks a fixed melodic pitch.
+- **`pitch_modulated`** (859) — may be musically pitched material whose
   changing pitch a single static MIDI note cannot represent.
-- **`noise`** (267) — genuinely lacks a fixed melodic pitch.
+
+So **no additional recoverable fixed-pitch omissions are demonstrated**
+beyond the 87. The rest preserve uncertainty rather than resolve it.
+
+*(The 27-game release's ledger reconciled the same way over its own 2,041,091
+attacks: 1,606,517 written, 434,487 omitted without an estimate, the same 87
+with one.)*
 
 So the correct reading is that **no additional recoverable fixed-pitch
 omissions have been demonstrated**. These rows preserve uncertainty instead
@@ -591,31 +635,45 @@ shipped, `midi_attacks_rejected_in_conversion`,
 `midi_tracks_without_file` and `midi_attacks_in_tracks_without_file` are
 published alongside it, and together they account for every attack.
 
-### Three statistical populations
+### Seven statistical populations
 
-This corpus has shipped as three distinct populations. A figure quoted
+This corpus has shipped as seven distinct populations: four **extraction
+cohorts** and three **combined releases** built from them. A figure quoted
 without naming one of them is unattributable.
 
-| population | games | tracks | attacks | identity | pitched |
-|---|---|---|---|---|---|
-| 22-game frozen cohort | 22 | 1,316 | 1,863,499 | 99.18% | 78.25% |
-| 5-game expansion | 5 | 161 | 177,592 | 99.91% | 83.56% |
-| 27-game combined | 27 | 1,477 | 2,041,091 | 99.24% | 78.71% |
-| 13-game expansion | 13 | 362 | 596,517 | 100.00% | 82.55% |
-| 40-game combined | 40 | 1,839 | 2,637,608 | 99.42% | 79.58% |
-| 10-game expansion | 10 | 389 | 567,853 | 100.00% | 76.92% |
-| **50-game combined** | **50** | **2,228** | **3,205,461** | 99.52% | **79.11%** |
+The current corpus is the last row.
 
-Every row is measured from that population's own published artifacts. The
-combined row is **not** derived from the two above it.
+| population | release | games | tracks | attacks | identity | pitched |
+|---|---|---|---|---|---|---|
+| 22-game cohort | `gate5-rc10` | 22 | 1,316 | 1,863,499 | 99.18% | 78.25% |
+| 5-game expansion | `expansion-6b-rc1` | 5 | 161 | 177,592 | 99.91% | 83.56% |
+| 27-game combined | `snesmdb-27game-rc1` | 27 | 1,477 | 2,041,091 | 99.24% | 78.71% |
+| 13-game expansion | `expansion-8-rc1` | 13 | 362 | 596,517 | 100.00% | 82.55% |
+| 40-game combined | `snesmdb-40game-rc1` | 40 | 1,839 | 2,637,608 | 99.42% | 79.58% |
+| 10-game expansion | `expansion-9-rc1` | 10 | 389 | 567,853 | 100.00% | 76.92% |
+| **50-game combined** | **`snesmdb-50game-rc1`** | **50** | **2,228** | **3,205,461** | **99.52%** | **79.11%** |
 
-**Distinct sample identities make the point concretely.** The cohort has
-1,132 and the expansion 166, which sum to 1,298. The combined corpus
-measures **1,288**: ten identities occur in both cohorts — the same decoded
-audio in Ken Griffey Jr. Baseball and Plok!, in Street Fighter II Turbo and
-both Mega Man X and Breath of Fire 2. Adding the two figures would have
-overstated sample diversity by ten and quietly asserted that no sample is
-shared across cohorts, which is false.
+Every row is measured from that population's own published artifacts. **No
+combined row is derived from the cohort rows above it**, and the cohort rows
+do not sum to it.
+
+The four cohorts do partition the 50-game corpus by track:
+1,316 + 161 + 362 + 389 = 2,228. **Nothing else about them adds.**
+
+**Distinct sample identities make the point concretely.** The 22-game cohort
+has 1,132 identities and the 5-game expansion 166, which sum to 1,298. The
+27-game corpus measured **1,288**: ten identities occur in both cohorts — the
+same decoded audio in Ken Griffey Jr. Baseball and Plok!, in Street Fighter
+II Turbo and both Mega Man X and Breath of Fire 2. Adding the two figures
+would have overstated sample diversity by ten and quietly asserted that no
+sample is shared across cohorts, which is false.
+
+The 50-game corpus measures **2,118** distinct identities. Cross-game reuse
+is not an artefact of how the cohorts were cut: `931339412de13491` is the
+same decoded audio and loop point in ActRaiser, Donkey Kong Country, Donkey
+Kong Country 2 **and** Killer Instinct — four games from unrelated studios.
+`sample_id` is a content identity, so identical audio implies nothing about
+a shared musical role.
 
 ### The combined release mixes two production paths
 
@@ -643,26 +701,61 @@ published figures for 1,316 tracks and deserves its own versioned study
 with its own comparison, rather than arriving as a side effect of adding
 five games.
 
-Until then, read the 78.71% combined figure as what it is: the pitched share
-of a corpus assembled from two cohorts, one of which was produced by a path
-now superseded.
+Until then, read any combined pitched share as what it is: the figure for a
+corpus assembled from four cohorts, the largest of which was produced by a
+path now superseded. That applies to the 27-game release's 78.71% and
+equally to the current corpus's **79.11%**.
 
 ### Splits are a property of the population, and this one limits evaluation
 
-Splits are composer-disjoint and recomputed for each population; they are
-never concatenated. For the combined corpus: **train 1,186 tracks over 18
-games, valid 145 over 4, test 146 over 5.**
+Splits are composer-disjoint and **recomputed for each population**; they are
+never concatenated. For the current corpus (`snesmdb-50game-rc1`):
+**train 1,785 tracks over 33 games, valid 225 over 9, test 218 over 8.**
+
+**Assignments do not carry across releases.** Because a split is a property
+of the population it was drawn from, a track in `test` in the 27-game
+release may be in `train` here. Results are comparable only within one
+release, and a benchmark must name the release it used. For the record, the
+27-game release assigned **train 1,186 over 18 games, valid 145 over 4, test
+146 over 5.**
+
+Splits are assigned per **game family**, not per ID666 tag. Grouping by the
+raw tag would make a game released regionally under two titles eligible for
+two splits — the same work on both sides of the partition.
 
 The limitation to understand before using them as a benchmark: splits are
 assigned by *game*, because composer credits attach to games in the source
 metadata. So a held-out score differs from training data in composer AND in
 genre, sound driver, and instrument bank simultaneously. **A model scoring
 poorly on `test` does not isolate composer generalisation** — those factors
-are correlated with the games, and with 27 games they cannot be separated.
+are correlated with the games, and 50 games do not separate them either.
+The defensible claim is held-out-**game** evaluation.
 
-The five-game expansion alone is worse and should not be used as a benchmark
-at all: its validation split is one racing soundtrack and its test split is
-nine tracks of one baseball soundtrack.
+Fifty games do improve the shape of the partition: valid and test now draw
+on 9 and 8 games rather than 4 and 5, so neither is one soundtrack.
+
+**But the splits are badly unbalanced in extraction path**, and this is the
+most important thing to know before using them:
+
+| split | tracks | from the 22-game cohort |
+|---|---|---|
+| train | 1,785 | 1,174 (**65.8%**) |
+| valid | 225 | 123 (**54.7%**) |
+| test | 218 | 19 (**8.7%**) |
+| corpus | 2,228 | 1,316 (59.1%) |
+
+Training data is mostly the **old** path, whose pitch estimates come from
+the capture-time directory; the test split is 91.3% the **new** path, which
+resolves identity at key-on and recovers substantially more pitch. So a
+train/test gap on this partition is confounded with a change in extraction
+method, not only with held-out games. Nobody assigned the splits to produce
+this — they are composer-disjoint by construction and the imbalance is a
+side effect — but it is there, and a pitch-dependent benchmark should
+account for it.
+
+Individual cohorts should not be used as benchmarks on their own. The
+five-game expansion is the clearest case: its validation split is one racing
+soundtrack and its test split is nine tracks of one baseball soundtrack.
 
 ### What the 13-game expansion added, measured
 
@@ -858,15 +951,37 @@ The claim the evidence supports:
 
 Three things stand behind that wording.
 
-**Composer separation is by recorded credit, not by author.** 287 of 1,477
-tracks carry a credit truncated at ID666's 32-byte field, and six of the 53
-distinct "composers" are truncation fragments rather than names. The largest
-is `Ke`, which covers **206 Earthbound tracks in train** and is a prefix of
-`Kenji Yamamoto`, a complete credit in **test**. Whether they name the same
-person is not decidable from published data. 501 tracks list several
-contributors, so even a complete credit does not establish who wrote a given
-track. Splits were assigned from these strings, so disjointness is a
-property of the strings.
+**Composer separation is by recorded credit, not by author.** Measured on
+`snesmdb-50game-rc1` with `tools/audit_attribution.py`: **406 of 2,228
+tracks** carry a credit truncated at ID666's 32-byte field, and **10 of the
+80 distinct "composers" are truncation fragments** rather than names,
+covering those same 406 tracks. **725 tracks list several contributors**, so
+even a complete credit does not establish who wrote a given track.
+
+No credit string spans two splits — that much the assignment guarantees.
+But three fragments are prefixes of complete credits on the *other* side of
+the partition, and the data does not resolve whether they name the same
+person:
+
+| fragment | tracks | split | prefixes | split |
+|---|---|---|---|---|
+| `Ke` | 206 | train | `Kenji Yamamoto` | valid |
+| `Ke` | 206 | train | `Kemco sound team` | valid |
+| `Yoko Shimom` | 36 | valid | `Yoko Shimomura` | train |
+
+Track counts here are over **all** tracks. `index.json` →
+`composition.tracks_per_composer` counts only `track_class: "music"`, so it
+reports `Ke` on 139 tracks rather than 206. Both are correct; they answer
+different questions, and neither should be quoted as the other.
+
+Splits were assigned from these strings, so **disjointness is a property of
+the strings and not of authorship.** The defensible claim is held-out-*game*
+evaluation.
+
+*(The 27-game release measured 287 of 1,477 tracks truncated and six
+fragments among 53 credits, with the same `Ke` / `Kenji Yamamoto` overlap —
+then across train and test rather than train and valid. Expanding the
+corpus did not introduce the problem; it enlarged it.)*
 
 **One cross-split duplicate is confirmed.** The Capcom startup fanfare is a
 complete track in Mega Man X and Breath of Fire 2 (train) and in Street
@@ -940,8 +1055,8 @@ amended when a new game is measured outside it.
 | 27-game combined | 1,477 | **1.813–30.500 ms** |
 | 13-game expansion (`expansion-8-rc1`) | 362 | **2.000–26.500 ms** |
 | 40-game combined (`snesmdb-40game-rc1`) | 1,839 | **1.813–30.500 ms** |
-| 10-game expansion candidate | 389 | **2.000–22.000 ms** |
-| 50-game combined candidate | 2,228 | **1.813–30.500 ms** |
+| 10-game expansion (`expansion-9-rc1`) | 389 | **2.000–22.000 ms** |
+| **50-game combined** (`snesmdb-50game-rc1`) | **2,228** | **1.813–30.500 ms** |
 
 The 40-game figure coincides with the 27-game one because the widest and
 narrowest rows in the corpus both come from games the 13-game expansion did

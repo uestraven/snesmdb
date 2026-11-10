@@ -19,7 +19,8 @@ Those five axes, in that order.
 Every claim is reported with its spread ACROSS GAMES, because the useful
 distinction is between a convention (every driver and composer does it) and a
 house style (one studio does it). A corpus-wide mean hides exactly that, and a
-mean over 22 games weighted by track count would mostly describe Earthbound.
+mean weighted by track count would mostly describe Earthbound, which alone
+contributes 139 of the corpus's 2,228 tracks.
 So per-game figures are computed first and the corpus figure is the median over
 games, not over tracks.
 """
