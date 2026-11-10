@@ -22,15 +22,20 @@ message: >-
   If you use SNES-MDB, please cite it using the metadata in this file.
 title: "SNES-MDB: a symbolic music database for the Super Nintendo Entertainment System"
 abstract: >-
-  A symbolic music corpus extracted from SNES/Super Famicom SPC files,
-  intended for musical analysis and machine learning without requiring
-  knowledge of SPC700 or S-DSP internals. Sample identity is resolved from
-  the directory entry the S-DSP reads at key-on, so an identity is a
-  property of the attack rather than of a hardware index. Uncertainty is
-  published explicitly: an unestablished identity is null with a reason, and
-  an unrecovered pitch is marked rather than estimated. This version of the
-  software produced the corpus release `snesmdb-50game-rc1`: 2,228 tracks
-  from 50 games, 3,499,685 events.
+  SNES-MDB is a hardware-grounded symbolic music research dataset for the
+  Super Nintendo Entertainment System. Its extraction combines instrumented
+  S-DSP emulation, event-time sample identification by content hash -- taken
+  at the instant the DSP commits a sample start, because drivers rewrite the
+  sample directory while the music plays -- and waveform-derived pitch
+  estimation, since no hardware field records a sample's base frequency.
+  Nothing in the pipeline is game-specific, so the corpus spans 50 games and
+  at least 13 audio engines, with uncertainty published rather than filled
+  in: an unestablished sample identity is null with a reason, and an
+  unrecovered pitch is marked rather than guessed. Note onsets, releases and
+  the row clock are read from hardware registers; pitch alone is estimated,
+  and is unrecovered for 20.89% of attacks. This version of the software
+  produced the corpus release `snesmdb-50game-rc1`: 2,228 tracks from 50
+  games, 3,499,685 events.
 type: software
 license: MIT
 license-url: "https://spdx.org/licenses/MIT.html"

@@ -160,6 +160,45 @@ def test_dataset_populations_table_has_the_current_release(census):
             f"the populations row omits the measured {key}")
 
 
+CITATION = (ROOT / "CITATION.cff").read_text()
+
+
+def test_citation_abstract_figures_match_the_census(census):
+    """The abstract quotes corpus figures, so it can go stale too.
+
+    `CITATION.cff` is the canonical machine-readable description and the
+    thing reference managers ingest, which makes a stale figure there harder
+    to notice and more widely copied than one in the README.
+    """
+    abstract = CITATION.split("abstract:", 1)[1].split("\ntype:", 1)[0]
+    for key in ("tracks", "games", "events"):
+        assert grouped(census[key]) in abstract, (
+            f"the CITATION.cff abstract omits the measured "
+            f"{key} ({census[key]:,})")
+    assert census["release"] in abstract, (
+        "the abstract does not name the corpus release it describes")
+
+
+def test_citation_abstract_does_not_overstate_hardware_grounding(census):
+    """"Hardware-grounded" must not imply pitch is read from hardware.
+
+    Three of the four things a note carries are read from registers; pitch
+    is estimated from the sample's decoded waveform and fails for a fifth of
+    attacks. That exception is the dataset's largest caveat, so the abstract
+    states it wherever it claims hardware grounding.
+    """
+    abstract = CITATION.split("abstract:", 1)[1].split("\ntype:", 1)[0]
+    if "hardware-grounded" not in abstract.lower():
+        return
+    assert "estimat" in abstract, (
+        "the abstract claims hardware grounding without saying pitch is "
+        "estimated")
+    pct = f"{100 * census['unpitched_share']:.2f}%"
+    assert pct in abstract, (
+        f"the abstract should state the measured unrecovered-pitch share "
+        f"({pct}) alongside its hardware-grounding claim")
+
+
 def test_changelog_release_history_names_the_current_release(census):
     assert "## Release history" in CHANGELOG
     history = CHANGELOG.split("## Release history", 1)[1][:4000]
