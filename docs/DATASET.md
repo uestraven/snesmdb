@@ -601,6 +601,8 @@ without naming one of them is unattributable.
 | 22-game frozen cohort | 22 | 1,316 | 1,863,499 | 99.18% | 78.25% |
 | 5-game expansion | 5 | 161 | 177,592 | 99.91% | 83.56% |
 | 27-game combined | 27 | 1,477 | 2,041,091 | 99.24% | 78.71% |
+| 13-game expansion | 13 | 362 | 596,517 | 100.00% | 82.55% |
+| **40-game combined** | **40** | **1,839** | **2,637,608** | 99.42% | **79.58%** |
 
 Every row is measured from that population's own published artifacts. The
 combined row is **not** derived from the two above it.
@@ -660,13 +662,80 @@ The five-game expansion alone is worse and should not be used as a benchmark
 at all: its validation split is one racing soundtrack and its test split is
 nine tracks of one baseball soundtrack.
 
+### What the 13-game expansion added, measured
+
+`expansion-8-rc1` adds 13 games and 362 tracks to a 27-game corpus. Its
+contribution is **breadth**, and the aggregate musical measurements barely
+move:
+
+| measurement | 27-game | 13-game expansion |
+|---|---|---|
+| distinct sample identities | 1,288 | 467 (**+448** new to the combined corpus) |
+| recorded composer credits | 53 | 20, of which **16 are new** |
+| pitched attacks | 78.71% | 82.55% |
+| interval entropy | 3.728 bits | 3.686 bits |
+| median note duration | 0.1464 s | 0.1472 s |
+| median attack density | 15.1/s | 15.5/s |
+
+**Read that correctly.** Near-identical entropy, note length and density do
+**not** establish that the new compositions lack stylistic diversity. They
+establish that *these particular aggregate measurements* did not change.
+Harmony, musical form, instrumentation roles, rhythmic organisation and
+game-specific musical function can all vary substantially without moving an
+interval-entropy figure or a median duration.
+
+What the evidence does not support is the opposite claim either: there is no
+basis for saying the expansion opened a new symbolic music distribution. Its
+demonstrated contribution is 13 games, 16 new recorded composer credits and
+448 new sample identities.
+
+### The 40-game splits, and what they cannot support
+
+| split | games | tracks |
+|---|---|---|
+| train | 27 | 1,472 |
+| valid | 7 | 186 |
+| test | 6 | 181 |
+
+Deterministic, composer-disjoint by recorded credit, and recomputed over the
+40-game population — never concatenated from the cohorts. Regional releases
+of one game are a single unit, so a game family cannot straddle the
+partition.
+
+Two limitations to carry into any experiment on these splits:
+
+- **The test split is entirely from the original 27-game corpus** (181
+  baseline tracks, 0 expansion). So results on it say nothing about
+  generalisation to the newly added games, which appear only in train and
+  validation.
+- **Recorded-credit separation is not proven author separation.** 369 of
+  1,839 tracks carry a credit truncated at 32 bytes, and the unresolved
+  `Ke` / `Kenji Yamamoto` overlap affecting 206 tracks is unchanged.
+
+The splits were **not** reassigned to balance them. A future benchmark may
+define a different evaluation protocol; it should do so explicitly rather
+than rewrite this one.
+
+Cross-split musical content is unchanged from the 27-game corpus: the same
+one confirmed Capcom-fanfare cluster, with the conditional exclusion still
+applying (`sf2t-01` in validation, both training copies in train). Demon's
+Crest, also a Capcom title, does **not** join it. Two new similarities —
+Bahamut Lagoon ↔ Plok! and Secret of Evermore ↔ Terranigma — are recorded as
+**unconfirmed candidates and are not evaluation exclusions**.
+
 ### A reproducible baseline, and what it shows
 
 `tools/baseline_interval_ngram.py` answers one question on the published
 artifacts alone: **can a smoothed interval n-gram predict the next melodic
 interval in an unseen SNES game better than a frequency-only baseline?**
 Results are in `docs/baseline_interval_ngram_results.json`, measured against
-release `snesmdb-27game-rc1`.
+release **`snesmdb-27game-rc1`** and its 27-game splits.
+
+**These are 27-game experiment results and do not transfer to the 40-game
+splits.** The 40-game partition is a different population with a different
+assignment, so the published figures below describe neither its training set
+nor its test set. Re-running the experiment on 40 games would be a new
+experiment, declared and reported separately.
 
 **Yes, by a clear margin.**
 
@@ -812,7 +881,12 @@ amended when a new game is measured outside it.
 | 22-game frozen cohort | 1,316 | **2.000–30.500 ms** |
 | 5-game expansion | 161 | **1.813–20.000 ms** |
 | 27-game combined | 1,477 | **1.813–30.500 ms** |
-| 13-game expansion candidate | 362 | **2.000–26.500 ms** |
+| 13-game expansion (`expansion-8-rc1`) | 362 | **2.000–26.500 ms** |
+| 40-game combined (`snesmdb-40game-rc1`) | 1,839 | **1.813–30.500 ms** |
+
+The 40-game figure coincides with the 27-game one because the widest and
+narrowest rows in the corpus both come from games the 13-game expansion did
+not displace. It is measured over the 40-game artifacts, not inherited.
 
 The combined figure is **measured over the combined artifacts**, not taken
 as the union of the two rows above. For a minimum and a maximum the two
