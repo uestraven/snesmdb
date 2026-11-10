@@ -162,6 +162,31 @@ are separated by game family and recorded composer-credit connections rather
 than by proven authorship independence, and that 406 of 2,228 tracks carry an
 incomplete or missing credit.
 
+## Provenance limitations, stated plainly
+
+**The pre-registration was not publicly timestamped before the result.** The
+commits were authored locally in sequence — pre-registration, protocol freeze,
+baselines, training, sealed evaluation — and the git history records that
+order. But the repository was not pushed until after Level 1 completed, so
+nothing here establishes public, third-party-verifiable pre-registration.
+
+The defensible claim is: **the criteria were fixed in local commits before the
+corresponding measurements, and the commit sequence is the evidence.** That is
+weaker than a public preregistration timestamp and must not be reported as one.
+For Level 2, push the registration before running it.
+
+**The original training logs were not retrieved.** `history.jsonl` and
+`summary.json` remain on RunPod network volume `kcc2582kg8`; the pod was
+terminated before they were downloaded. The trajectory preserved in
+`level1_artifacts/training_trajectory.tsv` is a transcription from the run's
+stdout, labelled as such. The primary artifact is unaffected: `best.pt` carries
+its own configuration, step and validation loss, and its sha256 matches what
+the pod reported at save time.
+
+**Immutable copy.** All Level 1 artifacts are sealed at
+`level1_artifacts/` with a `SHA256SUMS` manifest. No later experiment may
+modify them.
+
 ## Reproducing
 
 ```sh
