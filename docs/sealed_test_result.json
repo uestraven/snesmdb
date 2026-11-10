@@ -1,0 +1,81 @@
+{
+ "schema": "snes_lm.sealed_test.v1",
+ "checkpoint": "tmp/best.pt",
+ "checkpoint_sha256": "c146d36ad661fe3643f7c2896ad3747e663aac0c6741124165b6c9ba8e6bc6a9",
+ "model": {
+  "bits_per_token": 2.705743091014067,
+  "n_tokens": 1255751,
+  "n_tracks": 176,
+  "per_slot_bits": {
+   "TIME": 1.9255966026049627,
+   "VOICE": 1.564594624945404,
+   "PITCH": 4.587087150790348,
+   "DUR": 2.746277716619936
+  },
+  "per_game_bits": {
+   "Actraiser": 2.5693357271288684,
+   "Adventure Island": 2.879288747628063,
+   "Alien 3": 2.3519695887693293,
+   "F-Zero": 2.182572374191507,
+   "Shadowrun": 3.211839153424171,
+   "Star Fox": 2.6775623051594213,
+   "Tactics Ogre": 2.6743963012107783,
+   "Tetris 2": 2.7788501742758345
+  }
+ },
+ "baseline": {
+  "bits_per_token": 3.544162683105425,
+  "n_tokens": 1255751,
+  "n_tracks": 176,
+  "per_slot_bits": {
+   "TIME": 2.953482784986254,
+   "VOICE": 2.161632607353167,
+   "PITCH": 5.616224250789338,
+   "DUR": 3.445284145218202
+  },
+  "per_game_bits": {
+   "Actraiser": 3.3820171975451574,
+   "Adventure Island": 3.971966090089058,
+   "Alien 3": 3.2691967950820846,
+   "F-Zero": 2.98994295008139,
+   "Shadowrun": 4.10586295474431,
+   "Star Fox": 3.5141624538762124,
+   "Tactics Ogre": 3.3493181617097445,
+   "Tetris 2": 3.6495226940694896
+  }
+ },
+ "bootstrap": {
+  "observed_relative_improvement": 0.23656351783398608,
+  "ci_lower": 0.2263406275223173,
+  "ci_upper": 0.2467939073204659,
+  "confidence": 0.95,
+  "n_resamples": 10000,
+  "n_tracks": 176,
+  "ci_excludes_zero": true,
+  "ci_lower_exceeds_5pct": true,
+  "fraction_of_resamples_above_5pct": 1.0
+ },
+ "verdict": {
+  "model_test_bits": 2.705743091014067,
+  "baseline_test_bits": 3.544162683105425,
+  "threshold_bits": 3.3669545489501536,
+  "relative_improvement": 0.23656351783398608,
+  "meets_5pct_threshold": true,
+  "bootstrap_ci_lower": 0.2263406275223173,
+  "bootstrap_supports": true,
+  "verdict": "LEVEL 1 LEARNING CRITERION MET",
+  "note": "Level 1 also requires reproducibility: fixed split, configuration, evaluation code and recorded seeds. This function judges the likelihood criterion only. Nothing here speaks to Level 2, which requires the separate multi-listener study."
+ },
+ "per_game_relative_improvement": {
+  "Actraiser": 0.240294895900049,
+  "Adventure Island": 0.27509734919124035,
+  "Alien 3": 0.2805665317219685,
+  "F-Zero": 0.27002875619011574,
+  "Shadowrun": 0.21774321529341303,
+  "Star Fox": 0.23806530281319221,
+  "Tactics Ogre": 0.2015102262349526,
+  "Tetris 2": 0.2385716140931269
+ },
+ "n_games_improved": 8,
+ "accounting_note": "Both models scored on identical windowed targets with history confined to each window. The baseline is fitted on whole train tracks, which favours it."
+}
