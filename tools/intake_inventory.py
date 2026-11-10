@@ -62,6 +62,29 @@ def hint_class(title: str) -> str:
     return "music"
 
 
+#: Source material excluded by scope decision rather than by defect, keyed
+#: by a substring of the ID666 game tag. Each entry records WHY, because an
+#: excluded file that reconciles into a count with no reason is
+#: indistinguishable from one that was lost.
+#:
+#: The Mario Paint set contains 22 SPCs tagged `Mario Paint (Prototype)`:
+#: an unreleased build, not a regional release. Grouping it as a game family
+#: would assert it is the same work as the retail game, which it is not, and
+#: publishing it as a separate game would exceed the declared scope. It is
+#: excluded, and the 37 retail tracks are retained under the canonical
+#: identity.
+TAG_EXCLUSIONS: tuple[tuple[str, str], ...] = (
+    ("Mario Paint (Prototype)", "unreleased_prototype_out_of_scope"),
+)
+
+
+def tag_exclusion(game_tag: str) -> str | None:
+    for needle, reason in TAG_EXCLUSIONS:
+        if needle and needle in (game_tag or ""):
+            return reason
+    return None
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("spc_dir", type=Path)
@@ -119,6 +142,16 @@ def main() -> None:
                               f"{type(exc).__name__}: {exc}"[:160]})
                 continue
 
+            reason = tag_exclusion(spc.tag.game)
+            if reason:
+                excluded.append({
+                    "file": path.name, "sha256": digest[:16],
+                    "game_tag": spc.tag.game,
+                    "title": spc.tag.title,
+                    "reason": reason,
+                    "excluded_by": "scope_decision",
+                })
+                continue
             if digest in seen_hashes:
                 excluded.append({
                     "file": path.name, "sha256": digest[:16],
@@ -198,6 +231,8 @@ def main() -> None:
         totals["source_spc"] += len(spcs)
         totals["accepted"] += len(accepted)
         totals["excluded"] += len(excluded)
+        for item in excluded:
+            totals[f"excluded:{item['reason']}"] += 1
 
     problems = []
     for game in games:

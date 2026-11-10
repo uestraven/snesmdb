@@ -689,6 +689,61 @@ basis for saying the expansion opened a new symbolic music distribution. Its
 demonstrated contribution is 13 games, 16 new recorded composer credits and
 448 new sample identities.
 
+### Per-game observations from the 10-game cohort
+
+Two figures in the Milestone 9 cohort stand out, and leave-one-game-out
+analysis shows they are **per-game properties, not corpus trends**. Both are
+recorded here as per-game observations and are deliberately NOT promoted to
+corpus-level research conclusions.
+
+**Super Bomberman 2 dominates the corpus legato rate.** It supplies 3.2% of
+corpus attacks but 41,421 legato steps from 22 tracks. Removing it moves the
+50-game pooled rate from **91.79 to 81.47 steps per 1,000 attacks** — a
+12.7% swing, four times its share of attacks, and the only rate any single
+game in the cohort dominates. So "SNES music shows more in-note pitch
+movement than previously measured" is NOT supported; "Super Bomberman 2
+shows markedly more than any other game measured" is.
+
+The new cohort does sit higher on both weightings — pooled 133.08 and
+game-balanced 114.89 steps/1,000 against the earlier cohorts' 82.90 and
+77.61 — so the direction is real even game-balanced. The *magnitude* in the
+pooled view is inflated by one soundtrack.
+
+**Killer Instinct has the corpus's highest sample density**: 97 distinct
+identities from 42 tracks, 4.6% of the corpus's 2,118 identities from 1.0%
+of its attacks. Stated as density, not influence: sample banks do not cross
+games, so the corpus total is the SUM of per-game banks and every game moves
+it by its own contribution. A leave-one-out delta on that count measures the
+metric's additivity, not a game's effect on the corpus.
+
+**Pooled and game-balanced figures disagree on interval entropy**: 3.7193
+bits pooled against 3.5629 game-balanced over 50 games. Pooling mixes 50
+games' distributions, which raises entropy above any individual game's, so
+the pooled figure overstates *within-game* interval variety. Quote the
+game-balanced figure for claims about musical practice.
+
+### The 50-game splits finally give evaluation non-baseline representation
+
+| split | tracks | games | 22-game | M6 | M8 | M9 |
+|---|---|---|---|---|---|---|
+| train | 1,785 | 33 | 1,174 | 81 | 230 | 300 |
+| valid | 225 | 9 | 123 | 36 | 46 | 20 |
+| test | 218 | 8 | **19** | 44 | 86 | 69 |
+
+This is the first partition in which the test split is **not** dominated by
+the original cohort. At 40 games, test was 181 baseline tracks and **zero**
+expansion. Here it is 19 baseline and **199 from the three expansion
+cohorts** — Alien 3 and Star Fox from Milestone 9, Adventure Island,
+Shadowrun and Tactics Ogre from Milestone 8, F-Zero and Tetris 2 from
+Milestone 6.
+
+That is a real improvement in evaluation diversity, and it was not designed:
+the split assignment is deterministic and composer-driven, so the newly
+added sole-composer games were eligible to land in evaluation as independent
+units. The reverse caution now applies — test is only 8.7% original-cohort
+material, so results on it say little about the games the corpus started
+with.
+
 ### The 40-game splits, and what they cannot support
 
 | split | games | tracks |
@@ -883,6 +938,8 @@ amended when a new game is measured outside it.
 | 27-game combined | 1,477 | **1.813–30.500 ms** |
 | 13-game expansion (`expansion-8-rc1`) | 362 | **2.000–26.500 ms** |
 | 40-game combined (`snesmdb-40game-rc1`) | 1,839 | **1.813–30.500 ms** |
+| 10-game expansion candidate | 389 | **2.000–22.000 ms** |
+| 50-game combined candidate | 2,228 | **1.813–30.500 ms** |
 
 The 40-game figure coincides with the 27-game one because the widest and
 narrowest rows in the corpus both come from games the 13-game expansion did
