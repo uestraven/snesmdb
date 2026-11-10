@@ -91,6 +91,27 @@ Both checks are now tests: a stride-aware unigram may not lose to a flat one,
 and an interpolated n-gram may not lose to its own backoff on the data it was
 fitted to.
 
+
+## Per-slot breakdown — added so the model's diagnostic is interpretable
+
+The registered per-slot diagnostic reports the model's TIME/VOICE/PITCH/DUR
+loss, and that number means nothing without the comparator's. These should
+have been computed before training rather than after.
+
+| slot | unigram floor | **slot n-gram (comparator)** |
+|---|---|---|
+| TIME | 3.312 | **2.524** |
+| VOICE | 2.959 | **2.042** |
+| PITCH | 5.526 | **5.252** |
+| DUR | 5.013 | **3.718** |
+| overall | 4.2025 | **3.3839** |
+
+**The n-gram is near-useless on pitch and near-optimal on voice.** It improves
+on the floor by 38% on duration and 31% on voice, but only **5%** on pitch
+(5.526 → 5.252). Melodies do not repeat as literally as voice assignments do,
+so a repetition model has little to exploit there — which makes pitch the field
+where a learned model has the most room, and the field worth watching.
+
 ## Reproducing
 
 ```sh
