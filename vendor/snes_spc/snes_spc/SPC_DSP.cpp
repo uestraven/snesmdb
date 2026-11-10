@@ -16,6 +16,26 @@ details. You should have received a copy of the GNU Lesser General Public
 License along with this module; if not, write to the Free Software Foundation,
 Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA */
 
+/* ==========================================================================
+ * MODIFIED FILE NOTICE (LGPL-2.1 section 2a)
+ *
+ * This file has been CHANGED from Shay Green's snes_spc 0.9.0 release.
+ *
+ *   Changed by:  the SNES-MDB project (https://github.com/uestraven/snesmdb)
+ *   Changed on:  2026-11-08
+ *   Changes:     three instrumentation hook macros added, at the points
+ *                where the DSP commits a voice's BRR start address, accepts
+ *                a key-on, and takes a loop. Each site is marked with a
+ *                `snesmdb:` comment. Every hook expands to nothing unless
+ *                its macro is defined by the build, so the default build of
+ *                this file is functionally identical to upstream.
+ *
+ * No upstream logic was altered, removed, or reordered. The full list, with
+ * rationale per hook, is in ../MODIFICATIONS.md. This modified work remains
+ * under LGPL-2.1, as above; `make verify-vendor` shows the diff against the
+ * unmodified upstream source.
+ * ========================================================================== */
+
 #include "blargg_source.h"
 
 #ifdef BLARGG_ENABLE_OPTIMIZER
@@ -424,7 +444,8 @@ VOICE_CLOCK( V3c )
 		// Get ready to start BRR decoding on next sample
 		if ( v->kon_delay == 5 )
 		{
-			/* snesmdb: the ONLY modification to this vendored file.
+			/* snesmdb: SAMPLE START COMMIT (modification 1 of 3; see
+			 * ../MODIFICATIONS.md).
 			 * This is the instant the DSP commits a voice's BRR start
 			 * address, read from the sample directory it actually used --
 			 * not the directory as it stood when the CPU wrote KON, which
@@ -482,7 +503,8 @@ VOICE_CLOCK( V3c )
 		// KON
 		if ( m.kon & v->vbit )
 		{
-			/* snesmdb: KON ACCEPTANCE, which is not the CPU write. A write
+			/* snesmdb: KON ACCEPTANCE (modification 2 of 3; see
+			 * ../MODIFICATIONS.md), which is not the CPU write. A write
 			 * to $4C assigns m.new_kon; the DSP latches it here. Observing
 			 * this makes "the write was accepted before the commit" a
 			 * measurement rather than an inference from timestamps. */
@@ -527,7 +549,8 @@ VOICE_CLOCK( V4 )
 			v->brr_addr = (v->brr_addr + brr_block_size) & 0xFFFF;
 			if ( m.t_brr_header & 1 )
 			{
-				/* snesmdb: the loop destination ACTUALLY TAKEN. Not the
+				/* snesmdb: the loop destination ACTUALLY TAKEN
+				 * (modification 3 of 3; see ../MODIFICATIONS.md). Not the
 				 * directory's second word read at sample start -- a driver
 				 * can rewrite the entry while the voice sustains, and those
 				 * two values then differ. No-op unless defined. */

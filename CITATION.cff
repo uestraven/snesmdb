@@ -1,22 +1,15 @@
 # Citation metadata for SNES-MDB.
 #
-# DRAFT — two fields need a human decision and are deliberately left as
-# placeholders rather than invented:
+# `doi` is deliberately ABSENT. A DOI requires a hosting decision, which is
+# gated on the unresolved rights review for the musical corpus (see
+# RIGHTS.md). It will be added when one is assigned, not before.
 #
-#   authors  below lists the git-recorded author only. Real authorship,
-#            affiliation and ORCID are not derivable from a repository and
-#            must be supplied.
-#   doi      absent. A DOI requires a hosting decision, which is gated on
-#            the rights review for the musical corpus.
-#
-# `version` and `date-released` describe the CODE and the release label, not
-# a published dataset. Nothing here asserts that the corpus may be
-# redistributed; see LICENSE and docs/DATASET.md.
+# `version` and `date-released` describe the CODE and its release label.
+# Nothing here asserts that the corpus may be redistributed.
 
 cff-version: 1.2.0
 message: >-
-  If you use SNES-MDB, please cite both this project and NES-MDB, whose
-  design, format family and composer-disjoint split convention it follows.
+  If you use SNES-MDB, please cite it using the metadata in this file.
 title: "SNES-MDB: a symbolic music database for the Super Nintendo Entertainment System"
 abstract: >-
   A symbolic music corpus extracted from SNES/Super Famicom SPC files,
@@ -29,10 +22,11 @@ abstract: >-
 type: software
 license: MIT
 license-url: "https://spdx.org/licenses/MIT.html"
+repository-code: "https://github.com/uestraven/snesmdb"
 
 authors:
-  - name: "SNES-MDB contributors"
-    # TODO: replace with named authors, affiliations and ORCIDs.
+  - family-names: Cohen
+    given-names: Paul
 
 version: "snesmdb-50game-rc1"
 date-released: "2026-11-10"
@@ -46,6 +40,9 @@ keywords:
   - music generation
   - video game music
 
+# Prior and third-party work SNES-MDB builds on. These are ACKNOWLEDGEMENTS,
+# not substitutes: cite SNES-MDB for SNES-MDB. Cite NES-MDB additionally if
+# the design lineage or the split convention matters to your work.
 references:
   - type: conference-paper
     title: >-
@@ -60,11 +57,17 @@ references:
         given-names: Julian
     collection-title: "Proceedings of the 19th International Society for Music Information Retrieval Conference (ISMIR)"
     year: 2018
+    notes: >-
+      SNES-MDB takes its format family and its composer-disjoint split
+      convention from NES-MDB.
   - type: software
     title: snes_spc
+    version: "0.9.0"
     authors:
       - name: "Shay Green (blargg)"
     license: LGPL-2.1
+    url: "http://www.slack.net/~ant/libs/"
     notes: >-
-      The SPC700/S-DSP emulator extraction depends on. Vendored, with three
-      marked instrumentation hooks added for the research build.
+      The SPC700/S-DSP emulator extraction depends on. Vendored under its own
+      LGPL-2.1 license, with three marked instrumentation hooks added; see
+      vendor/snes_spc/MODIFICATIONS.md.

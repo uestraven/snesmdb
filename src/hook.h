@@ -8,16 +8,22 @@
  * `-include` so the declaration is visible wherever the macro expands.
  *
  * Keeping the vendored tree byte-identical to upstream mattered here, and it
- * is no longer quite true: SPC_DSP.cpp carries one documented addition for
- * the sample hook below, inside voice_V3c. It is LGPL-2.1, the change is
- * marked in place, and `make verify-vendor` shows the diff.
+ * is no longer true: SPC_DSP.cpp carries THREE documented additions, for the
+ * three macros defined below. It is LGPL-2.1, each change is marked in
+ * place, the file carries a modified-file notice, and the full account is in
+ * vendor/snes_spc/MODIFICATIONS.md. `make verify-vendor` shows the diff
+ * against the unmodified upstream file kept at
+ * vendor/snes_spc/upstream/SPC_DSP.cpp.
+ *
+ * The no-op fallbacks live HERE rather than in the vendored tree so that
+ * directory contains no snesmdb-authored code.
  */
 /* SECOND HOOK: the sample-directory entry the DSP actually consumed.
  *
  * Unlike the write hook, snes_spc provides no extension point here, so
- * SPC_DSP.cpp carries one three-line addition inside voice_V3c -- the only
- * modification to the vendored tree, and a no-op unless the macro is
- * defined. It is needed because hooking the CPU's KON write captures the
+ * SPC_DSP.cpp carries an addition inside voice_V3c -- a no-op unless the
+ * macro is defined. It is needed because hooking the CPU's KON write
+ * captures the
  * wrong instant: the DSP reads the directory during voice processing after a
  * key-on delay, and a driver can rewrite the table in between. Super
  * Turrican does exactly that, producing 2,952 directory states in one track

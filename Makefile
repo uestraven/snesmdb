@@ -64,9 +64,25 @@ $(BUILD)/spc_dump_evt: tools/spc_dump.cpp $(SRCS) src/hook.h | $(BUILD)
 verify-instrumentation: $(BUILD)/spc_dump $(BUILD)/spc_dump_evt
 	@$(PYTHON) -I tools/verify_instrumentation.py
 
-# The one documented modification to the vendored tree.
+# The three documented modifications to the vendored LGPL-2.1 tree.
+#
+# The reference is IN THE REPOSITORY, not in /tmp: an LGPL change notice is
+# only verifiable if the original is available to whoever received the copy.
+# A missing reference is an error, not a silent pass.
+VENDOR_ORIG = vendor/snes_spc/upstream/SPC_DSP.cpp
+VENDOR_ORIG_SHA = 42a48152675eaa772f3bd534122fa71c3d6adec9566d9f5f63e53a556849ac22
+
 verify-vendor:
-	@diff -u /tmp/SPC_DSP.cpp.orig vendor/snes_spc/snes_spc/SPC_DSP.cpp || true
+	@test -f $(VENDOR_ORIG) || { \
+	  echo "MISSING $(VENDOR_ORIG) -- cannot verify the vendored change"; \
+	  exit 1; }
+	@echo "$(VENDOR_ORIG_SHA)  $(VENDOR_ORIG)" | sha256sum -c -
+	@echo "--- snes_spc 0.9.0 SPC_DSP.cpp -> snesmdb instrumented ---"
+	@diff -u $(VENDOR_ORIG) vendor/snes_spc/snes_spc/SPC_DSP.cpp \
+	  | sed -n '1,$$p'; \
+	  diff -q $(VENDOR_ORIG) vendor/snes_spc/snes_spc/SPC_DSP.cpp >/dev/null \
+	  && echo "(no differences)" || true
+	@echo "see vendor/snes_spc/MODIFICATIONS.md"
 
 $(BUILD):
 	mkdir -p $(BUILD)

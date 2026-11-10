@@ -42,6 +42,7 @@ read correctly.
 - [SNES Synthesizer Primer](#snes-synthesizer-primer)
 - [Limitations](#limitations)
 - [Licensing and the source data](#licensing-and-the-source-data)
+- [Citing SNES-MDB](#citing-snes-mdb)
 - [Attribution](#attribution)
 
 ## Installation
@@ -53,7 +54,7 @@ build of vendored `snes_spc`.
 ```sh
 git clone <repo> && cd snesmdb
 make                  # builds build/spc_dump
-make test             # 603 tests, no skips
+make test             # 634 tests, no skips
 ```
 
 You only need the C++ tool to process SPC files yourself; the Python
@@ -220,7 +221,7 @@ and reports it rather than substituting a sample.
 
 ```sh
 make                        # build build/spc_dump
-make test                   # 603 tests, no skips (bootstraps .venv for pytest)
+make test                   # 634 tests, no skips (bootstraps .venv for pytest)
 make corpus                 # full rebuild: ~80 min on 8 jobs
 make verify                 # 37 checks on an existing corpus and dist tree
 make audit                  # 39 checks, opening EVERY published file
@@ -315,15 +316,25 @@ A fuller account of what the corpus gets wrong is in
 
 ## Licensing and the source data
 
-The code in this repository is MIT licensed, matching NES-MDB.
-`vendor/snes_spc` is blargg's snes_spc emulator, **LGPL-2.1**. The production
-extractor uses snes_spc's own extension point (`SPC_DSP_WRITE_HOOK`), enabled
-by a macro definition. The vendored DSP additionally carries **three marked
-instrumentation hooks** used only by the `spc_dump_evt` research build, which
-observe when the DSP commits a sample start, accepts a key-on, and takes a
-loop; `make verify-vendor` shows the diff against upstream, and
+The code in this repository is MIT licensed ([`LICENSE`](LICENSE)), matching
+NES-MDB. **That license covers the code and nothing else** — not the musical
+compositions, not the symbolic datasets, not SPC files, and not the vendored
+emulator. [`RIGHTS.md`](RIGHTS.md) sets out each boundary; read it before
+redistributing anything built with these tools.
+
+`vendor/snes_spc` is blargg's snes_spc emulator, **LGPL-2.1**, governed by its
+own license. The production extractor uses snes_spc's own extension point
+(`SPC_DSP_WRITE_HOOK`), enabled by a macro definition. One vendored file
+carries **three marked instrumentation hooks** used only by the
+`spc_dump_evt` research build, which observe when the DSP commits a sample
+start, accepts a key-on, and takes a loop. Those changes, their dates and the
+LGPL obligations they create are documented in
+`vendor/snes_spc/MODIFICATIONS.md` in the source repository, alongside an
+unmodified copy of the upstream file; `make verify-vendor` diffs the two, and
 `make verify-instrumentation` proves the instrumented build produces
-bit-identical audio to the production one.
+bit-identical audio to the production one. A data distribution ships no
+emulator source, so neither that document nor the vendored tree is present in
+one.
 
 **SPC files are not in this repository and must not be added.** This is a
 deliberate departure from NES-MDB's README, which does not address the
@@ -341,11 +352,18 @@ a git work tree**, so a built corpus cannot be committed by accident. The
 score, MIDI and intake trees are derived works of copyrighted material, and
 `make verify` fails if any audio or SPC file is found in a published tree.
 
+## Citing SNES-MDB
+
+Citation metadata is in [`CITATION.cff`](CITATION.cff), which GitHub and most
+reference managers read directly. It carries no DOI yet; one requires a
+hosting decision that is gated on the rights review above.
+
 ## Attribution
 
 This project's design is taken directly from NES-MDB, including its format
-family and its composer-disjoint split convention. If you use snesmdb, please
-also cite the work it is modelled on:
+family and its composer-disjoint split convention. Cite SNES-MDB for
+SNES-MDB; cite NES-MDB **in addition** if the design lineage or the split
+convention matters to your work:
 
 ```
 @inproceedings{donahue2018nesmdb,

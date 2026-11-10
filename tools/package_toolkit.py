@@ -45,8 +45,16 @@ ROOT = Path(__file__).resolve().parent.parent
 
 #: What a researcher needs, and nothing else. Extraction tooling is
 #: deliberately absent: it requires SPC files, which cannot be distributed.
+#:
+#: LICENSE, RIGHTS.md and CITATION.cff ship because a download is where they
+#: matter most. MIT requires its notice to accompany the code, and a reader
+#: who has the data in hand is exactly the person who needs to be told that
+#: the MIT file beside it does not license that data.
 INVENTORY = {
     "README.md": "README.md",
+    "LICENSE": "LICENSE",
+    "RIGHTS.md": "RIGHTS.md",
+    "CITATION.cff": "CITATION.cff",
     "docs/DATASET.md": "DATASET.md",
     "docs/SCHEMA.md": "SCHEMA.md",
     "docs/CHANGELOG.md": "CHANGELOG.md",

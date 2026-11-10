@@ -177,6 +177,9 @@ def test_the_documented_quantization_loss_matches_the_measured_one():
 SHIPPED_PATHS = frozenset({
     "README.md", "docs/DATASET.md", "docs/CHANGELOG.md", "docs/SCHEMA.md",
     "verify.py", "SCHEMA.md", "CHANGELOG.md", "DATASET.md",
+    # Licensing and citation, added to `package_toolkit.INVENTORY` so a
+    # download carries them and these links resolve.
+    "LICENSE", "RIGHTS.md", "CITATION.cff",
 })
 
 
