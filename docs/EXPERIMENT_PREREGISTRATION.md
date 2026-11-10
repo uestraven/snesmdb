@@ -237,7 +237,23 @@ Three corrections, each forced by a number:
    inaudible at 1 s. Durations keep quantile spacing — their distribution is
    not dominated by one repeated value.
 
-Mean error improved 85× from where this started. **The same tokenizer and
+Improvement over the original scheme, each statistic labelled: **353× at p99**
+(10,806 → 30.6 ms) and **84× at the mean** (428.55 → 5.10 ms). An earlier draft
+said "85×" without naming the statistic; it was the mean.
+
+**Documented limitation — the 2 s cap.** Gaps longer than 2 s cannot be
+represented exactly; they fold into the top bucket. This affects 0.072% of
+positive deltas (888 of 1,224,840 in train). It is acceptable only because the
+behaviour is identical for every baseline and for the model, and it is recorded
+here rather than left implicit.
+
+**Tokenizer version pinned:** `snes-lm-repr/1.0.0-log96-cap2s`, vocabulary 240,
+fitted on the train split of `snesmdb-50game-rc1`. The fitted vocabulary and
+these error figures are part of the experiment record. All corrections were
+made before any model was trained or evaluated, so none is post-hoc
+optimisation against a test result.
+
+**The same tokenizer and
 vocabulary are used by every baseline and by the model**; the vocabulary is
 fitted on train only and serialised, so the sealed split stays sealed.
 
