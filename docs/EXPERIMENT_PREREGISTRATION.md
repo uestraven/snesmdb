@@ -203,6 +203,90 @@ stratification — because the release documents them as "curated external
 knowledge, NOT derived from the SPC files… a hypothesis to test rather than a
 measurement". Per-driver breakdowns remain legitimate as descriptive output.
 
+## Representation, corrected by measurement
+
+Four tokens per event at fixed stride — **TIME, VOICE, PITCH, DUR** — which
+makes the registered generation-validity criterion decidable. Vocabulary 240:
+97 time (1 `TIME_SAME` + 96 log buckets), 8 voice, 99 pitch (87 semitones plus
+`PITCH_NONE` and `PITCH_OOR`), 33 duration, 3 special.
+
+**Positive-delta quantisation error was measured before the representation was
+accepted**, over all 1,224,840 positive train deltas:
+
+| scheme | p50 | p90 | p99 | mean | relative p99 |
+|---|---|---|---|---|---|
+| quantile 48, zero in fit, no cap | 4.98 ms | 20.99 ms | **10,806 ms** | 428 ms | 30.7 |
+| quantile 48 + 2 s cap | 2.34 | 9.72 | 1,489 ms | 31.4 ms | 2.918 |
+| quantile 96 + cap | 1.14 | 4.74 | 114 ms | 13.7 ms | 0.488 |
+| **log 96 (0.5 ms–2 s) + cap** | **3.04** | **11.93** | **30.6 ms** | **5.10 ms** | **0.090** |
+
+Three corrections, each forced by a number:
+
+1. **Zero is its own token, excluded from the fit.** 51.9% of consecutive
+   key-on pairs across the full corpus share an onset exactly. Fitting
+   quantiles over that spent half the buckets on one value and collapsed 48
+   requested buckets to 25. Zero is categorical — "same tick" — not a point on
+   a continuum.
+2. **Gaps cap at 2 s**, folding into the top bucket. Only 0.072% of positive
+   deltas exceed it.
+3. **Time buckets are LOG spaced, not quantile spaced.** This is the change
+   that mattered. Quantiles put buckets where the mass is, so the top bucket
+   spanned 0.4–2 s. Log spacing bounds the **relative** error at 9% (p99)
+   against 292% for quantiles, which is the musically meaningful invariant:
+   timing is heard as ratios, so 10 ms matters at 50 ms spacing and is
+   inaudible at 1 s. Durations keep quantile spacing — their distribution is
+   not dominated by one repeated value.
+
+Mean error improved 85× from where this started. **The same tokenizer and
+vocabulary are used by every baseline and by the model**; the vocabulary is
+fitted on train only and serialised, so the sealed split stays sealed.
+
+## Dataloader accounting — one policy, no mixed arithmetic
+
+An earlier draft reported 1,216 steps per epoch. That was a **token-packing**
+figure (9,963,188 ÷ 8,192), which assumes tokens are concatenated and sliced
+across track boundaries. The registered policy is different, and the two
+must not be mixed.
+
+**Policy: per-track windows, stride = context, final partial window padded and
+masked in the loss. Tracks never share a window** — a model should not learn
+transitions between unrelated pieces.
+
+| split | tracks | tokens | windows @1024 | pad | steps/epoch @bs8 |
+|---|---|---|---|---|---|
+| train | 1,384 | 9,963,188 | **10,426** | 6.7% | **1,304** |
+| valid | 180 | 1,482,980 | 1,541 | 6.0% | 193 |
+| test | 176 | 1,257,064 | 1,313 | 6.5% | 165 |
+
+So 50,000 steps is **38.3 epochs**, 25,000 is 19.2, and 10,000 is 7.7.
+
+**Loss accounting:** per-token cross-entropy with padding masked, reported in
+bits/token, over the identical token stream for every baseline and the model.
+The existing 27-game interval n-gram is NOT in these units — it is per-interval
+over a melody-only population — so it is context, not the matched baseline.
+
+## Verified corpus invariants
+
+Checked over the **full 1,740-track music population**, not a sample, because a
+sample would not support the claim:
+
+- **Zero same-voice retriggers in 1,527,546 ticks.** No voice ever keys twice
+  on one tick, in any split. Simultaneity is voice-parallel chords and nothing
+  else, up to the full eight voices.
+- **51.9% of consecutive key-on pairs share an onset** (train 50.8%, valid
+  56.2%, test 55.4%).
+- Nonzero deltas have a 94.2 ms median, independently corroborating the
+  ~11 rows/sec median of the release's own onset-grid scan.
+
+## On the NES comparison
+
+Training windows here (10,426) sit close to the NES corpus's 11,151. That is
+**comparable training-window scale, not a replicated experiment**: equal window
+counts do not imply equal musical information, tokenization, model capacity or
+optimisation difficulty. If this model also produces poor music, that is a
+meaningful parallel negative result and must not be reported as a strict
+replication.
+
 ## Listening test
 
 Short excerpts (~16 bars), model and baseline rendered through the **same
