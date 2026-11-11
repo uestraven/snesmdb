@@ -154,3 +154,67 @@ genuine cross-game content reuse: the same decoded BRR audio and loop point
 in four games across unrelated studios. It is a clean illustration of the
 documented rule that `sample_id` is a **content** identity and not an
 instrument label — identical audio implies no shared musical role.
+
+## `performance.json` splits one game across two case-variant keys
+
+Found 2026-11-11 while fact-checking manuscript counts against the frozen
+release. **The canonical counts are unaffected**; this is confined to the
+per-game performance summaries.
+
+`index.json` and `RELEASE.json` both report `n_games = 50`, which is correct:
+`index.json` holds exactly 50 distinct `game` values over its 2,228 tracks.
+
+`performance.json` and `performance_music.json` each carry **52** `per_game`
+entries, because one release variant appears under two case-distinct keys:
+
+| per_game key | tracks (all) | tracks (music) |
+|---|---|---|
+| `Tetris Attack` | 48 | 40 |
+| `Panel de Pon` | 3 | 3 |
+| `Panel De Pon` | 2 | 1 |
+
+All 53 belong to one canonical game — `index.json` labels every one of them
+`Tetris Attack` and distinguishes the Japanese release through
+`release_variant` (`Panel de Pon (JP)`, 5 tracks; `Tetris Attack (US/EU)`,
+48). The two `Panel de Pon` keys differing only in the capitalisation of "de"
+are therefore **fragments of a single variant**, not two games.
+
+### What this affects
+
+Every `median_over_games` figure in those two files is a median over 52
+artifact-defined entries rather than 50 canonical families, with one game
+contributing three entries of which two are 2- and 3-track fragments. Small
+fragments carry the same weight as a 48-track game in a median over games, so
+the affected statistics are not family-balanced estimates. The 20 corpus-level
+aggregates in `performance.json` are all of this form.
+
+Not affected: track, game, attack, event and sample-identity counts, which
+come from `index.json`; and the machine-learning splits, which use
+`index.json`'s `game` field and so already treat all 53 tracks as one game.
+
+### Why it is not simply recomputed
+
+**A fully corrected reaggregation cannot be produced from the frozen release.**
+Of the 28 per-game statistic leaves, roughly 15 are recomputable from
+published data (`events.v4` plus `intake.v1`): track counts, the voice
+occupancy family, the note-length family, `median_volume`, the three
+volume-correlation fields, and `sustain_level_median`.
+
+The other 13 require extractor-internal state that neither schema publishes:
+
+- `velocity.median_abs_pan`, `hard_panned_fraction`, `phase_inverted_fraction`
+  — no pan field is published.
+- `envelopes.adsr_fraction`, `distinct_adsr_words`, `attack_rate_median` — no
+  ADSR register words are published.
+- all seven `echo.*` fields — no echo state is published.
+
+Correcting those requires re-running the extractor, not reaggregating the
+release.
+
+### Disposition
+
+The frozen files and their checksums are left **unchanged**. Any corrected
+reaggregation must be a separately versioned derived artifact keyed on
+`index.json`'s canonical grouping, must state which of the 28 statistics it
+covers, and must not be presented as a silent revision of
+`snesmdb-50game-rc1`.
