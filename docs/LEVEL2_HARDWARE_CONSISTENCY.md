@@ -46,6 +46,16 @@ decode value can fix it.
 
 ## The Transformer's figures, preserved as observed
 
+> **These figures came from an exploratory probe, not the registered batch.**
+> Six 10-second excerpts at an arbitrary `temperature = 1.0` that the
+> registered selection procedure had not chosen. They are preserved because
+> the interpretation table above was fixed against them, but they are **not**
+> the registered measurement and must not be cited as it.
+>
+> The peak-concurrency figure below is further superseded: the function that
+> produced it conflated three distinct quantities. See
+> [LEVEL2_HARNESS_CORRECTIONS.md](LEVEL2_HARNESS_CORRECTIONS.md).
+
 - same-voice overlap **43.23%** of consecutive same-voice pairs
 - **40.7%** of notes require clamping by voice stealing
 - peak **19** concurrent note instances, on hardware with **8** voices
@@ -53,6 +63,41 @@ decode value can fix it.
 These are not to be improved by re-running parameter selection, and the
 intervention rate stays visible in any listening report. A study must not
 conceal how much correction the model's output needed.
+
+## Registered batch: 24 × 25 s per arm, seeds 0–23
+
+Sampling parameters chosen by the registered listening-free distributional
+procedure: Transformer `T = 1.0, top_p = 0.95`; SlotNGram
+`T = 1.2, top_p = 0.95`.
+
+Reported as **per-excerpt medians**. Pooled rates are not robust here: two
+Transformer excerpts degenerated into 4,000-event runaways and hold 53% of all
+notes in that arm, which drags every pooled figure. See
+[LEVEL2_HARNESS_CORRECTIONS.md](LEVEL2_HARNESS_CORRECTIONS.md) for the pooled
+figures and for the two harness defects corrected before this measurement.
+
+| measurement | control (real, tokenized) | SlotNGram | Transformer |
+|---|---|---|---|
+| structural validity | — | 24/24 | **23/24 (95.8%)** |
+| same-voice overlap, median | 3.08% | 45.10% | 63.57% |
+| attacks/sec, median | 18.08 | 20.59 | 12.90 |
+| (1) concurrent notes, median / max | 10 / 16 | 22.5 / 29 | 18.0 / **3,642** |
+| (2) peak after stealing | 8 | 8 | 8 |
+| (3) peak occupied voices | 8 | 8 | 8 |
+
+Both generators produce far more same-voice overlap than the tokenizer alone
+manufactures on real music, so the band in the interpretation table that
+applies is **"both struggle; Transformer substantially worse"** — roughly 20×
+the control against the comparator's 15×.
+
+Two cautions on reading this table:
+
+- The comparator's close density match (20.59 against 18.08) is partly by
+  construction: the registered selection procedure chose its temperature to
+  minimise exactly that distance.
+- The comparator's 24/24 validity is not better-learned grammar. It is handed
+  the slot from absolute position and places only ~3.8e-4 of its mass on
+  illegal groups, which the selected `top_p = 0.95` prunes.
 
 ## Why this does not weaken Level 1
 
