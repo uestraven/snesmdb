@@ -95,21 +95,62 @@ matters.
 
 ### Perceptual result
 
-**Pending.** The 10 control files require the same human listener; the
-assistant cannot supply this. The question to answer is narrow and should be
-answered before anything is rebuilt:
-
-> Do `real_published` and `real_roundtrip` sound recognisably like music
-> through this renderer?
+The three possible outcomes were written down **before** the control was
+heard, so the answer could not be shaded afterwards:
 
 | outcome | conclusion |
 |---|---|
-| both sound musical | the generators are the failure; the negative result is clean and attributable |
-| published musical, round-trip not | the **representation** is destroying the music; the generators were never given a fair medium |
-| neither sounds musical | the **renderer** is the limiting factor and the 48-excerpt assessment cannot be attributed to the generators |
+| **both sound musical** | **the generators are the failure; the negative result is clean and attributable** |
+| published musical, round-trip not | the representation is destroying the music; the generators were never given a fair medium |
+| neither sounds musical | the renderer is the limiting factor and the 48-excerpt assessment cannot be attributed to the generators |
 
-Files are outside both repositories, in `~/workplace/level2_renders/`, under
-`real_published/` and `real_roundtrip/`.
+**The first outcome is what occurred.** The same listener reports that
+
+- `real_published` and the corresponding `real_roundtrip` **sound identical**
+  to each other, and
+- the control renders **sound recognisably like music** — identifiable
+  melody, rhythm and harmony through the same plain timbre.
+
+Both halves matter:
+
+1. **The tokenizer's quantisation is perceptually transparent on real music.**
+   96 log-spaced time buckets, 32 duration quantiles and semitone-rounded
+   pitch cost nothing audible — including on `actr-02`, whose round trip
+   introduces 30.1% voice-stealing clamping. The middle outcome is ruled out.
+2. **The renderer conveys music.** The bottom outcome is ruled out. A plain
+   tone, fixed gain, no normalisation and eight-voice stealing are together
+   sufficient for real SNES music to be recognisable as music.
+
+> A sample-domain check is worth recording because it looks alarming and is
+> not: the two arms differ substantially as waveforms — all five md5 pairs
+> differ and the difference signal is about 3 dB **louder** than the signal
+> itself. Displacing a note by a few milliseconds produces an enormous
+> sample-wise difference while sounding the same, so sample distance is not
+> perceptual distance. The listener is the correct instrument here, and
+> waveform difference should not be read as audible difference.
+
+### The control is not single-game
+
+The first draw took the first qualifying tracks in split order and drew all
+five from ActRaiser, which would have left the control vulnerable to one game
+being atypical. Redrawn one track per game — ActRaiser, Alien 3, F-Zero,
+Sailor Moon, Star Fox — the pattern holds: **0.0% voice stealing as published
+in every game, 0.0–2.6% round-tripped.** Rendered under
+`~/workplace/level2_renders_crossgame/`.
+
+Files are outside both repositories, in `~/workplace/level2_renders/` and
+`~/workplace/level2_renders_crossgame/`.
+
+## Attribution: the generators
+
+With the pipeline cleared, the 48-excerpt result attributes to the
+generators. Real SNES music, carried through the identical representation and
+the identical synthesiser, is recognisable as music; neither generator's
+output is. The failure is in what the generators produce, not in how it is
+measured or heard.
+
+This is a clean, defensible negative result and the experiment can close on
+it.
 
 ## What is not being done in response
 
