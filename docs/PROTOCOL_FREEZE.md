@@ -122,3 +122,56 @@ not a replication**: the representations and learning tasks are not identical.
 
 Level 1 passes, Level 2 fails, ~75% confidence. The experiment is to be allowed
 to contradict it.
+
+---
+
+## Both experiments frozen — 2026-11-11
+
+Level 1 and Level 2 are closed. **No further technical experiments are
+required for the current claims**, and none should be run under these
+registrations: not a larger model, not a temperature search, not a Level 3,
+not an additional evaluation gate. Any future work is a new experiment with
+its own registration.
+
+Frozen artifacts, both verified on this date:
+
+| set | location | integrity |
+|---|---|---|
+| Level 1 | `~/workplace/level1_artifacts/` | 9 files, `SHA256SUMS` verified; checkpoint sha256 `c146d36ad661fe3643f7c2896ad3747e663aac0c6741124165b6c9ba8e6bc6a9` |
+| Level 2 | `~/workplace/level2_artifacts/` | 12 files, `SHA256SUMS` verified, `PROVENANCE.md` written |
+
+The locked model is 5,056,512 parameters: d_model 256, 6 layers, 8 heads,
+context 1024, vocabulary 240.
+
+### The position being published
+
+1. **SNES-MDB is a viable symbolic-music research corpus** — reproducible
+   extraction, validated musical measurements, and statistically significant
+   predictive learning across held-out games (23.66%, 8/8 games, two-sided
+   sign test p = 0.0078).
+2. **The tested generative approach fails** — the registered
+   generation-validity criterion was not met (23/24), performances are
+   hardware-inconsistent (44–80% of notes need voice stealing against 0.0% for
+   real music), and two excerpts show pathological clock stagnation while
+   remaining grammatically valid. The single-listener diagnostic found the
+   output incoherent; genuine symbolic performances survived identical
+   rendering.
+3. **The dataset's broader generative potential remains open.** This
+   experiment does not establish that other representations, architectures, or
+   constrained decoding would fail.
+
+### Caveats that must travel with claim 1
+
+- The generalization is across unseen **games**, never an unseen **composer**:
+  406 tracks carry incomplete or missing credits and a possible authorship
+  overlap covering 206 tracks is unresolved.
+- The splits are not interchangeable samples: pitched share 77.5 / 81.8 /
+  85.5% across train/valid/test, validation is a 43% expansion cohort against
+  train's 6.8%, and test median max polyphony is 6 against train's 8.
+- The comparator's 24/24 structural validity is **not** evidence of better
+  grammar learning. It is handed the slot from absolute position and places
+  only ~3.8e-4 on illegal groups, which `top_p = 0.95` prunes. The arms were
+  never symmetric on that criterion.
+- Same-voice overlap has two control values — 6.638% pooled, 3.08%
+  per-excerpt median — and the multipliers differ roughly twofold between
+  them. Fix one aggregation and state which.
