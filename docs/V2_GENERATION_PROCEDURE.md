@@ -129,3 +129,59 @@ temperatures to reach comparable distributional behaviour.
 
 The final settings are recorded as **outputs of this procedure**, not as
 hyperparameters chosen with hindsight.
+
+---
+
+## AMENDMENT A1 — development-candidate eligibility (2026-11-12)
+
+**Registered before any development generation was evaluated.** No excerpt
+existed when this was written, so it is prospective relative to the outcomes
+it governs.
+
+**Reason for the amendment.** The registered objective was **undefined** for a
+decoded performance containing zero notes. §3's metrics — attacks per second,
+mean simultaneity, interval histogram — all require at least one note.
+Omitting those failures from a candidate's median would bias selection.
+
+### The bias this avoids
+
+| candidate | decodable seeds | median over survivors |
+|---|---|---|
+| A | 1 of 4 | excellent, on its single success |
+| B | 4 of 4 | good, on all four |
+
+Scoring over survivors could select A, rewarding a configuration **because**
+its failures were excluded. That defeats the fixed four-seed design.
+
+### The rule
+
+1. Each temperature/top-p candidate produces **exactly four** outcomes, from
+   its registered development seeds.
+2. A candidate is **eligible only if all four** outcomes decode into
+   performances for which the frozen distributional metrics are defined.
+3. For eligible candidates the objective is computed exactly as registered in
+   §4: per-excerpt statistics, then the median aggregation and tie-break.
+4. A candidate with one or more undecodable or zero-note outcomes is
+   **ineligible** — not assigned a penalty, and **not scored over its
+   surviving seeds**.
+5. All outcomes are retained. Ineligible candidates are reported with their
+   failure reasons.
+6. **If no candidate is eligible, sampling selection is declared
+   unsuccessful.** No fallback is chosen, the grid is not changed, and seeds
+   are not replaced.
+
+### What this does NOT change
+
+`short` and `budget_exhausted` remain **decodable outcomes** governed by §5
+and §6. They are not reclassified as invalid: this amendment concerns
+zero-note decoded performances only. No other metric, weight, candidate, seed,
+threshold or tie-break is altered.
+
+### Denominators
+
+Reported separately and never conflated:
+
+| population | expected |
+|---|---|
+| attempted outcomes | **40** = 10 candidates × 4 seeds |
+| eligible candidates | 0–10, reported with the count |
