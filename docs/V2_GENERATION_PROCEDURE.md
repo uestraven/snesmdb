@@ -185,3 +185,75 @@ Reported separately and never conflated:
 |---|---|
 | attempted outcomes | **40** = 10 candidates × 4 seeds |
 | eligible candidates | 0–10, reported with the count |
+
+---
+
+## ADDENDUM D1 — duration is reported, not scored (2026-11-12)
+
+**Not an amendment. No registered quantity changes.** This records a decision
+taken after the first clean baseline run, and the reason it was taken.
+
+### The gap
+
+§4's objective scores density, mean simultaneity and the interval histogram.
+**None of the three measures duration.** So a candidate whose excerpts barely
+play can score well on all three.
+
+It did. The baseline arm's winning candidate (t=0.8, top-p=0.95) scored
+**0.6969** — 17.63 attacks/s against a reference of 17.88, simultaneity 1.89
+against 2.30 — while its duration distribution was:
+
+| | whole arm (40 outcomes) | winning candidate (4) |
+|---|---|---|
+| in the 45–60 s target | **1 / 40** | **1 / 4** |
+| under 5 seconds | **12 / 40** | 1 / 4 |
+| shortest | **0.05 s** | 0.60 s |
+| median | 11.29 s | 27.99 s |
+| longest | 104.63 s | 45.08 s |
+
+**No candidate in the grid reached more than 1 of 4 in target.**
+
+A 0.05 s excerpt with corpus-like local density is, to this objective,
+indistinguishable from a 50 s one.
+
+### The decision
+
+**§4 stays frozen, and §5 stays frozen.** Changing either would be
+retrospective relative to the baseline arm, which has now been run and seen.
+The remedy is visibility, not a changed formula:
+
+1. Every candidate row carries a `duration` block — min, median, max, count
+   in the 45–60 s target, count under 5 s, count past the hard cap — marked
+   `"scored": false`.
+2. The selected candidate carries the same block, so the one summary a reader
+   quotes cannot omit it.
+3. When no development excerpt of the winning candidate reached the target,
+   the run says so explicitly in its output.
+
+Nothing in this addendum feeds `objective()` or `tie_break_key()`. A test
+asserts that two candidates differing only in duration receive the
+**identical** objective, which is the property this addendum deliberately
+preserves rather than fixes.
+
+### What follows from it
+
+The duration figures are a **result about the comparator**, not a defect in
+it: Kneser-Ney order 1 cannot hold a 45–60 s form, and samples `EOS` early in
+37 of 40 outcomes. That is reportable evidence, and it also means the
+**blinded paired listening study cannot be administered as designed** if one
+arm's excerpts are sub-second and the other's are ~47 s — the pairing would
+not be blind. That is recorded here as an open question for §8 and for
+`V2_MILESTONE3_PROTOCOL.md`, not resolved.
+
+### Hard-cap overshoot
+
+§5 stops "at the next group boundary" and the clock advances only when a
+delta is sampled, so **one sampled delta can jump past the 60 s cap**. The
+baseline produced excerpts at **85.23 s** and **104.63 s**; a
+uniform-distribution probe reached 3,030.91 s.
+
+This is conformant with §5 as written, and §5 is not amended — masking an
+overshooting delta would change the registered grammar mask that both arms
+share. Instead `Excerpt.exceeded_hard_cap` is set whenever the terminating
+boundary was already past 60 s, so such an excerpt can never be read as an
+in-target 45–60 s result. 2 of 40 baseline outcomes carry the flag.
